@@ -443,6 +443,8 @@ export function computeLegendContent(
   if (!suppression.showTraditionalLegend) {
     entries = [];
   }
+  // Mirrored bars label their two halves above the plot instead of a swatch legend.
+  if (spec.markDef.mirror === true) entries = [];
 
   // Bar/column/lollipop/beeswarm redundancy rule: when color.field matches the
   // category axis field, the legend just repeats the axis labels. Hide it

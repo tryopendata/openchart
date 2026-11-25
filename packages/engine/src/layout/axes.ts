@@ -455,6 +455,12 @@ export interface AxesDataContext {
    * mark); explicit `axis.values` opt out.
    */
   maxXTicks?: number;
+  /**
+   * Mirrored bars: the x ticks for both halves, already placed. When set, the x axis draws
+   * exactly these (no thinning, no domain line across the gutter) and the y axis is hidden,
+   * since the category labels sit in the gutter.
+   */
+  mirrorXTicks?: AxisTick[];
 }
 
 /**
@@ -554,8 +560,11 @@ export function computeAxes(
       : undefined;
 
     // Use explicit tick values from axis config if provided
+    const mirrorTicks = dataContext?.mirrorXTicks;
     let allTicks: AxisTick[];
-    if (axisConfig?.values) {
+    if (mirrorTicks) {
+      allTicks = mirrorTicks;
+    } else if (axisConfig?.values) {
       allTicks = resolveExplicitTicks(axisConfig.values, scales.x);
     } else if (!isContinuousX) {
       // For band scales, generate all ticks first (no thinning). Rotation and
@@ -612,7 +621,7 @@ export function computeAxes(
     }
 
     // Thin tick labels to prevent overlap (skip for explicit tick values).
-    const hasExplicitValues = !!axisConfig?.values;
+    const hasExplicitValues = !!axisConfig?.values || !!mirrorTicks;
     let ticks: AxisTick[];
     if (hasExplicitValues) {
       ticks = allTicks;
@@ -708,8 +717,10 @@ export function computeAxes(
     // because tick labels need horizontal room around their x position).
     const xTickPosition = axisConfig?.tickPosition ?? 'gutter';
 
-    const xDomainLine =
-      axisConfig?.domain ?? (GROUNDED_MARKS.has(dataContext?.markType ?? '') ? undefined : false);
+    const xDomainLine = mirrorTicks
+      ? false
+      : (axisConfig?.domain ??
+        (GROUNDED_MARKS.has(dataContext?.markType ?? '') ? undefined : false));
 
     result.x = {
       ticks,
@@ -735,7 +746,12 @@ export function computeAxes(
     };
   }
 
-  if (scales.y && !dataContext?.skipY && scales.y.channel.axis !== false) {
+  if (
+    scales.y &&
+    !dataContext?.skipY &&
+    !dataContext?.mirrorXTicks &&
+    scales.y.channel.axis !== false
+  ) {
     const axisConfig = scales.y.channel.axis;
     const isContinuousY =
       scales.y.type !== 'band' && scales.y.type !== 'point' && scales.y.type !== 'ordinal';

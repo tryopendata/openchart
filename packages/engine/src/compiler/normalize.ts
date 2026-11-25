@@ -345,6 +345,16 @@ function withCalendarColorScale(encoding: Encoding): Encoding {
   };
 }
 
+/**
+ * Mirrored bars draw each color value on its own half, so the bar default of stacking
+ * resolves to none. Validation rejects an authored `stack` with `mirror`.
+ */
+function withMirrorStackDefault(encoding: Encoding): Encoding {
+  const x = encoding.x;
+  if (!x || x.stack !== undefined) return encoding;
+  return { ...encoding, x: { ...x, stack: null } };
+}
+
 /** Resolved form of the opt-in `other` bucketing option. */
 function resolveOtherOption(
   other: number | { threshold: number; label?: string } | undefined,
@@ -412,7 +422,12 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   const inferred = inferEncodingTypes(spec.encoding, spec.data, warnings);
   const markType = resolveMarkType(spec.mark);
   const markDef = resolveMarkDef(spec.mark);
-  const encoding = markType === 'calendar' ? withCalendarColorScale(inferred) : inferred;
+  const encoding =
+    markType === 'calendar'
+      ? withCalendarColorScale(inferred)
+      : markDef.type === 'bar' && markDef.mirror === true
+        ? withMirrorStackDefault(inferred)
+        : inferred;
   const data =
     markType === 'waffle' ? applyWaffleOther(spec, encoding, markDef, warnings) : spec.data;
   const display = spec.display ?? 'full';

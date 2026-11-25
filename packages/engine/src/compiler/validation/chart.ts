@@ -6,6 +6,7 @@ import {
   MARK_ENCODING_RULES,
   type MarkType,
 } from '@opendata-ai/openchart-core';
+import { hasTimeEncoding } from '../../playback/time-spec';
 import type { ValidationError } from '../types';
 import { validateFrame } from './frame';
 import {
@@ -23,14 +24,30 @@ import {
   validatePointSize,
   validateRangeSpec,
 } from './mark-rules';
+import { validateMirror } from './mirror';
+import { type TimeValidationContext, validateTimeEncoding } from './time';
+
+/** Whether the authored mark is `{ type: 'bar', mirror: true }` (any mark type; validation names the mismatch). */
+function isMirroredMark(spec: Record<string, unknown>): boolean {
+  const mark = spec.mark;
+  return (
+    typeof mark === 'object' && mark !== null && (mark as { mirror?: unknown }).mirror === true
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Chart validation
 // ---------------------------------------------------------------------------
 
-export function validateChartSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+export function validateChartSpec(
+  spec: Record<string, unknown>,
+  errors: ValidationError[],
+  context: TimeValidationContext = {},
+): void {
   validateLabelPlacement(spec, errors);
   validateFrame(spec, errors);
+  if (hasTimeEncoding(spec)) validateTimeEncoding(spec, errors, context);
+  if (isMirroredMark(spec)) validateMirror(spec, errors);
   const markType =
     typeof spec.mark === 'string' ? spec.mark : (spec.mark as Record<string, unknown>)?.type;
 

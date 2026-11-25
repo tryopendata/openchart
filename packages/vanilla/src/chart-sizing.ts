@@ -43,7 +43,20 @@ export interface ChartSizer {
   shouldResize(width: number, height: number): boolean;
 }
 
-export function createChartSizer(container: HTMLElement): ChartSizer {
+export interface ChartSizerOptions {
+  /**
+   * Height below the SVG that the mount fills itself (the 44px playback controls strip).
+   * Explicit-height hosts compile at `height - reservedHeight`, and the own-height echo check
+   * compares the host against `svgHeight + reservedHeight`. Defaults to 0.
+   */
+  reservedHeight?: number;
+}
+
+export function createChartSizer(
+  container: HTMLElement,
+  sizerOptions: ChartSizerOptions = {},
+): ChartSizer {
+  void sizerOptions;
   // Auto-height sizing state. `isAutoHeight` latches whether the host
   // constrains the container's height:
   //   null  = unknown — every measurement so far was an all-zero rect

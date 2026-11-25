@@ -38,6 +38,7 @@ import { admitReferenceRows } from '../annotations/reference-layout';
 import { thinAnnotations } from '../annotations/thinning';
 import type { BarLabelPlan } from '../charts/bar/label-plan';
 import { emitValueLabelDiagnostic, offsetValueLabelAxes } from '../charts/bar/label-plan';
+import { mirrorAxisTicks, mirrorGeometry } from '../charts/bar/mirror';
 import {
   assignAnimationIndices,
   isBinnedBarEncoding,
@@ -363,9 +364,22 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
   const axisless = chartSpec.display === 'sparkline' || !economy.axes;
   const skipX = axisless && !chartSpec.userExplicit.xAxis;
   const skipY = axisless && !chartSpec.userExplicit.yAxis;
+  const mirrorXTicks =
+    renderSpec.markDef.mirror === true && scales.x
+      ? mirrorAxisTicks(
+          scales.x,
+          mirrorGeometry(
+            chartArea,
+            (scales.y?.scale.domain() ?? []).map(String),
+            options.measureText,
+            theme,
+          ),
+        )
+      : undefined;
   const axes = isRadial
     ? { x: undefined, y: undefined }
     : computeAxes(scales, chartArea, strategy, theme, options.measureText, {
+        mirrorXTicks,
         data: renderSpec.data,
         axisTitleHeader: plan.axisTitleHeader,
         preserveEnd: responsiveConfig ? responsiveConfig.preserveEnd : false,
@@ -423,6 +437,15 @@ function layoutSingleChart(input: SingleChartInput): ChartLayout {
     options,
     plan.valueLabelPlan,
   );
+  if (options.frameCapture) {
+    Object.assign(options.frameCapture, {
+      scales,
+      chartArea,
+      labelPlan: plan.valueLabelPlan,
+      renderSpec,
+      strategy,
+    });
+  }
 
   // Resolve "you draw it" geometry (pixel fromX, x-sample positions, target
   // line color/key). Reads marks so it must run after they're computed.

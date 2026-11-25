@@ -2403,6 +2403,12 @@ export interface CompileOptions {
    * If not provided, the engine falls back to heuristic estimation.
    */
   measureText?: MeasureTextFn;
+  /**
+   * Charts with `encoding.time`: the continuous period index to draw (0 is the
+   * first period, 1.5 halfway between the second and third). Clamped to the
+   * periods present. Defaults to the final period. Ignored without `time`.
+   */
+  playbackT?: number;
 }
 
 /** Extended compile options for table visualizations. */

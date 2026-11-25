@@ -1,3 +1,11 @@
+export { compileChartPlayback } from './chart-playback';
+export type {
+  ChartPlayback,
+  FrameMark,
+  FrozenChartFrame,
+  ObservedValues,
+  TrailPath,
+} from './chart-types';
 export { PlaybackDataError, type PlaybackDataErrorCode } from './errors';
 export { interpolatePlaybackLogValue, interpolatePlaybackValue } from './interpolate';
 export {
@@ -16,3 +24,4 @@ export {
   type PlaybackTimeType,
   readPeriod,
 } from './periods';
+export { hasTimeEncoding } from './time-spec';

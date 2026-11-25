@@ -14,6 +14,7 @@
 import type {
   BarListLayout,
   ChartLayout,
+  ChartSpec,
   CompileOptions,
   CompileTableOptions,
   DesignDiagnostic,
@@ -34,6 +35,7 @@ import { compileChartInternal, resolveCompileTheme } from './compile/chart';
 import { compileLayer as compileLayerImpl } from './compile/layer';
 import { applySpecSize } from './compile/prepare';
 import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
+import { compileTimeChart } from './compile-chart-time';
 import { compile as compileSpec } from './compiler/index';
 import type { NormalizedTableSpec } from './compiler/types';
 import { noteCapacityDiagnostic } from './design/diagnostics';
@@ -41,6 +43,7 @@ import { compileGeoMap as compileGeoMapImpl } from './geo/compile-geo-map';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
 import type { GraphCompilation } from './graphs/types';
 import { isNoteOverflowDiagnostic } from './layout/budget';
+import { hasTimeEncoding } from './playback/time-spec';
 import { compileSankey as compileSankeyImpl } from './sankey/compile-sankey';
 import { compileTableLayout } from './tables/compile-table';
 import { compileTileMap as compileTileMapImpl } from './tilemap/compile-tilemap';
@@ -77,6 +80,9 @@ export function compileChart(spec: unknown, optionsInput: CompileOptions): Chart
     throw new Error('compileChart received a race spec. Use prepareRace and layoutRace instead.');
   }
   assertMarkOptions(spec);
+  // Playback charts compile once over every period and draw one frame; the envelope
+  // compile inside goes through compileChartInternal without `time`, so this never recurses.
+  if (hasTimeEncoding(spec)) return compileTimeChart(spec as ChartSpec, optionsInput);
   return compileChartInternal(spec, optionsInput);
 }
 

@@ -50,6 +50,11 @@ export interface StaticRenderOptions {
    * Race SVG marks share the live renderer's two-decimal coordinates.
    */
   precision?: number | null;
+  /**
+   * Charts with `encoding.time`: the continuous period index to draw (0 is the first
+   * period). Defaults to the final period. Ignored for other specs.
+   */
+  t?: number;
 }
 const XMLNS_NS = 'http://www.w3.org/2000/xmlns/';
 export type StaticSpec = ChartSpec | LayerSpec | TileMapSpec | GeoMapSpec | BarListSpec | RaceSpec;
@@ -93,6 +98,7 @@ export function renderStaticParts(
     watermark: options.watermark,
     measureText: options.measureText,
     onWarn: () => {},
+    ...(options.t === undefined ? {} : { playbackT: options.t }),
   };
   let svg: SVGElement;
   let theme: ResolvedTheme;
