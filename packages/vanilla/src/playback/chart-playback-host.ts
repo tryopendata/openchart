@@ -25,6 +25,7 @@ import { type ControllerRelay, createControllerRelay } from './controller-relay'
 import { PLAYBACK_CONTROLS_HEIGHT } from './controls';
 import { layoutAtPlayhead } from './frame-layout';
 import { createPlaybackCompiler } from './playback-compiler';
+import { applySeriesHiding } from './series-hiding';
 import type { PlaybackController } from './types';
 
 type MountSpec = ChartSpec | LayerSpec;
@@ -86,7 +87,8 @@ export function createChartPlaybackHost(options: {
   const compiler = createPlaybackCompiler();
   let mounted: ChartPlaybackMount | null = null;
   let relay: ControllerRelay | null = null;
-  let current: { spec: ChartSpec; playback: ChartPlayback } | null = null;
+  // The rendered spec and layout (base, or base with legend state) and their playback.
+  let current: { spec: ChartSpec; layout: ChartLayout; playback: ChartPlayback } | null = null;
   let tooltips: PlaybackTooltips | null = null;
   let tooltipPeriod: number | undefined;
 
@@ -113,7 +115,7 @@ export function createChartPlaybackHost(options: {
   function restart(args: PlaybackRenderArgs, spec: ChartSpec, playback: ChartPlayback) {
     const speed = relay?.controller.getState().speed;
     mounted?.destroy();
-    current = { spec, playback };
+    current = { spec, layout: args.layout, playback };
     mounted = mountChartPlayback({
       container,
       svg: args.svg,
@@ -133,7 +135,7 @@ export function createChartPlaybackHost(options: {
       return relay?.controller ?? null;
     },
     compilerFor(spec) {
-      return isPlaybackSpec(spec) ? compiler.compile : undefined;
+      return isPlaybackSpec(spec) ? compiler.compilerFor(spec) : undefined;
     },
     render(args) {
       const { spec } = args;
@@ -144,14 +146,16 @@ export function createChartPlaybackHost(options: {
       }
       if (!mounted || !current || !samePlaybackShape(current.spec, spec)) {
         restart(args, spec, playback);
-        return;
+      } else {
+        const t = carriedPlayhead(current.playback, playback, playhead());
+        current = { spec, layout: args.layout, playback };
+        mounted.rebind({ svg: args.svg, playback, darkMode: args.darkMode, t });
       }
-      const t = carriedPlayhead(current.playback, playback, playhead());
-      current = { spec, playback };
-      mounted.rebind({ svg: args.svg, playback, darkMode: args.darkMode, t });
+      applySeriesHiding(args.svg, playback.base, spec, compiler.hiddenSeriesFor(args.layout));
     },
     frameLayout() {
-      return current && mounted ? layoutAtPlayhead(current.playback, playhead()) : null;
+      if (!current || !mounted) return null;
+      return layoutAtPlayhead(current.playback, playhead(), current.layout);
     },
     wireTooltips(svg, tooltipManager, emphasis) {
       const wired = wirePlaybackTooltips({

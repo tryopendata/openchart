@@ -119,6 +119,49 @@ describe('reading a playback chart', () => {
   });
 });
 
+describe('toggling a series on a playback chart', () => {
+  const ticks = (container: HTMLElement) =>
+    [...container.querySelectorAll('.oc-axis-tick')].map((tick) => tick.textContent);
+  const shown = (container: HTMLElement) =>
+    [...container.querySelectorAll<SVGElement>('circle[data-key]')]
+      .filter((circle) => circle.style.display !== 'none')
+      .map((circle) => circle.getAttribute('data-key'))
+      .sort();
+  const fills = (container: HTMLElement) =>
+    Object.fromEntries(
+      [...container.querySelectorAll('circle[data-key]')].map((circle) => [
+        circle.getAttribute('data-key'),
+        circle.getAttribute('fill'),
+      ]),
+    );
+  const toggle = (container: HTMLElement, series: string) =>
+    container
+      .querySelector(`[data-legend-label="${series}"]`)
+      ?.dispatchEvent(createMouseEvent('click', 10, 10));
+
+  it('hides the series keys without re-freezing, and shows them again', () => {
+    const { container, chart, controller } = mount(timeSpec({ animation: false }));
+    const axes = chart.layout.axes;
+    const tickText = ticks(container);
+    const { Avalon, Borea } = fills(container);
+    controller.seek(1);
+
+    toggle(container, 'South');
+    expect(shown(container)).toEqual(['Avalon', 'Borea']);
+    expect(chart.layout.axes).toBe(axes);
+    expect(ticks(container)).toEqual(tickText);
+    expect(fills(container)).toMatchObject({ Avalon, Borea });
+    expect(
+      container.querySelector('[data-legend-label="South"]')?.getAttribute('data-legend-active'),
+    ).toBe('false');
+    expect(controller.getState().t).toBe(1);
+
+    toggle(container, 'South');
+    expect(shown(container)).toEqual(['Avalon', 'Borea', 'Cydonia']);
+    expect(chart.layout.axes).toBe(axes);
+  });
+});
+
 describe('updating a playback chart', () => {
   it('pauses for a manual update and returns no transition', () => {
     const { chart, controller } = mount(timeSpec());
