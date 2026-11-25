@@ -12,7 +12,7 @@ import Demo from "../../components/demo/Demo.astro";
 
 In the week ending March 21, 2020, the median state's insured unemployment rate was 1.34%. Fourteen weeks later, in the week ending June 27, it was 11.2%. The rate is the Department of Labor's weekly count of people collecting state unemployment benefits, as a share of the jobs those benefits cover, and in this dataset it's averaged over 13 weeks.
 
-An animated choropleth shows that spread one week at a time. Every state's color changes as the weeks play, and the reader can pause on any week or drag back to an earlier one. In OpenChart the map is an ordinary map spec with one more encoding channel, `encoding.time`. The map at the top of this post plays 2020 in 20 seconds; the strip under it plays, pauses and scrubs, and with focus on the strip the arrow keys step through the weeks one at a time.
+An animated choropleth shows that climb one week at a time, recoloring every state as the weeks play. In OpenChart the map is an ordinary map spec with one more encoding channel, `encoding.time`. The map at the top of this post plays 2020 in 20 seconds; the strip under it plays, pauses and scrubs, and with focus on the strip the arrow keys step through the weeks one at a time.
 
 ## The data: one row per state per week
 
@@ -77,9 +77,9 @@ The color channel has to be `quantitative`. A time map recolors each state from 
 
 ## A color scale fixed for the whole year
 
-OpenChart computes the color classes and the legend once, from every week's values together, and keeps them for the whole playback. On this map the breaks fall at 5%, 10%, 15% and 20%. In January every state is in the lightest of the five classes. By July all five are in use, and the legend hasn't changed.
+OpenChart computes the color classes and the legend once, from every week's values together, and keeps them for the whole playback. On this map the breaks fall at 5%, 10%, 15% and 20%. In January every state is in the lightest of the five classes. By July all five are in use.
 
-A scale that refit itself to each week would make the map lie. In the first week of January the highest rate is Alaska's 2.64%, so a per-week scale would paint Alaska in the darkest class, the same blue Nevada gets at its peak, 23.13% in the week ending August 1. A reader comparing the two frames would see the same color for rates almost nine times apart, and the legend would change with every week of playback. The axes of a playing chart are fixed for the same reason.
+A scale refit to each week would give rates almost nine times apart the same color. In the first week of January the highest rate is Alaska's 2.64%, so a per-week scale would paint Alaska in the darkest class, the same blue Nevada gets at its peak, 23.13% in the week ending August 1. The legend would also change with every week of playback. The axes of a playing chart are fixed for the same reason.
 
 Between two weeks each state's rate is interpolated, and its color jumps to the next class at the moment the rate crosses a break. A state with no row in some week gets a value interpolated from the weeks on either side by default (`playback.gaps: "interpolate"`). `"hold"` carries the last value forward, and `"drop"` shows the state as no data until its next row. Once any state lacks a value in any week, the legend keeps its "No data" swatch for the whole run.
 

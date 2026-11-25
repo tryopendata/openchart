@@ -10,7 +10,7 @@ lead: blog/japan-pyramid-2020
 
 import Demo from "../../components/demo/Demo.astro";
 
-Japan had 126 million people in 2020, and more of them were 45 to 49 years old than any other five-year age group, according to the UN's World Population Prospects. A population pyramid shows that structure at a glance: horizontal bars for each age group, men extending left and women right from a shared center, youngest at the bottom. In OpenChart a pyramid is a horizontal bar chart with one mark option, `mirror: true`, and adding `encoding.time` makes it play through the years.
+Japan had 126 million people in 2020, and more of them were 45 to 49 years old than any other five-year age group, according to the UN's World Population Prospects. A population pyramid draws that structure as horizontal bars for each age group, men extending left and women right from a shared center, youngest at the bottom. In OpenChart a pyramid is a horizontal bar chart with one mark option, `mirror: true`, and adding `encoding.time` makes it play through the years.
 
 ## The data: one row per age group and sex
 
@@ -26,7 +26,7 @@ const rows = [
 ];
 ```
 
-The UN publishes the figures in thousands of people. These rows multiply them by 1,000, so the axis reads "6M" for six million people; left in thousands, it would read "6k". Both sexes are positive numbers; the chart decides which way each one points.
+The UN publishes the figures in thousands of people, and these rows multiply them by 1,000 so the axis reads "6M" for six million people; left in thousands, it would read "6k". Both sexes are positive numbers; the chart decides which way each one points.
 
 ## A static pyramid with `mirror`
 
@@ -116,9 +116,9 @@ The 2020 pyramid has two bulges. People aged 70 to 74 were born from 1946 to 195
 
 ## Why `mirror` and not negative values
 
-The usual workaround, and the one in the Plotly and Highcharts pyramid examples, is to store men's counts as negative numbers and format the axis to hide the minus sign. The minus sign comes back everywhere the formatter doesn't reach: tooltips, CSV exports and the data table a screen reader gets all list -5,054,000 men. The age labels also stay at the left edge of the plot, where they collide with the men's bars, instead of sitting between the halves.
+The usual workaround, used in the Plotly and Highcharts pyramid examples, stores men's counts as negative numbers and formats the axis to hide the minus sign. Tooltips, CSV exports and the data table a screen reader gets still list -5,054,000 men. The age labels also stay at the left edge of the plot, where they collide with the men's bars, instead of sitting between the halves.
 
-Vega-Lite's pyramid example builds three views side by side with `hconcat`, one of them a reversed x scale, and keeps their scales matched by hand. That's a lot of spec for one chart, and OpenChart has no `hconcat`. With `mirror`, both halves share one scale by construction, so equal counts draw equal bar lengths on both sides.
+Vega-Lite's pyramid example builds three views side by side with `hconcat`, one of them a reversed x scale, and keeps their scales matched by hand. OpenChart has no `hconcat`; with `mirror`, both halves share one scale, so equal counts draw equal bar lengths on both sides.
 
 On a mirrored chart the color field must have exactly two values, the bars must be horizontal (quantitative x, categories on y), and `encoding.x.stack` can't be set, since mirrored bars never stack. A color field with three values fails with a message that names the field and its values.
 
@@ -142,7 +142,7 @@ const spec = {
 
 <Demo id="blog/japan-pyramid-playback" />
 
-Figures from 2025 onward are the UN's medium-variant projection, and the subtitle says so, since a reader watching the bars move has no other cue that the estimates have turned into projections. In 1950 the largest group is the youngest, 0-4. The bulge climbs the pyramid as the years play, and by 2100 the largest group is 85-89 in a population of 77 million, down from 126 million in 2020.
+In 1950 the largest group is the youngest, 0-4. The bulge climbs the pyramid as the years play, and by 2100 the largest group is 85-89 in a population of 77 million, down from 126 million in 2020. Figures from 2025 onward are the UN's medium-variant projection, and the subtitle says so, since a reader watching the bars move has no other cue that the estimates have turned into projections.
 
 The bars need no `key`. Each bar is identified by its age group and sex, so "Female, 45-49" in 2020 grows or shrinks into "Female, 45-49" in 2025, with lengths interpolated between the two years. The value axis is fixed for the whole run, sized to the largest bar in any year, so a bar's length means the same number of people in every frame. The year appears as a large faint label in the upper right.
 
