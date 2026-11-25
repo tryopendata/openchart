@@ -1,5 +1,12 @@
 # Changelog
 
+## [9.2.1](https://github.com/tryopendata/openchart/compare/core-v9.2.0...core-v9.2.1) (2026-11-25)
+
+### Fixed
+
+- Faceted charts now share one size scale and one colour scale across panels, so a bubble size or colour means the same value in every panel and matches the legend. Before, each panel fit its own, and a category missing from one panel shifted the colours of the others. Set `resolve: { scale: { size: 'independent' } }` or `color: 'independent'` to fit each panel on its own.
+- X tick labels in the second and later facet columns sat to the left of their ticks. They now line up.
+
 ## [9.2.0](https://github.com/tryopendata/openchart/compare/core-v9.1.0...core-v9.2.0) (2026-11-25)
 
 Charts and maps can now play through time. Add `encoding.time` to a point, circle or bar chart, a geo map or a tile map, and it animates period by period with the same playback controls as race charts. See the [playback docs](https://openchart.steamfield.io/docs/change-over-time/playback/).
