@@ -29,11 +29,11 @@ function point(frame: FrameMark[], key: string): FrameMark & { mark: PointMark }
 }
 
 describe('period label', () => {
-  it('reads the period nearest the playhead', () => {
+  it('reads the period the playhead has reached, as the controls do', () => {
     const playback = compile();
     expect(text(overlays(playback, 0), PERIOD_LABEL_KEY)?.text).toBe('2000');
-    expect(text(overlays(playback, 0.4), PERIOD_LABEL_KEY)?.text).toBe('2000');
-    expect(text(overlays(playback, 1.6), PERIOD_LABEL_KEY)?.text).toBe('2002');
+    expect(text(overlays(playback, 0.9), PERIOD_LABEL_KEY)?.text).toBe('2000');
+    expect(text(overlays(playback, 1.6), PERIOD_LABEL_KEY)?.text).toBe('2001');
   });
 
   it('honors playback.period.format', () => {

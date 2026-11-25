@@ -146,8 +146,8 @@ export interface FrameOverlays {
 }
 
 /**
- * The overlays for one frame: the period label for `period` (the period nearest the
- * playhead) and a name label beside each labelled point in `marks`, sharing its presence.
+ * The overlays for one frame: the period label for `period` (the period the
+ * playhead has reached) and a name label beside each labelled point in `marks`, sharing its presence.
  */
 export function buildFrameOverlays(
   plan: OverlayPlan,

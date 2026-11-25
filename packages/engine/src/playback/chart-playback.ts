@@ -236,11 +236,13 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
   const draw = createFrameDrawer(frame, frame.layout.dimensions.width);
   const order = baseKeyOrder(matrix, sampler);
   const marksAt = lastFrameCache((t: number) => drawFrame(pivot, sampler, order, draw, t));
+  const finalPeriod = matrix.periods.length - 1;
   const periodLabels = formatPeriodLabels(matrix.periods, pivot.time);
   const labelledPeriods = hasPlayablePeriods(sampler, order) ? matrix.periods : null;
   const overlayPlan = planOverlays(source, frame, timing, labelledPeriods, pivot.time);
+  // The label shows the period the playhead has reached, like the controls and period events.
   const overlaysFor = (t: number) =>
-    buildFrameOverlays(overlayPlan, marksAt(t), sampler.nearestPeriod(t));
+    buildFrameOverlays(overlayPlan, marksAt(t), Math.min(finalPeriod, Math.max(0, Math.floor(t))));
   const finalT = matrix.periods.length - 1;
   const finalMarks = marksAt(finalT);
   const finalOverlays = overlaysFor(finalT);
