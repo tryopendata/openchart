@@ -116,6 +116,34 @@ describe('pointer on playback overlays', () => {
   });
 });
 
+describe('pointer on a playback pyramid’s fixed labels', () => {
+  it('shows no tooltip for a gutter category label', () => {
+    const pyramid: ChartSpec = {
+      mark: { type: 'bar', mirror: true },
+      animation: false,
+      data: ['Male', 'Female'].flatMap((sex) =>
+        ['0-9', '10-19'].flatMap((age) =>
+          [2000, 2001].map((year, index) => ({ sex, age, year, pop: 40 + index * 10 })),
+        ),
+      ),
+      encoding: {
+        y: { field: 'age', type: 'ordinal' },
+        x: { field: 'pop', type: 'quantitative' },
+        color: { field: 'sex', type: 'nominal' },
+        time: { field: 'year', type: 'temporal' },
+      },
+      playback: { autoplay: false },
+    };
+    const container = createContainer(640, 480);
+    const chart = createChart(container, pyramid, { autoResize: false });
+    cleanup.push(() => chart.destroy());
+    const gutterLabel = container.querySelector('[data-key^="oc-mirror-category|"]');
+    expect(gutterLabel).not.toBeNull();
+    gutterLabel?.dispatchEvent(createMouseEvent('mouseover'));
+    expect(tooltipText(container)).toBe('');
+  });
+});
+
 describe('overlays in the layout at the playhead', () => {
   it('reads the paused period and puts each name label beside its bubble at t', () => {
     const { chart, controller } = mount();

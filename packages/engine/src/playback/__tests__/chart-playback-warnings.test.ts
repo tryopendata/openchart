@@ -223,10 +223,8 @@ describe('bars sorted by value', () => {
     expect(sortWarnings({ ...barSpec('-x'), mark: 'point' } as ChartSpec)).toEqual([]);
   });
 
-  // Fails until compileChartPlayback passes the authored spec into collectPlaybackWarnings
-  // (`{ matrix, channels, timing, time: pivot.time, spec }`); sugar has already turned the
-  // sort into a fixed domain in the spec the playback compiles.
-  it.fails('reaches the result and onWarn when the bar chart compiles', () => {
+  // Read from the authored spec: sugar turns the sort into a fixed domain before playback.
+  it('reaches the result and onWarn when the bar chart compiles', () => {
     const { warnings, sent } = compileCollecting(barSpec('-x'));
     expect(warnings.filter((message) => FROZEN_SORT_WARNING.test(message))).toHaveLength(1);
     expect(sent.filter((message) => FROZEN_SORT_WARNING.test(message))).toHaveLength(1);
