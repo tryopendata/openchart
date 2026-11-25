@@ -32,7 +32,10 @@ function checkColor(color: Channel, data: unknown, errors: ValidationError[]): v
   if (!Array.isArray(data)) return;
   const values = new Set<string>();
   for (const row of data) {
-    if (row && typeof row === 'object') values.add(String((row as Record<string, unknown>)[field]));
+    if (!row || typeof row !== 'object') continue;
+    // A row with no color value picks no side, so it doesn't count as a group.
+    const value = (row as Record<string, unknown>)[field];
+    if (value !== undefined && value !== null) values.add(String(value));
   }
   if (values.size === 2) return;
   const shown = [...values].slice(0, 5).join(', ');
@@ -44,15 +47,22 @@ function checkColor(color: Channel, data: unknown, errors: ValidationError[]): v
   });
 }
 
-/** Mirrored bars are horizontal: a quantitative x and a categorical y. */
+/**
+ * Mirrored bars are horizontal. Types are inferred after validation, so only an authored
+ * quantitative y, or an authored non-quantitative x, is known to be wrong here.
+ */
 function checkOrientation(encoding: Record<string, Channel>, errors: ValidationError[]): void {
-  const vertical = encoding.y?.type === 'quantitative' || encoding.x?.type !== 'quantitative';
-  if (!vertical) return;
+  const yType = encoding.y?.type;
+  const xType = encoding.x?.type;
+  let problem: string | undefined;
+  if (yType === 'quantitative') problem = 'y is quantitative, which draws vertical bars';
+  else if (xType !== undefined && xType !== 'quantitative')
+    problem = `x is ${JSON.stringify(xType)}, but the bar lengths need a quantitative x`;
+  if (!problem) return;
   errors.push({
     code: 'ENCODING_MISMATCH',
     path: '/mark/mirror',
-    message:
-      'mark.mirror works only on horizontal bars; this spec draws vertical bars (quantitative y).',
+    message: `mark.mirror works only on horizontal bars; ${problem}.`,
     suggestion: 'Put the values on x (quantitative) and the categories on y (nominal or ordinal).',
   });
 }

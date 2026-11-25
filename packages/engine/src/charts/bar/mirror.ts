@@ -13,17 +13,22 @@ import type {
   RectMark,
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
-import { estimateTextWidth } from '@opendata-ai/openchart-core';
-import type { ScaleBand } from 'd3-scale';
+import { type ScaleBand, type ScaleLinear, scaleLinear } from 'd3-scale';
 import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { finiteNumber } from '../../data/finite-number';
-import { continuousTicks, resolveExplicitTicks, targetTickCount } from '../../layout/axes/ticks';
+import { formatTickLabel, targetTickCount } from '../../layout/axes/ticks';
 import type { D3ContinuousScale, ResolvedScale, ResolvedScales } from '../../layout/scales';
 import { formatLabelValue } from '../_shared/format-label-value';
 import { BAR_CORNER_RADIUS, getColor, valueEndCorners } from '../utils';
 import type { BarLabelPlan } from './label-plan';
-import { attachValueLabels, categoryLabelMarks, halfLabelMarks } from './mirror-labels';
+import {
+  attachValueLabels,
+  categoryLabelMarks,
+  GUTTER_PADDING,
+  halfLabelMarks,
+  measureCategoryLabel,
+} from './mirror-labels';
 
 /** A horizontal pixel span, start < end. */
 export interface MirrorSpan {
@@ -41,9 +46,6 @@ export interface MirrorGeometry {
   right: MirrorSpan;
 }
 
-/** Space between a category label and each half's inner edge. */
-const GUTTER_PADDING = 8;
-
 /**
  * Split the plot into left half, center gutter and right half. The gutter is as wide as the
  * widest category label (measured at the axis tick font) plus padding; the halves share the
@@ -56,14 +58,9 @@ export function mirrorGeometry(
   measureText: MeasureTextFn | undefined,
   theme: ResolvedTheme,
 ): MirrorGeometry {
-  const fontSize = theme.fonts.sizes.axisTick;
-  const fontWeight = theme.fonts.weights.normal;
   let widestLabel = 0;
   for (const label of categoryLabels) {
-    const width =
-      measureText?.(label, fontSize, fontWeight).width ??
-      estimateTextWidth(label, fontSize, fontWeight);
-    widestLabel = Math.max(widestLabel, width);
+    widestLabel = Math.max(widestLabel, measureCategoryLabel(label, theme, measureText));
   }
   const gutterWidth = Math.min(widestLabel + 2 * GUTTER_PADDING, chartArea.width / 2);
   const halfWidth = (chartArea.width - gutterWidth) / 2;
@@ -77,28 +74,54 @@ export function mirrorGeometry(
 }
 
 /**
- * Value-axis ticks for both halves: the x scale's ticks mapped onto the left half (reversed,
- * 0 at `left.end`) and the right half (0 at `right.start`), labelled with absolute values.
- * An authored `axis.values` or `axis.tickCount` applies to each half.
+ * Value-axis ticks for both halves: ticks of the mirror's own [0, max] value scale mapped onto
+ * the left half (reversed, 0 at `left.end`) and the right half (0 at `right.start`), so every
+ * label is non-negative. An authored `axis.values` (non-negative, within the domain) or
+ * `axis.tickCount` applies to each half. With no positive extent, only the 0 ticks remain.
  */
 export function mirrorAxisTicks(xScale: ResolvedScale, geometry: MirrorGeometry): AxisTick[] {
   const halfWidth = geometry.right.end - geometry.right.start;
   const axis = xScale.channel.axis || undefined;
-  const baseTicks = axis?.values
-    ? resolveExplicitTicks(axis.values, xScale)
-    : continuousTicks(xScale, 'full', targetTickCount(halfWidth, 'full', 'x'));
-  const fractionOf = rangeFraction(xScale);
-  const onScale = baseTicks
-    .map((tick) => ({ tick, fraction: fractionOf(tick.value as number) }))
-    .filter(({ fraction }) => fraction >= -1e-9 && fraction <= 1 + 1e-9);
-  const left = onScale
-    .map(({ tick, fraction }) => ({ ...tick, position: geometry.left.end - fraction * halfWidth }))
-    .reverse();
-  const right = onScale.map(({ tick, fraction }) => ({
-    ...tick,
-    position: geometry.right.start + fraction * halfWidth,
-  }));
-  return [...left, ...right];
+  const tickCount = mirrorTickCount(xScale, halfWidth);
+  const valueScale = mirrorValueScale(xScale, halfWidth, tickCount);
+  const [, domainMax] = valueScale?.domain() ?? [0, 0];
+  const values = axis?.values
+    ? axis.values.map(Number).filter((value) => value >= 0 && value <= domainMax)
+    : (valueScale?.ticks(tickCount) ?? [0]);
+  const offsets = values.map((value) => ({ value, offset: valueScale ? valueScale(value) : 0 }));
+  const tick = (value: number, position: number): AxisTick => ({
+    value,
+    position,
+    label: formatTickLabel(value, xScale),
+  });
+  const left = offsets.map(({ value, offset }) => tick(value, geometry.left.end - offset));
+  const right = offsets.map(({ value, offset }) => tick(value, geometry.right.start + offset));
+  return [...left.reverse(), ...right];
+}
+
+/** Ticks per half: the authored `axis.tickCount`, else the usual x density for one half. */
+function mirrorTickCount(xScale: ResolvedScale, halfWidth: number): number {
+  const axis = xScale.channel.axis || undefined;
+  return axis?.tickCount ?? targetTickCount(halfWidth, 'full', 'x');
+}
+
+/**
+ * The value mapping both halves share: [0, max] onto [0, halfWidth], clamped, where max is
+ * the shared x domain's upper end (it already covers the largest value unless the author
+ * capped the domain, and the axis ticks can only see the scale). The shared domain's lower
+ * end is ignored, so negative data, `zero: false` or an authored floor never move 0 off the
+ * inner edges. Undefined when max is not positive (all-zero or all-negative data): every bar
+ * is then zero length.
+ */
+function mirrorValueScale(
+  xScale: ResolvedScale,
+  halfWidth: number,
+  tickCount: number,
+): ScaleLinear<number, number> | undefined {
+  const domain = (xScale.scale as D3ContinuousScale).domain().map(Number);
+  const max = Math.max(0, ...domain.filter(Number.isFinite));
+  if (!(max > 0)) return undefined;
+  return scaleLinear().domain([0, max]).range([0, halfWidth]).nice(tickCount).clamp(true);
 }
 
 /**
@@ -138,27 +161,21 @@ export function computeMirrorMarks(
 
   return [
     ...rects,
-    ...categoryLabelMarks(categories, yScale, geometry, theme),
+    ...categoryLabelMarks(categories, yScale, geometry, theme, measureText),
     ...halfLabelMarks(sides, geometry, chartArea, theme),
   ];
 }
 
-/** Maps a value to its share (0 at the domain start, 1 at the end) of the x scale's range. */
-function rangeFraction(xScale: ResolvedScale): (value: number) => number {
-  const scale = xScale.scale as D3ContinuousScale;
-  const [rangeStart, rangeEnd] = scale.range() as [number, number];
-  const span = rangeEnd - rangeStart;
-  return (value) => (span === 0 ? 0 : ((scale(value) as number) - rangeStart) / span);
-}
-
 /**
  * The two color values in side order, left first: by an explicit sort array or direction,
- * else in the order they first appear in the data.
+ * else in the order they first appear in the data. Rows with no color value pick no side.
  */
 function sideOrder(data: DataRow[], colorField: string, sort: unknown): string[] {
   const firstSeen: string[] = [];
   for (const row of data) {
-    const value = String(row[colorField] ?? '');
+    const raw = row[colorField];
+    if (raw === undefined || raw === null) continue;
+    const value = String(raw);
     if (!firstSeen.includes(value)) firstSeen.push(value);
   }
   if (Array.isArray(sort)) {
@@ -188,20 +205,21 @@ function buildMirrorRects(
   fields: MirrorFields,
 ): RectMark[] {
   const yScale = scales.y!.scale as ScaleBand<string>;
-  const fractionOf = rangeFraction(scales.x!);
   const halfWidth = geometry.right.end - geometry.right.start;
+  const valueScale = mirrorValueScale(scales.x!, halfWidth, mirrorTickCount(scales.x!, halfWidth));
   const bandwidth = yScale.bandwidth();
   const marks: RectMark[] = [];
   for (const row of spec.data) {
     const value = finiteNumber(row[fields.xField]);
     const category = String(row[fields.yField] ?? '');
     const bandY = yScale(category);
-    const series = String(row[fields.colorField] ?? '');
-    const sideIndex = fields.sides.indexOf(series);
+    const rawSeries = row[fields.colorField];
+    const series = String(rawSeries ?? '');
+    const sideIndex = rawSeries == null ? -1 : fields.sides.indexOf(series);
     if (value === undefined || bandY === undefined || sideIndex < 0 || sideIndex > 1) continue;
 
     const onLeft = sideIndex === 0;
-    const length = Math.max(0, fractionOf(value) * halfWidth);
+    const length = valueScale ? valueScale(Math.max(0, value)) : 0;
     const color = getColor(scales, series);
     marks.push({
       type: 'rect',

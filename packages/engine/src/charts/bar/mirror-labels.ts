@@ -3,25 +3,46 @@
  * in the gutter, and the two half labels above the plot.
  */
 import type {
+  MeasureTextFn,
   Rect,
   RectMark,
   ResolvedLabel,
   ResolvedTheme,
   TextMarkLayout,
 } from '@opendata-ai/openchart-core';
-import { getRepresentativeColor } from '@opendata-ai/openchart-core';
+import {
+  estimateTextWidth,
+  getRepresentativeColor,
+  truncateToWidth,
+} from '@opendata-ai/openchart-core';
 import type { ScaleBand } from 'd3-scale';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { resolveFieldFormatter } from '../../format/field-format';
 import { filterByDensity } from '../_shared/density-filter';
 import type { MirrorGeometry } from './mirror';
 
+/** Space between a category label and each half's inner edge. */
+export const GUTTER_PADDING = 8;
 /** Space between a half label's baseline and the top of the plot. */
 const HALF_LABEL_GAP = 8;
 const HALF_LABEL_LINE_HEIGHT = 1.2;
 const VALUE_LABEL_GAP = 6;
 const VALUE_LABEL_FONT_SIZE = 11;
 const VALUE_LABEL_FONT_WEIGHT = 600;
+
+/** Width of a category label at the axis tick font, the measure the gutter is sized by. */
+export function measureCategoryLabel(
+  label: string,
+  theme: ResolvedTheme,
+  measureText: MeasureTextFn | undefined,
+): number {
+  const fontSize = theme.fonts.sizes.axisTick;
+  const fontWeight = theme.fonts.weights.normal;
+  return (
+    measureText?.(label, fontSize, fontWeight).width ??
+    estimateTextWidth(label, fontSize, fontWeight)
+  );
+}
 
 /**
  * Height the two half labels need above the plot, so the layout plan can reserve it.
@@ -67,15 +88,24 @@ export function attachValueLabels(
   }
 }
 
-/** One label per category, centered in the gutter on its row. */
+/**
+ * One label per category, centered in the gutter on its row. A label wider than the gutter
+ * (which is capped at half the plot) is cut with an ellipsis; the full text stays in the
+ * mark's data and aria label.
+ */
 export function categoryLabelMarks(
   categories: string[],
   yScale: ScaleBand<string>,
   geometry: MirrorGeometry,
   theme: ResolvedTheme,
+  measureText?: MeasureTextFn,
 ): TextMarkLayout[] {
   const centerX = (geometry.gutter.start + geometry.gutter.end) / 2;
   const halfBand = yScale.bandwidth() / 2;
+  // The gutter is sized to the widest label exactly; the epsilon keeps that label from being
+  // cut over the float error of rebuilding its width from the gutter's pixel edges.
+  const budget = geometry.gutter.end - geometry.gutter.start - 2 * GUTTER_PADDING + 1e-6;
+  const measure = (text: string) => measureCategoryLabel(text, theme, measureText);
   return categories.flatMap((category) => {
     const bandY = yScale(category);
     if (bandY === undefined) return [];
@@ -85,15 +115,21 @@ export function categoryLabelMarks(
         key: `oc-mirror-category|${category}`,
         x: centerX,
         y: bandY + halfBand,
-        text: category,
+        text: truncateToWidth(
+          category,
+          budget,
+          theme.fonts.sizes.axisTick,
+          theme.fonts.weights.normal,
+          measure,
+        ),
         fill: theme.colors.axis,
         fontSize: theme.fonts.sizes.axisTick,
         fontWeight: theme.fonts.weights.normal,
         fontFamily: theme.fonts.family,
         textAnchor: 'middle' as const,
         dominantBaseline: 'central' as const,
-        data: {},
-        aria: { decorative: true },
+        data: { category },
+        aria: { label: category, decorative: true },
       },
     ];
   });
