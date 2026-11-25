@@ -42,6 +42,14 @@ const DENSE_LAYER_POINTS = 200;
 // Helpers
 // ---------------------------------------------------------------------------
 
+/**
+ * Default point fill opacity for a layer of `pointCount` points: near-solid below 200,
+ * more transparent at or above it so overplotting still reads as density.
+ */
+export function pointFillOpacity(pointCount: number): number {
+  return pointCount < DENSE_LAYER_POINTS ? 0.85 : 0.6;
+}
+
 /** Resolve a data value to a pixel position based on channel type and scale. */
 function resolvePosition(
   value: unknown,
@@ -153,7 +161,7 @@ export function computeScatterMarks(
   // A knockout stroke at 1.5px separates touching dots, which lets the fill
   // run near-solid without overplotting turning into mush. Dense layers still
   // need the extra transparency to show pile-up.
-  const defaultFillOpacity = spec.data.length < DENSE_LAYER_POINTS ? 0.85 : 0.6;
+  const defaultFillOpacity = pointFillOpacity(spec.data.length);
 
   const keyEnc = encoding.key && 'field' in encoding.key ? encoding.key : undefined;
   const keyField = keyEnc?.field;

@@ -708,6 +708,33 @@ describe('SVG root structure', () => {
     expect(clippedGroup).not.toBeNull();
     expect(clippedGroup!.getAttribute('clip-path')).toMatch(/url\(#oc-clip-/);
   });
+
+  it('keeps text marks placed above the plot inside the clip', () => {
+    const container = createContainer(COMPILE_OPTS.width, COMPILE_OPTS.height);
+    const layout = compileChart(lineSpec, COMPILE_OPTS);
+    const plain = renderChartSVG(layout, container).querySelector('clipPath rect');
+    expect(Number(plain!.getAttribute('y'))).toBe(layout.area.y - 2);
+
+    const label = {
+      type: 'textMark' as const,
+      x: layout.area.x,
+      y: layout.area.y - 20,
+      text: 'Male',
+      fill: '#000',
+      fontSize: 14,
+      textAnchor: 'middle' as const,
+      data: {},
+      aria: { decorative: true },
+    };
+    const withLabel = { ...layout, marks: [...layout.marks, label] } as typeof layout;
+    const rect = renderChartSVG(withLabel, createContainer(600, 400)).querySelector(
+      'clipPath rect',
+    );
+    expect(Number(rect!.getAttribute('y'))).toBe(layout.area.y - 34);
+    expect(Number(rect!.getAttribute('y')) + Number(rect!.getAttribute('height'))).toBe(
+      layout.area.y + layout.area.height + 2,
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------

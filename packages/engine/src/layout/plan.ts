@@ -343,7 +343,8 @@ export function resolveLayoutPlan(
   // or the reserved left margin won't line up with where the title is drawn.
   // Sparkline display already returned early above, so no sparkline guard needed.
   const yIsInline = yTickPositionIsInline(encoding.y, renderSpec.markType);
-  const yAxisSuppressed = encoding.y?.axis === false;
+  // Mirrored bars draw their categories in a center gutter, so no y axis claims the left edge.
+  const yAxisSuppressed = encoding.y?.axis === false || renderSpec.markDef.mirror === true;
 
   // -----------------------------------------------------------------------
   // Seed gutter from formatted max |y|
@@ -622,7 +623,10 @@ export function resolveLayoutPlan(
     // Evaluate each authored mode against the same frame the budget places.
     // This is a planning measurement: no marks/scales are placed or recompiled.
     const selectValueLabelPlan = (gutter: number, inlineInset = 0): BarLabelPlan | undefined => {
-      if (renderSpec.markType !== 'bar' || !renderSpec.labels.placement) return undefined;
+      // Mirrored bars always plan: their half labels and outer value labels need reserved room.
+      const mirrored = renderSpec.markDef.mirror === true;
+      if (renderSpec.markType !== 'bar' || (!renderSpec.labels.placement && !mirrored))
+        return undefined;
       const baseMargins = frameMargins(frameCtx, spacing, frameRef, {
         legendContent,
         sizeLegendContent,
@@ -787,6 +791,7 @@ export function resolveLayoutPlan(
       const yAxisDef = encoding.y?.axis as Record<string, unknown> | undefined;
       if (
         yAxisDef &&
+        !yAxisSuppressed &&
         (yAxisDef.title || yAxisDef.label) &&
         !isRadial &&
         !isYAxisHeader(encoding.y)
