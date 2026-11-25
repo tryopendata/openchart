@@ -14,6 +14,7 @@ import { materializeCanvasModeSVG } from './export-canvas';
 import type { GIFExportOptions } from './export-gif';
 import { exportEntranceGIF } from './export-gif-lazy';
 import type { ChartInstance, ExportOptions } from './mount-types';
+import type { PlaybackExportSource } from './playback/chart-playback-host';
 import type { ScatterCanvasLayer } from './scatter-canvas/layer';
 import { renderChartSVG } from './svg-renderer';
 import { prepareSettledExportTheme } from './theme-style-block';
@@ -24,6 +25,28 @@ export interface ExportState {
   canvasLayer: ScatterCanvasLayer | null;
   currentLayout: ChartLayout;
   currentSpec: ChartSpec | LayerSpec;
+  /** The playback a time spec's GIF steps through; null for charts without time. */
+  playback: PlaybackExportSource | null;
+}
+
+/**
+ * Encode a playback chart's run as a GIF from a settled render of its base layout, loading
+ * the encoder on first use.
+ */
+function exportPlaybackChartGIF(
+  liveSVG: SVGElement,
+  source: PlaybackExportSource,
+  options: GIFExportOptions,
+  explicitTheme: boolean,
+): Promise<Blob> {
+  const svg = renderChartSVG(source.layout, document.createElement('div'), { animate: false });
+  prepareSettledExportTheme(liveSVG, svg, options.theme, explicitTheme);
+  return import('./playback/chart-export-gif').then(({ exportChartPlaybackGIF }) =>
+    exportChartPlaybackGIF(
+      { svg: svg as SVGSVGElement, playback: source.playback, hiddenKeys: source.hiddenKeys },
+      options,
+    ),
+  );
 }
 
 export function createChartExporter(state: () => ExportState): ChartInstance['export'] {
@@ -37,9 +60,18 @@ export function createChartExporter(state: () => ExportState): ChartInstance['ex
     format: 'svg' | 'svg-with-fonts' | 'png' | 'jpg' | 'gif' | 'csv',
     exportOptions?: ExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
-    const { svgElement, canvasLayer, currentLayout, currentSpec } = state();
+    const { svgElement, canvasLayer, currentLayout, currentSpec, playback } = state();
     if (!svgElement) {
       throw new Error('Chart is not rendered yet');
+    }
+    if (format === 'gif' && playback) {
+      const theme = exportOptions?.theme ?? playback.layout.theme;
+      return exportPlaybackChartGIF(
+        svgElement,
+        playback,
+        { ...exportOptions, theme },
+        !!exportOptions?.theme,
+      );
     }
     // In canvas mode the on-screen SVG has no dots, no gridlines and no
     // background -- the canvas owns those. Serializing it would export an

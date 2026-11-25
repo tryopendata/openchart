@@ -880,6 +880,7 @@ export function createChart<TData extends DataRow = DataRow>(
       canvasLayer,
       currentLayout: playback.frameLayout(settled) ?? settled,
       currentSpec,
+      playback: playback.exportSource(settled),
     };
   });
 

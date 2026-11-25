@@ -3288,9 +3288,9 @@ export interface PlaybackConfig {
         /** Where the label sits. Defaults to `auto`: centered for scatter, lower left for maps, upper right for bars. */
         position?: PlaybackPeriodPosition;
       };
-  /** Point and circle charts only: keys whose name is drawn next to the mark for the whole run. */
+  /** Point marks only: keys whose name is drawn next to the mark for the whole run. */
   labels?: string[];
-  /** Point and circle charts only: draw past positions as a trail. `true` is every key; an array names keys. Defaults to false. */
+  /** Point marks only: draw past positions as a trail. `true` is every key; an array names keys. Defaults to false. */
   trails?: boolean | string[];
 }
 
