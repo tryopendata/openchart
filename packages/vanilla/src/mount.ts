@@ -41,6 +41,7 @@ import {
   wireKeyboardNav,
   wireLegendDrag,
   wireLegendInteraction,
+  wireMirrorHalfLabelHover,
   wireTooltipEvents,
   wireVoronoiTooltipEvents,
 } from './interactions';
@@ -448,6 +449,7 @@ export function createChart<TData extends DataRow = DataRow>(
       restoreNavigation = undefined;
     });
     track(wireEndpointLabelHover(svgElement, hoverEmphasis));
+    track(wireMirrorHalfLabelHover(svgElement, hoverEmphasis));
 
     if (
       options?.rowHover &&

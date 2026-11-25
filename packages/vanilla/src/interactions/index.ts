@@ -12,7 +12,11 @@ export {
   wireLegendDrag,
 } from './editing-drags';
 export type { HoverEmphasis } from './hover-emphasis';
-export { createHoverEmphasis, wireEndpointLabelHover } from './hover-emphasis';
+export {
+  createHoverEmphasis,
+  wireEndpointLabelHover,
+  wireMirrorHalfLabelHover,
+} from './hover-emphasis';
 export { invertScale } from './invert';
 export { wireKeyboardNav } from './keyboard-nav';
 export { wireLegendInteraction } from './legend-interaction';

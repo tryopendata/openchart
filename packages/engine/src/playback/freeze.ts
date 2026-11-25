@@ -92,7 +92,8 @@ function envelopeRows(spec: ChartSpec, matrix: PlaybackMatrix): DataRow[] {
  *
  * The matrix's channels are named after the encoding channels they feed (`x`, `y`, `size`
  * for points; `x` for horizontal bars), each reading that channel's field, and its
- * statics carry the color, key and other nominal fields.
+ * statics carry the color, key and other nominal fields. The crosshair is off: a time spec
+ * uses element hit-testing for tooltips.
  */
 export function buildEnvelopeSpec(spec: ChartSpec, matrix: PlaybackMatrix): ChartSpec {
   const {
@@ -108,11 +109,11 @@ export function buildEnvelopeSpec(spec: ChartSpec, matrix: PlaybackMatrix): Char
       : spec.mark;
   const rows = envelopeRows(spec, matrix);
   if (rows.length === 0)
-    return { ...rest, mark, encoding, transform, data: spec.data } as ChartSpec;
+    return { ...rest, mark, encoding, transform, data: spec.data, crosshair: false } as ChartSpec;
   const stack = summedStackFields(spec);
   const timeField = channelField((spec.encoding as Encoding & { time?: unknown }).time);
   const data = stack && timeField ? tallestStackRows(rows, stack, timeField) : rows;
-  return { ...rest, mark, encoding, data } as ChartSpec;
+  return { ...rest, mark, encoding, data, crosshair: false } as ChartSpec;
 }
 
 function resolveFormatters(

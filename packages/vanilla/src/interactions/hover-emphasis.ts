@@ -175,3 +175,37 @@ export function wireEndpointLabelHover(svg: SVGElement, emphasis: HoverEmphasis)
     for (const cleanup of cleanups) cleanup();
   };
 }
+
+/** Key prefix of the mirrored-bar half labels (`oc-mirror-half|<side>`, set by the engine). */
+const MIRROR_HALF_KEY_PREFIX = 'oc-mirror-half|';
+
+/**
+ * Hover-link the half labels above a mirrored bar chart, which replace its swatch
+ * legend: hovering one raises that side's series and dims the other, as a legend
+ * swatch does. The label itself stays undimmed. Hover only, no click toggle.
+ * Returns a cleanup function.
+ */
+export function wireMirrorHalfLabelHover(svg: SVGElement, emphasis: HoverEmphasis): () => void {
+  const entries = svg.querySelectorAll(`[data-key^="${MIRROR_HALF_KEY_PREFIX}"]`);
+  const cleanups: Array<() => void> = [];
+
+  for (const entry of entries) {
+    const side = entry.getAttribute('data-key')?.slice(MIRROR_HALF_KEY_PREFIX.length);
+    if (!side) continue;
+    const handleEnter = () => {
+      emphasis.setSeries(side);
+      entry.classList.remove(MARK_DIM_CLASS);
+    };
+    const handleLeave = () => emphasis.clear();
+    entry.addEventListener('mouseenter', handleEnter);
+    entry.addEventListener('mouseleave', handleLeave);
+    cleanups.push(() => {
+      entry.removeEventListener('mouseenter', handleEnter);
+      entry.removeEventListener('mouseleave', handleLeave);
+    });
+  }
+
+  return () => {
+    for (const cleanup of cleanups) cleanup();
+  };
+}

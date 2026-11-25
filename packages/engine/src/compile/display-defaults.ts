@@ -148,7 +148,8 @@ export function resolveChartAnimation(
  * Crosshair: explicit user value at any level wins. Default is ON for line
  * and area marks in full mode (the hover guideline + per-series tooltip is
  * the standard interaction pattern for time-series charts). Sparkline mode
- * defaults off. The value is plumbed through ChartLayout so the renderer
+ * defaults off. Mirrored bars and specs with `encoding.time` never get one: their
+ * tooltips use element hit-testing. The value is plumbed through ChartLayout so the renderer
  * doesn't need to re-inspect the raw spec.
  */
 export function resolveCrosshair(
@@ -156,6 +157,10 @@ export function resolveCrosshair(
   bp: BreakpointOverride | undefined,
   chartSpec: NormalizedChartSpec,
 ): boolean {
+  const hitTested =
+    (chartSpec.markDef.type === 'bar' && chartSpec.markDef.mirror === true) ||
+    (chartSpec.encoding as Record<string, unknown>).time !== undefined;
+  if (hitTested) return false;
   const rawCrosshair = (bp?.crosshair ?? rawSpec.crosshair) as boolean | undefined;
   const isLineOrAreaMark = chartSpec.markType === 'line' || chartSpec.markType === 'area';
   const crosshairDefault = chartSpec.display === 'sparkline' ? false : isLineOrAreaMark;
