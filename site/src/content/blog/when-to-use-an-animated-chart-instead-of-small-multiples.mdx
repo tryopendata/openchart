@@ -1,0 +1,460 @@
+---
+title: When to use an animated chart instead of small multiples
+description: Animation shows movement over many years; small multiples let readers compare them. World Bank data drawn three ways shows what each view keeps and loses.
+published: 2026-11-25
+author: OpenChart
+tags: [chart-choice]
+related: [change-over-time/playback, correlation/bubble-playback, composition/facets, behavior/motion]
+lead: blog/wealth-health-small-multiples
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Use an animated chart when the story is how things moved over many periods and the reader will watch it play, as in a talk, a video or a social post. Use small multiples when the reader needs to compare positions at different times, read exact values or see the chart in print.
+
+An animated bubble chart of the World Bank's income and life expectancy figures for 62 countries plays 64 years in 25 seconds. The same data as small multiples puts four of those years side by side, and a connected scatter traces a few countries through all 64 at once.
+
+## What the animation shows well
+
+The playback below moves each country through income and life expectancy one year at a time, from 1960 to 2023.
+
+<Demo id="blog/wealth-health-playback" />
+
+Motion makes sudden changes stand out. Cambodia's bubble drops from a life expectancy of 39 years to 13 in 1975 and to 11.3 in 1977, under the Khmer Rouge, then climbs back to 47.5 by 1980. In the playback that is a bubble falling to the bottom of the chart and bouncing back, and nobody misses it. China's climb from 33.4 years in 1960 to 64.8 in 1981, while its GDP per person stayed under $200, reads as a large bubble rising almost straight up.
+
+Animation also suits a presenter. Someone who pauses on 1977 and says what happened in Cambodia gives the reader the frame and the explanation together, which is how Hans Rosling used this kind of chart in his Gapminder talks.
+
+## What the animation hides
+
+Two years never share the screen. To compare China in 1980 with China in 2023, a reader has to remember where a bubble was 17 seconds earlier, and to compare it with India in 2000 as well, they need three frames in memory at once. Readers can't do that with any precision.
+
+A reader who scrolls past sees whatever frame is up at that moment, a printed page shows one frame, and a reader who prefers reduced motion sees the last year. The chart's title has to carry the finding on its own for all of them.
+
+OpenChart softens these costs without removing them:
+
+- The control strip pauses, scrubs and steps one year at a time with the arrow keys, so a reader can stop on 1977 and look.
+- The axes are fixed for the whole run, so a position in 1975 and a position in 2023 sit on the same gridlines.
+- With reduced motion the chart doesn't autoplay and opens on the last year, and stepping moves from year to year without sliding.
+- `playback.trails` keeps the path behind a few named countries, which turns part of the animation into a connected scatter.
+- A static render or export draws any single year, chosen by period index.
+
+For screen readers the cost stays high. After a pause or a step they hear the year and how many countries are on the chart, not where any of them moved.
+
+## A connected scatter keeps the paths
+
+A connected scatter draws each country's whole path at once: one dot per year, joined in time order. Five countries fit before the lines tangle.
+
+```json demo source="World Bank, World Development Indicators" height=520 phone-height=560
+{
+  "mark": "point",
+  "encoding": {
+    "x": {
+      "field": "gdp",
+      "type": "quantitative",
+      "scale": {
+        "type": "log"
+      },
+      "axis": {
+        "title": "GDP per capita (current US$, log scale)",
+        "format": "$,.0f"
+      }
+    },
+    "y": {
+      "field": "life",
+      "type": "quantitative",
+      "axis": {
+        "title": "Life expectancy at birth (years)"
+      }
+    },
+    "color": {
+      "field": "country",
+      "type": "nominal"
+    },
+    "key": {
+      "field": "country",
+      "type": "nominal"
+    },
+    "time": {
+      "field": "year",
+      "type": "temporal"
+    }
+  },
+  "playback": {
+    "labels": [
+      "China",
+      "India",
+      "Nigeria",
+      "South Korea",
+      "United States"
+    ],
+    "trails": true
+  },
+  "animation": false,
+  "legend": {
+    "show": false
+  },
+  "chrome": {
+    "title": "China's life expectancy is within half a year of America's on a sixth of the income",
+    "subtitle": "GDP per capita and life expectancy, 1960-2023. Each line is one country's path, one dot per year."
+  },
+  "data": [
+    { "country": "China", "year": 1960, "gdp": 90, "life": 33.4 },
+    { "country": "China", "year": 1961, "gdp": 76, "life": 40.2 },
+    { "country": "China", "year": 1962, "gdp": 71, "life": 51 },
+    { "country": "China", "year": 1963, "gdp": 74, "life": 51.7 },
+    { "country": "China", "year": 1964, "gdp": 86, "life": 52.3 },
+    { "country": "China", "year": 1965, "gdp": 99, "life": 53 },
+    { "country": "China", "year": 1966, "gdp": 105, "life": 53.7 },
+    { "country": "China", "year": 1967, "gdp": 97, "life": 54.4 },
+    { "country": "China", "year": 1968, "gdp": 92, "life": 55.2 },
+    { "country": "China", "year": 1969, "gdp": 100, "life": 56 },
+    { "country": "China", "year": 1970, "gdp": 113, "life": 56.8 },
+    { "country": "China", "year": 1971, "gdp": 119, "life": 57.7 },
+    { "country": "China", "year": 1972, "gdp": 132, "life": 58.6 },
+    { "country": "China", "year": 1973, "gdp": 157, "life": 59.5 },
+    { "country": "China", "year": 1974, "gdp": 160, "life": 60.2 },
+    { "country": "China", "year": 1975, "gdp": 179, "life": 61 },
+    { "country": "China", "year": 1976, "gdp": 166, "life": 61.2 },
+    { "country": "China", "year": 1977, "gdp": 186, "life": 62.5 },
+    { "country": "China", "year": 1978, "gdp": 157, "life": 63.1 },
+    { "country": "China", "year": 1979, "gdp": 184, "life": 63.7 },
+    { "country": "China", "year": 1980, "gdp": 195, "life": 64.2 },
+    { "country": "China", "year": 1981, "gdp": 197, "life": 64.8 },
+    { "country": "China", "year": 1982, "gdp": 204, "life": 65.2 },
+    { "country": "China", "year": 1983, "gdp": 226, "life": 65.7 },
+    { "country": "China", "year": 1984, "gdp": 251, "life": 66.1 },
+    { "country": "China", "year": 1985, "gdp": 295, "life": 66.5 },
+    { "country": "China", "year": 1986, "gdp": 282, "life": 66.9 },
+    { "country": "China", "year": 1987, "gdp": 252, "life": 67.3 },
+    { "country": "China", "year": 1988, "gdp": 284, "life": 67.6 },
+    { "country": "China", "year": 1989, "gdp": 311, "life": 67.9 },
+    { "country": "China", "year": 1990, "gdp": 319, "life": 68.2 },
+    { "country": "China", "year": 1991, "gdp": 334, "life": 68.6 },
+    { "country": "China", "year": 1992, "gdp": 368, "life": 69.1 },
+    { "country": "China", "year": 1993, "gdp": 379, "life": 69.5 },
+    { "country": "China", "year": 1994, "gdp": 476, "life": 69.8 },
+    { "country": "China", "year": 1995, "gdp": 613, "life": 70.4 },
+    { "country": "China", "year": 1996, "gdp": 713, "life": 70.8 },
+    { "country": "China", "year": 1997, "gdp": 787, "life": 71.2 },
+    { "country": "China", "year": 1998, "gdp": 835, "life": 71.6 },
+    { "country": "China", "year": 1999, "gdp": 881, "life": 72 },
+    { "country": "China", "year": 2000, "gdp": 969, "life": 72.3 },
+    { "country": "China", "year": 2001, "gdp": 1065, "life": 72.7 },
+    { "country": "China", "year": 2002, "gdp": 1164, "life": 73 },
+    { "country": "China", "year": 2003, "gdp": 1307, "life": 73.4 },
+    { "country": "China", "year": 2004, "gdp": 1531, "life": 73.7 },
+    { "country": "China", "year": 2005, "gdp": 1778, "life": 74.1 },
+    { "country": "China", "year": 2006, "gdp": 2129, "life": 74.4 },
+    { "country": "China", "year": 2007, "gdp": 2735, "life": 74.8 },
+    { "country": "China", "year": 2008, "gdp": 3523, "life": 74.8 },
+    { "country": "China", "year": 2009, "gdp": 3898, "life": 75.3 },
+    { "country": "China", "year": 2010, "gdp": 4629, "life": 75.7 },
+    { "country": "China", "year": 2011, "gdp": 5704, "life": 75.9 },
+    { "country": "China", "year": 2012, "gdp": 6405, "life": 76.2 },
+    { "country": "China", "year": 2013, "gdp": 7147, "life": 76.5 },
+    { "country": "China", "year": 2014, "gdp": 7781, "life": 76.7 },
+    { "country": "China", "year": 2015, "gdp": 8175, "life": 77 },
+    { "country": "China", "year": 2016, "gdp": 8255, "life": 77.2 },
+    { "country": "China", "year": 2017, "gdp": 8980, "life": 77.2 },
+    { "country": "China", "year": 2018, "gdp": 10086, "life": 77.7 },
+    { "country": "China", "year": 2019, "gdp": 10343, "life": 77.9 },
+    { "country": "China", "year": 2020, "gdp": 10627, "life": 78 },
+    { "country": "China", "year": 2021, "gdp": 12887, "life": 78.1 },
+    { "country": "China", "year": 2022, "gdp": 12971, "life": 78.2 },
+    { "country": "China", "year": 2023, "gdp": 12951, "life": 78 },
+    { "country": "India", "year": 1960, "gdp": 85, "life": 45.6 },
+    { "country": "India", "year": 1961, "gdp": 88, "life": 45.8 },
+    { "country": "India", "year": 1962, "gdp": 92, "life": 46.1 },
+    { "country": "India", "year": 1963, "gdp": 103, "life": 46.5 },
+    { "country": "India", "year": 1964, "gdp": 118, "life": 46.7 },
+    { "country": "India", "year": 1965, "gdp": 122, "life": 45.6 },
+    { "country": "India", "year": 1966, "gdp": 91, "life": 45.9 },
+    { "country": "India", "year": 1967, "gdp": 98, "life": 46.2 },
+    { "country": "India", "year": 1968, "gdp": 102, "life": 47.9 },
+    { "country": "India", "year": 1969, "gdp": 109, "life": 48.3 },
+    { "country": "India", "year": 1970, "gdp": 114, "life": 48.6 },
+    { "country": "India", "year": 1971, "gdp": 121, "life": 48.9 },
+    { "country": "India", "year": 1972, "gdp": 125, "life": 49.2 },
+    { "country": "India", "year": 1973, "gdp": 147, "life": 49.6 },
+    { "country": "India", "year": 1974, "gdp": 167, "life": 50.3 },
+    { "country": "India", "year": 1975, "gdp": 161, "life": 50.8 },
+    { "country": "India", "year": 1976, "gdp": 164, "life": 51.3 },
+    { "country": "India", "year": 1977, "gdp": 190, "life": 51.8 },
+    { "country": "India", "year": 1978, "gdp": 209, "life": 52.4 },
+    { "country": "India", "year": 1979, "gdp": 228, "life": 53 },
+    { "country": "India", "year": 1980, "gdp": 271, "life": 53.6 },
+    { "country": "India", "year": 1981, "gdp": 275, "life": 54.2 },
+    { "country": "India", "year": 1982, "gdp": 279, "life": 54.7 },
+    { "country": "India", "year": 1983, "gdp": 296, "life": 55.3 },
+    { "country": "India", "year": 1984, "gdp": 281, "life": 55.8 },
+    { "country": "India", "year": 1985, "gdp": 301, "life": 56.3 },
+    { "country": "India", "year": 1986, "gdp": 315, "life": 56.8 },
+    { "country": "India", "year": 1987, "gdp": 345, "life": 57.3 },
+    { "country": "India", "year": 1988, "gdp": 358, "life": 57.7 },
+    { "country": "India", "year": 1989, "gdp": 350, "life": 58.2 },
+    { "country": "India", "year": 1990, "gdp": 371, "life": 58.6 },
+    { "country": "India", "year": 1991, "gdp": 306, "life": 59 },
+    { "country": "India", "year": 1992, "gdp": 319, "life": 59.4 },
+    { "country": "India", "year": 1993, "gdp": 303, "life": 59.8 },
+    { "country": "India", "year": 1994, "gdp": 348, "life": 60.2 },
+    { "country": "India", "year": 1995, "gdp": 375, "life": 60.6 },
+    { "country": "India", "year": 1996, "gdp": 401, "life": 61 },
+    { "country": "India", "year": 1997, "gdp": 416, "life": 61.4 },
+    { "country": "India", "year": 1998, "gdp": 414, "life": 61.9 },
+    { "country": "India", "year": 1999, "gdp": 442, "life": 62.3 },
+    { "country": "India", "year": 2000, "gdp": 443, "life": 62.7 },
+    { "country": "India", "year": 2001, "gdp": 450, "life": 63.2 },
+    { "country": "India", "year": 2002, "gdp": 469, "life": 63.6 },
+    { "country": "India", "year": 2003, "gdp": 544, "life": 64.1 },
+    { "country": "India", "year": 2004, "gdp": 624, "life": 64.5 },
+    { "country": "India", "year": 2005, "gdp": 710, "life": 64.9 },
+    { "country": "India", "year": 2006, "gdp": 802, "life": 65.4 },
+    { "country": "India", "year": 2007, "gdp": 1022, "life": 65.8 },
+    { "country": "India", "year": 2008, "gdp": 993, "life": 66.2 },
+    { "country": "India", "year": 2009, "gdp": 1095, "life": 66.7 },
+    { "country": "India", "year": 2010, "gdp": 1348, "life": 67.2 },
+    { "country": "India", "year": 2011, "gdp": 1445, "life": 67.6 },
+    { "country": "India", "year": 2012, "gdp": 1429, "life": 68.1 },
+    { "country": "India", "year": 2013, "gdp": 1433, "life": 68.5 },
+    { "country": "India", "year": 2014, "gdp": 1554, "life": 68.9 },
+    { "country": "India", "year": 2015, "gdp": 1584, "life": 69.3 },
+    { "country": "India", "year": 2016, "gdp": 1708, "life": 69.7 },
+    { "country": "India", "year": 2017, "gdp": 1950, "life": 70.1 },
+    { "country": "India", "year": 2018, "gdp": 1966, "life": 70.4 },
+    { "country": "India", "year": 2019, "gdp": 2041, "life": 70.7 },
+    { "country": "India", "year": 2020, "gdp": 1907, "life": 70.2 },
+    { "country": "India", "year": 2021, "gdp": 2240, "life": 67.3 },
+    { "country": "India", "year": 2022, "gdp": 2347, "life": 71.7 },
+    { "country": "India", "year": 2023, "gdp": 2530, "life": 72 },
+    { "country": "Nigeria", "year": 1960, "gdp": 93, "life": 37.2 },
+    { "country": "Nigeria", "year": 1961, "gdp": 97, "life": 37.4 },
+    { "country": "Nigeria", "year": 1962, "gdp": 105, "life": 37.6 },
+    { "country": "Nigeria", "year": 1963, "gdp": 108, "life": 37.8 },
+    { "country": "Nigeria", "year": 1964, "gdp": 113, "life": 38 },
+    { "country": "Nigeria", "year": 1965, "gdp": 117, "life": 38.2 },
+    { "country": "Nigeria", "year": 1966, "gdp": 124, "life": 38.4 },
+    { "country": "Nigeria", "year": 1967, "gdp": 100, "life": 37.5 },
+    { "country": "Nigeria", "year": 1968, "gdp": 97, "life": 38.6 },
+    { "country": "Nigeria", "year": 1969, "gdp": 121, "life": 38.9 },
+    { "country": "Nigeria", "year": 1970, "gdp": 224, "life": 40 },
+    { "country": "Nigeria", "year": 1971, "gdp": 160, "life": 40.6 },
+    { "country": "Nigeria", "year": 1972, "gdp": 209, "life": 41.3 },
+    { "country": "Nigeria", "year": 1973, "gdp": 252, "life": 41.8 },
+    { "country": "Nigeria", "year": 1974, "gdp": 403, "life": 42.5 },
+    { "country": "Nigeria", "year": 1975, "gdp": 438, "life": 43.1 },
+    { "country": "Nigeria", "year": 1976, "gdp": 556, "life": 44.2 },
+    { "country": "Nigeria", "year": 1977, "gdp": 536, "life": 44.8 },
+    { "country": "Nigeria", "year": 1978, "gdp": 527, "life": 45.3 },
+    { "country": "Nigeria", "year": 1979, "gdp": 661, "life": 45.7 },
+    { "country": "Nigeria", "year": 1980, "gdp": 870, "life": 46 },
+    { "country": "Nigeria", "year": 1981, "gdp": 2162, "life": 46.3 },
+    { "country": "Nigeria", "year": 1982, "gdp": 1822, "life": 46.4 },
+    { "country": "Nigeria", "year": 1983, "gdp": 1207, "life": 46.4 },
+    { "country": "Nigeria", "year": 1984, "gdp": 890, "life": 46.3 },
+    { "country": "Nigeria", "year": 1985, "gdp": 869, "life": 46.2 },
+    { "country": "Nigeria", "year": 1986, "gdp": 628, "life": 46 },
+    { "country": "Nigeria", "year": 1987, "gdp": 588, "life": 45.9 },
+    { "country": "Nigeria", "year": 1988, "gdp": 540, "life": 45.8 },
+    { "country": "Nigeria", "year": 1989, "gdp": 465, "life": 45.8 },
+    { "country": "Nigeria", "year": 1990, "gdp": 556, "life": 45.7 },
+    { "country": "Nigeria", "year": 1991, "gdp": 597, "life": 45.5 },
+    { "country": "Nigeria", "year": 1992, "gdp": 509, "life": 45.6 },
+    { "country": "Nigeria", "year": 1993, "gdp": 540, "life": 45.8 },
+    { "country": "Nigeria", "year": 1994, "gdp": 745, "life": 45.7 },
+    { "country": "Nigeria", "year": 1995, "gdp": 1272, "life": 45.9 },
+    { "country": "Nigeria", "year": 1996, "gdp": 1633, "life": 45.8 },
+    { "country": "Nigeria", "year": 1997, "gdp": 1720, "life": 46 },
+    { "country": "Nigeria", "year": 1998, "gdp": 1822, "life": 46.1 },
+    { "country": "Nigeria", "year": 1999, "gdp": 481, "life": 46.6 },
+    { "country": "Nigeria", "year": 2000, "gdp": 547, "life": 47.1 },
+    { "country": "Nigeria", "year": 2001, "gdp": 566, "life": 47.5 },
+    { "country": "Nigeria", "year": 2002, "gdp": 712, "life": 48 },
+    { "country": "Nigeria", "year": 2003, "gdp": 763, "life": 48.6 },
+    { "country": "Nigeria", "year": 2004, "gdp": 962, "life": 49.1 },
+    { "country": "Nigeria", "year": 2005, "gdp": 1211, "life": 49.5 },
+    { "country": "Nigeria", "year": 2006, "gdp": 1600, "life": 49.9 },
+    { "country": "Nigeria", "year": 2007, "gdp": 1816, "life": 50.4 },
+    { "country": "Nigeria", "year": 2008, "gdp": 2154, "life": 50.7 },
+    { "country": "Nigeria", "year": 2009, "gdp": 1820, "life": 51.1 },
+    { "country": "Nigeria", "year": 2010, "gdp": 2202, "life": 51.3 },
+    { "country": "Nigeria", "year": 2011, "gdp": 2418, "life": 51.5 },
+    { "country": "Nigeria", "year": 2012, "gdp": 2633, "life": 51.7 },
+    { "country": "Nigeria", "year": 2013, "gdp": 2873, "life": 51.8 },
+    { "country": "Nigeria", "year": 2014, "gdp": 3089, "life": 51.9 },
+    { "country": "Nigeria", "year": 2015, "gdp": 2586, "life": 51.9 },
+    { "country": "Nigeria", "year": 2016, "gdp": 2070, "life": 52.2 },
+    { "country": "Nigeria", "year": 2017, "gdp": 1876, "life": 52.4 },
+    { "country": "Nigeria", "year": 2018, "gdp": 2058, "life": 52.7 },
+    { "country": "Nigeria", "year": 2019, "gdp": 3190, "life": 53 },
+    { "country": "Nigeria", "year": 2020, "gdp": 2797, "life": 53.1 },
+    { "country": "Nigeria", "year": 2021, "gdp": 2787, "life": 53.5 },
+    { "country": "Nigeria", "year": 2022, "gdp": 2899, "life": 54.1 },
+    { "country": "Nigeria", "year": 2023, "gdp": 2139, "life": 54.5 },
+    { "country": "South Korea", "year": 1960, "gdp": 159, "life": 53.8 },
+    { "country": "South Korea", "year": 1961, "gdp": 94, "life": 54.5 },
+    { "country": "South Korea", "year": 1962, "gdp": 107, "life": 55.1 },
+    { "country": "South Korea", "year": 1963, "gdp": 147, "life": 55 },
+    { "country": "South Korea", "year": 1964, "gdp": 124, "life": 55.4 },
+    { "country": "South Korea", "year": 1965, "gdp": 109, "life": 55.9 },
+    { "country": "South Korea", "year": 1966, "gdp": 134, "life": 55.5 },
+    { "country": "South Korea", "year": 1967, "gdp": 162, "life": 60.9 },
+    { "country": "South Korea", "year": 1968, "gdp": 200, "life": 60.9 },
+    { "country": "South Korea", "year": 1969, "gdp": 245, "life": 61.5 },
+    { "country": "South Korea", "year": 1970, "gdp": 282, "life": 62.2 },
+    { "country": "South Korea", "year": 1971, "gdp": 304, "life": 62.6 },
+    { "country": "South Korea", "year": 1972, "gdp": 328, "life": 63 },
+    { "country": "South Korea", "year": 1973, "gdp": 412, "life": 63.4 },
+    { "country": "South Korea", "year": 1974, "gdp": 572, "life": 63.8 },
+    { "country": "South Korea", "year": 1975, "gdp": 627, "life": 64.2 },
+    { "country": "South Korea", "year": 1976, "gdp": 847, "life": 64.5 },
+    { "country": "South Korea", "year": 1977, "gdp": 1073, "life": 64.9 },
+    { "country": "South Korea", "year": 1978, "gdp": 1429, "life": 65.2 },
+    { "country": "South Korea", "year": 1979, "gdp": 1814, "life": 65.5 },
+    { "country": "South Korea", "year": 1980, "gdp": 1746, "life": 66 },
+    { "country": "South Korea", "year": 1981, "gdp": 1918, "life": 66.5 },
+    { "country": "South Korea", "year": 1982, "gdp": 2032, "life": 67.1 },
+    { "country": "South Korea", "year": 1983, "gdp": 2246, "life": 67.5 },
+    { "country": "South Korea", "year": 1984, "gdp": 2469, "life": 68.2 },
+    { "country": "South Korea", "year": 1985, "gdp": 2543, "life": 68.8 },
+    { "country": "South Korea", "year": 1986, "gdp": 2911, "life": 69.4 },
+    { "country": "South Korea", "year": 1987, "gdp": 3658, "life": 70 },
+    { "country": "South Korea", "year": 1988, "gdp": 4889, "life": 70.5 },
+    { "country": "South Korea", "year": 1989, "gdp": 5989, "life": 71 },
+    { "country": "South Korea", "year": 1990, "gdp": 6813, "life": 71.6 },
+    { "country": "South Korea", "year": 1991, "gdp": 7873, "life": 72 },
+    { "country": "South Korea", "year": 1992, "gdp": 8387, "life": 72.5 },
+    { "country": "South Korea", "year": 1993, "gdp": 9180, "life": 73 },
+    { "country": "South Korea", "year": 1994, "gdp": 10734, "life": 73.4 },
+    { "country": "South Korea", "year": 1995, "gdp": 13002, "life": 73.7 },
+    { "country": "South Korea", "year": 1996, "gdp": 13865, "life": 74.2 },
+    { "country": "South Korea", "year": 1997, "gdp": 12822, "life": 74.6 },
+    { "country": "South Korea", "year": 1998, "gdp": 8583, "life": 75 },
+    { "country": "South Korea", "year": 1999, "gdp": 11063, "life": 75.4 },
+    { "country": "South Korea", "year": 2000, "gdp": 12710, "life": 75.9 },
+    { "country": "South Korea", "year": 2001, "gdp": 11981, "life": 76.4 },
+    { "country": "South Korea", "year": 2002, "gdp": 13643, "life": 76.8 },
+    { "country": "South Korea", "year": 2003, "gdp": 15212, "life": 77.2 },
+    { "country": "South Korea", "year": 2004, "gdp": 17122, "life": 77.7 },
+    { "country": "South Korea", "year": 2005, "gdp": 20167, "life": 78.2 },
+    { "country": "South Korea", "year": 2006, "gdp": 22610, "life": 78.7 },
+    { "country": "South Korea", "year": 2007, "gdp": 25078, "life": 79.1 },
+    { "country": "South Korea", "year": 2008, "gdp": 22252, "life": 79.5 },
+    { "country": "South Korea", "year": 2009, "gdp": 19937, "life": 80 },
+    { "country": "South Korea", "year": 2010, "gdp": 24071, "life": 80.1 },
+    { "country": "South Korea", "year": 2011, "gdp": 26175, "life": 80.6 },
+    { "country": "South Korea", "year": 2012, "gdp": 26601, "life": 80.8 },
+    { "country": "South Korea", "year": 2013, "gdp": 28449, "life": 81.3 },
+    { "country": "South Korea", "year": 2014, "gdp": 30667, "life": 81.7 },
+    { "country": "South Korea", "year": 2015, "gdp": 30172, "life": 82 },
+    { "country": "South Korea", "year": 2016, "gdp": 30832, "life": 82.3 },
+    { "country": "South Korea", "year": 2017, "gdp": 33297, "life": 82.6 },
+    { "country": "South Korea", "year": 2018, "gdp": 35364, "life": 82.6 },
+    { "country": "South Korea", "year": 2019, "gdp": 33827, "life": 83.2 },
+    { "country": "South Korea", "year": 2020, "gdp": 33646, "life": 83.4 },
+    { "country": "South Korea", "year": 2021, "gdp": 37518, "life": 83.5 },
+    { "country": "South Korea", "year": 2022, "gdp": 34822, "life": 82.7 },
+    { "country": "South Korea", "year": 2023, "gdp": 35674, "life": 83.4 },
+    { "country": "United States", "year": 1960, "gdp": 3000, "life": 69.8 },
+    { "country": "United States", "year": 1961, "gdp": 3059, "life": 70.3 },
+    { "country": "United States", "year": 1962, "gdp": 3236, "life": 70.1 },
+    { "country": "United States", "year": 1963, "gdp": 3366, "life": 69.9 },
+    { "country": "United States", "year": 1964, "gdp": 3565, "life": 70.2 },
+    { "country": "United States", "year": 1965, "gdp": 3818, "life": 70.2 },
+    { "country": "United States", "year": 1966, "gdp": 4136, "life": 70.2 },
+    { "country": "United States", "year": 1967, "gdp": 4326, "life": 70.6 },
+    { "country": "United States", "year": 1968, "gdp": 4685, "life": 70 },
+    { "country": "United States", "year": 1969, "gdp": 5020, "life": 70.5 },
+    { "country": "United States", "year": 1970, "gdp": 5234, "life": 70.8 },
+    { "country": "United States", "year": 1971, "gdp": 5609, "life": 71.1 },
+    { "country": "United States", "year": 1972, "gdp": 6094, "life": 71.2 },
+    { "country": "United States", "year": 1973, "gdp": 6726, "life": 71.4 },
+    { "country": "United States", "year": 1974, "gdp": 7226, "life": 72 },
+    { "country": "United States", "year": 1975, "gdp": 7801, "life": 72.6 },
+    { "country": "United States", "year": 1976, "gdp": 8592, "life": 72.9 },
+    { "country": "United States", "year": 1977, "gdp": 9453, "life": 73.3 },
+    { "country": "United States", "year": 1978, "gdp": 10565, "life": 73.4 },
+    { "country": "United States", "year": 1979, "gdp": 11674, "life": 73.8 },
+    { "country": "United States", "year": 1980, "gdp": 12575, "life": 73.6 },
+    { "country": "United States", "year": 1981, "gdp": 13976, "life": 74 },
+    { "country": "United States", "year": 1982, "gdp": 14434, "life": 74.4 },
+    { "country": "United States", "year": 1983, "gdp": 15544, "life": 74.5 },
+    { "country": "United States", "year": 1984, "gdp": 17121, "life": 74.6 },
+    { "country": "United States", "year": 1985, "gdp": 18237, "life": 74.6 },
+    { "country": "United States", "year": 1986, "gdp": 19071, "life": 74.6 },
+    { "country": "United States", "year": 1987, "gdp": 20039, "life": 74.8 },
+    { "country": "United States", "year": 1988, "gdp": 21417, "life": 74.8 },
+    { "country": "United States", "year": 1989, "gdp": 22857, "life": 75 },
+    { "country": "United States", "year": 1990, "gdp": 23889, "life": 75.2 },
+    { "country": "United States", "year": 1991, "gdp": 24342, "life": 75.4 },
+    { "country": "United States", "year": 1992, "gdp": 25419, "life": 75.6 },
+    { "country": "United States", "year": 1993, "gdp": 26387, "life": 75.4 },
+    { "country": "United States", "year": 1994, "gdp": 27695, "life": 75.6 },
+    { "country": "United States", "year": 1995, "gdp": 28691, "life": 75.6 },
+    { "country": "United States", "year": 1996, "gdp": 29968, "life": 76 },
+    { "country": "United States", "year": 1997, "gdp": 31459, "life": 76.4 },
+    { "country": "United States", "year": 1998, "gdp": 32854, "life": 76.6 },
+    { "country": "United States", "year": 1999, "gdp": 34515, "life": 76.6 },
+    { "country": "United States", "year": 2000, "gdp": 36330, "life": 76.6 },
+    { "country": "United States", "year": 2001, "gdp": 37134, "life": 76.8 },
+    { "country": "United States", "year": 2002, "gdp": 37998, "life": 76.9 },
+    { "country": "United States", "year": 2003, "gdp": 39490, "life": 77 },
+    { "country": "United States", "year": 2004, "gdp": 41725, "life": 77.5 },
+    { "country": "United States", "year": 2005, "gdp": 44123, "life": 77.5 },
+    { "country": "United States", "year": 2006, "gdp": 46302, "life": 77.7 },
+    { "country": "United States", "year": 2007, "gdp": 48050, "life": 78 },
+    { "country": "United States", "year": 2008, "gdp": 48570, "life": 78 },
+    { "country": "United States", "year": 2009, "gdp": 47195, "life": 78.4 },
+    { "country": "United States", "year": 2010, "gdp": 48643, "life": 78.5 },
+    { "country": "United States", "year": 2011, "gdp": 50025, "life": 78.6 },
+    { "country": "United States", "year": 2012, "gdp": 51708, "life": 78.7 },
+    { "country": "United States", "year": 2013, "gdp": 53179, "life": 78.7 },
+    { "country": "United States", "year": 2014, "gdp": 54973, "life": 78.8 },
+    { "country": "United States", "year": 2015, "gdp": 56573, "life": 78.7 },
+    { "country": "United States", "year": 2016, "gdp": 57638, "life": 78.5 },
+    { "country": "United States", "year": 2017, "gdp": 59635, "life": 78.5 },
+    { "country": "United States", "year": 2018, "gdp": 62500, "life": 78.6 },
+    { "country": "United States", "year": 2019, "gdp": 64746, "life": 78.8 },
+    { "country": "United States", "year": 2020, "gdp": 63516, "life": 77 },
+    { "country": "United States", "year": 2021, "gdp": 70205, "life": 76.3 },
+    { "country": "United States", "year": 2022, "gdp": 76657, "life": 77.4 },
+    { "country": "United States", "year": 2023, "gdp": 81032, "life": 78.4 }
+  ]
+}
+```
+
+China's line rises steeply at the left before it turns right, and South Korea's does the same but turns right in the 1970s, two decades before China's. Nigeria's stays low; its life expectancy in 2023, 54.5 years, was the lowest of the 62 countries. China ends within half a year of the United States' life expectancy, 78.0 years to 78.4, on about a sixth of the income.
+
+OpenChart has no mark that joins points in data order. A line mark sorts its points along x, and GDP per capita falls in some years, so a line through these points would zigzag back and forth across the chart. This chart is the bubble playback with `trails: true`, five countries in its data, no size channel, and `animation: false`, which opens it on 2023 with every trail drawn.
+
+The trails exist only in the live chart, so a static render or a reader without JavaScript sees the 2023 positions without the lines.
+
+## Small multiples put the years side by side
+
+Small multiples draw the same chart once per year, in a grid of panels that share their axes.
+
+<Demo id="blog/wealth-health-small-multiples" />
+
+Every one of the 51 countries with figures for both 1960 and 2023 is further right and higher in the last panel than in the first. That comparison takes one look here, and in the playback it takes 25 seconds and a good memory. A reader can also put a finger on any bubble in any panel and read its value against the axes.
+
+The panels only show the years they are given. Cambodia's 1977 collapse falls between the 1960 and 1980 panels, so it doesn't appear at all. Each panel is also short, which squeezes the differences in life expectancy, and more years would mean more, smaller panels.
+
+## Choosing between them
+
+| If the reader's question is | Use |
+| --- | --- |
+| How did everything move, and what happened suddenly? | An [animated bubble chart](/docs/correlation/bubble-playback/) |
+| How did a few countries get from where they started to where they are? | A connected scatter |
+| How do a few chosen years compare? | [Small multiples](/docs/composition/facets/) |
+| Where is everything now? | A [bubble chart](/docs/correlation/bubble/) of the latest year |
+
+For a page that will also be printed, read on a phone in passing or used by screen-reader users, lead with small multiples or a single year and offer the playback alongside them. For a talk or a social video, lead with the playback.
+
+## The specs
+
+The playback is `mark: "point"` with `encoding.time` on the year and `encoding.key` on the country, plus `playback: { duration: 25000, labels: ["China", "India", "Nigeria"] }`. The [playback docs](/docs/change-over-time/playback/) list every option.
+
+The connected scatter's spec is printed above. It is the bubble encoding without `size`, colored by country, with `playback: { labels, trails: true }`. `animation: false`, the same switch that turns off a chart's [entrance animation](/docs/behavior/motion/), opens it on the last year without autoplay.
+
+The small multiples drop `time` and `key` and add `encoding.facet: { field: "year", columns: 1 }` over the rows for the four years. Facet panels don't share a size or color scale unless the spec sets one, so `size.scale.domain` and `color.scale.domain` are explicit: a country's bubble is then the same color in every panel, and its size means the same population. The scatter's default trend line is off with `mark: { type: "point", trendline: false }`.
+
+To build the playback from your own data, follow [How to make an animated bubble chart in JavaScript](/blog/how-to-make-an-animated-bubble-chart-in-javascript/).
