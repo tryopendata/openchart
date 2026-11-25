@@ -13,7 +13,7 @@ A time-lapse map recolors its regions, or resizes its symbols, one period at a t
 
 ## Add time to a choropleth
 
-A time-lapse choropleth is a [choropleth](/docs/maps/choropleth/) with `encoding.time` naming the period field. Supply one row per region and period. `encoding.key` joins each row to a feature, as it does without time, and it also carries the region from one period to the next.
+A time-lapse choropleth is a [choropleth](/docs/maps/choropleth/) with `encoding.time` naming the period field. Supply one row per region and period. `encoding.key` joins each row to a feature, as it does without time, and also identifies each region from one period to the next.
 
 ```ts title="claims-map.ts"
 import states from "us-atlas/states-10m.json";
@@ -35,7 +35,7 @@ const spec = {
 
 ## One color scale for the whole run
 
-The classes and the legend are computed once over every period, so a color means the same value in January as in July. This map's five classes break at 5, 10, 15 and 20 percent, chosen from the whole year's values, and no break moves while the map plays. A tile map's gradient legend runs from the lowest value of any period to the highest in the same way.
+The classes and the legend are computed once over every period, so a color means the same value in January as in July. This map's five classes break at 5, 10, 15 and 20 percent, chosen from the whole year's values. A tile map's gradient legend runs from the lowest value of any period to the highest in the same way.
 
 Between two periods each region's value moves in a straight line, and its fill is the class of that value. A region changes color when its value crosses a class break, which can happen partway between two periods. On a tile map the shade changes continuously with the value.
 
@@ -69,7 +69,7 @@ A map can play both layers. When `encoding.time` and `points.time` are both set,
 
 Zoom, pan, camera methods such as `zoomTo`, and `geo.focus` keep working while the map plays, and playback keeps running through a zoom. Hovering a region shows its value for the nearest period, titled with that period, such as "Alabama, Jul 4, 2020". A value filled in for a gap is marked "(estimated)", and a region without a value shows "No data".
 
-Pages without JavaScript, `compileGeoMap`, `compileTileMap` and `renderStaticSVG` draw the final period. Pass `t` to `renderStaticSVG` to draw another, counting periods from zero. These maps have one week in two, so `t: 13` is the week ending July 4, 2020.
+Pages without JavaScript, `compileGeoMap`, `compileTileMap` and `renderStaticSVG` draw the final period. Pass `t` to `renderStaticSVG` to draw another, counting periods from zero. The demos here play every other week, so `t: 13` is the week ending July 4, 2020.
 
 ## Fields that matter
 

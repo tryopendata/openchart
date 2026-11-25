@@ -39,7 +39,6 @@ Both halves share one value scale that starts at zero on each side of the center
 - The category labels sit in the center column, which is as wide as the longest label. There is no separate y axis.
 - The two color values label the halves above the plot, and the chart has no legend.
 - Value labels sit past the outer end of each bar, in the `x` format unless `labels.format` sets another. `labels.placement` is ignored, and `labels.density: "none"` turns the labels off.
-- There is no crosshair by default, as on any bar chart.
 
 The spec fails validation when `color` is missing or has more or fewer than two values in the data, when `y` is quantitative (which would draw vertical bars), and when `x` has a `stack` of any value, `null` included, since mirrored bars never stack. A negative value draws as a zero-length bar.
 
