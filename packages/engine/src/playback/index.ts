@@ -44,3 +44,13 @@ export {
   readPeriod,
 } from './periods';
 export { hasTimeEncoding } from './time-spec';
+export {
+  isTrailMark,
+  TRAIL_KEY_PREFIX,
+  TRAIL_STYLE,
+  trailColorsByKey,
+  trailDotKey,
+  trailLineKey,
+  trailLinePoints,
+  trailMarks,
+} from './trail-marks';
