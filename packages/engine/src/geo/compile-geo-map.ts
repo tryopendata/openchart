@@ -1136,6 +1136,12 @@ function compileGeoMapImpl(
     const number = finiteNumber(value);
     return number === undefined ? 'No data' : formatter(number);
   };
+  /** A points-layer value in its own channel's format; the color format belongs to the regions. */
+  const formatPointValue = (channel: { format?: string }, value: unknown): string => {
+    const number = finiteNumber(value);
+    if (number === undefined) return 'No data';
+    return (buildD3Formatter(channel.format) ?? formatNumber)(number);
+  };
   // The theme's own neutral ramp, so a warm or cool theme gets a warm or cool
   // "no data" gray instead of an uninvited zinc.
   const neutralFill = theme.colors.mapNoDataFill ?? theme.colors.neutral[100];
@@ -1866,7 +1872,7 @@ function compileGeoMapImpl(
               label: ch.title ?? ch.field,
               role: 'value',
               source: { field: ch.field, channel: 'tooltip' },
-              value: ch.type === 'quantitative' ? formatQuantitative(val) : String(val),
+              value: ch.type === 'quantitative' ? formatPointValue(ch, val) : String(val),
             });
           }
         }
@@ -1890,14 +1896,15 @@ function compileGeoMapImpl(
               label: pts.color.title ?? pts.color.field,
               role: 'value',
               source: { field: pts.color.field, channel: 'color' },
-              value: pts.color.type === 'quantitative' ? formatQuantitative(val) : String(val),
+              value:
+                pts.color.type === 'quantitative' ? formatPointValue(pts.color, val) : String(val),
             });
         }
         if (pts.size) {
           const val = pm.data[pts.size.field];
           fields.push({
             label: pts.size.title ?? pts.size.field,
-            value: formatQuantitative(val),
+            value: formatPointValue(pts.size, val),
             role: 'value',
             source: { field: pts.size.field, channel: 'size' },
           });

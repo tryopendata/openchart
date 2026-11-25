@@ -1384,6 +1384,32 @@ describe('compileGeoMap', () => {
       expect(laTooltip!.fields[0].label).toBe('City');
     });
 
+    it('formats point values with their own channel format, not the choropleth color format', () => {
+      const layout = compileGeoMap(
+        {
+          type: 'map',
+          geo: { features: MINI_TOPO, projection: 'mercator' },
+          data: [{ fips: '06', share: 0.1 }],
+          encoding: {
+            key: { field: 'fips', type: 'nominal' },
+            color: { field: 'share', type: 'quantitative', format: '.1%' },
+          },
+          points: {
+            data: [{ lat: 34, lon: -118, name: 'LA', pop: 3_900_000, growth: 1234.5 }],
+            longitude: { field: 'lon', type: 'quantitative' },
+            latitude: { field: 'lat', type: 'quantitative' },
+            key: { field: 'name', type: 'nominal' },
+            size: { field: 'pop', type: 'quantitative', format: '.2s' },
+            color: { field: 'growth', type: 'quantitative' },
+          },
+        },
+        DEFAULT_OPTIONS,
+      );
+      const values = layout.tooltipDescriptors.get('point:LA')!.fields.map(({ value }) => value);
+      expect(values).toContain('3.9M');
+      expect(values.some((value) => value.includes('%'))).toBe(false);
+    });
+
     it('handles points alongside choropleth', () => {
       const layout = compileGeoMap(
         {
