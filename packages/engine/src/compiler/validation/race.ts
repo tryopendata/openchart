@@ -1,7 +1,7 @@
 import { jsonPointer, type RaceMarkType, type RaceTableColumn } from '@opendata-ai/openchart-core';
 import type { ValidationError } from '../types';
 import { didYouMean } from './helpers';
-import { validateOptions } from './race-options';
+import { validateOptions, validateRacePlayback } from './race-options';
 
 const MARK_OPTIONS: Record<RaceMarkType, string> = {
   bar: 'cornerRadius',
@@ -252,6 +252,7 @@ export function validateRaceSpec(spec: Record<string, unknown>, errors: Validati
   if (validData) validateEncodingFields(encoding, data, errors);
   validateMark(spec.mark, errors);
   validateOptions(spec.race, errors);
+  validateRacePlayback(spec.race, spec.playback, errors);
 
   if (Object.hasOwn(spec, 'transform')) {
     errors.push({
