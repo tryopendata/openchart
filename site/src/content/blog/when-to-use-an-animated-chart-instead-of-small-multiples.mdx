@@ -36,7 +36,7 @@ OpenChart softens these costs without removing them:
 - The axes are fixed for the whole run, so a position in 1975 and a position in 2023 sit on the same gridlines.
 - With reduced motion the chart doesn't autoplay and opens on the last year, and stepping moves from year to year without sliding.
 - `playback.trails` keeps the path behind a few named countries, which turns part of the animation into a connected scatter.
-- A static render or export draws any single year, chosen by period index.
+- A static render or export draws any single year, chosen by period index, and a GIF export records the whole run.
 
 For screen readers the cost stays high. After a pause or a step they hear the year and how many countries are on the chart, not where any of them moved.
 
@@ -426,7 +426,7 @@ China's line rises steeply at the left before it turns right, and South Korea's 
 
 OpenChart has no mark that joins points in data order. A line mark sorts its points along x, and GDP per capita falls in some years, so a line through these points would zigzag back and forth across the chart. This chart is the bubble playback with `trails: true`, five countries in its data, no size channel, and `animation: false`, which opens it on 2023 with every trail drawn.
 
-The trails exist only in the live chart, so a static render or a reader without JavaScript sees the 2023 positions without the lines.
+Static renders and exports draw the trails too, up to the year they show, so a reader without JavaScript still sees the paths.
 
 ## Small multiples put the years side by side
 

@@ -328,10 +328,10 @@ Vue and Svelte import `Chart` from `@opendata-ai/openchart-vue` and `@opendata-a
 
 ## Static frames and exports
 
-Server renders and static exports show one frame, the last year by default. `renderStaticSVG(spec, { t })` from `@opendata-ai/openchart-vanilla/static` takes the period index to draw, so `t: 20` draws 1980, and `compileChart` takes the same index as `playbackT`. Use a static frame for a social preview image or a no-JavaScript fallback, and remove it before mounting the live chart. The static render leaves trails out.
+Server renders and static exports show one frame, the last year by default. `renderStaticSVG(spec, { t })` from `@opendata-ai/openchart-vanilla/static` takes the period index to draw, so `t: 20` draws 1980, and `compileChart` takes the same index as `playbackT`. Use a static frame for a social preview image or a no-JavaScript fallback, and remove it before mounting the live chart. Trails are drawn up to the year you pick.
 
 On a mounted chart, `chart.export("svg")` and `chart.export("png")` save the frame on screen with its trails, so seek to the year you want first. The [export docs](/docs/output/export/) cover the options both formats take.
 
-`chart.export("gif")` on a playback chart works from the frame on screen and doesn't record the run from 1960 to 2023. A race does record its whole run with `player.export("gif")`, as [How to make a bar chart race in JavaScript](/blog/how-to-make-a-bar-chart-race-in-javascript/) shows. For a bubble chart, record the screen while the live chart plays to get the run as a video.
+`chart.export("gif")` on a playback chart records the whole run, 1960 through 2023 and the hold on the last year, for newsletters and other pages that can't embed a live chart. It needs the optional `gifenc` package. A race exports the same way with `player.export("gif")`, as [How to make a bar chart race in JavaScript](/blog/how-to-make-a-bar-chart-race-in-javascript/) shows.
 
 The [bubble playback docs page](/docs/correlation/bubble-playback/) covers keys, trails, labels and the fixed axes in more detail.

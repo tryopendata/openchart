@@ -110,6 +110,8 @@ This arrow chart works as an image because its title states the finding, so a re
 
 A GIF plays once and holds its last frame unless you pass `loop: true`, and it is limited to 256 colors. A chart with no entrance animation exports as a single frame. Lowering `dpi` and `fps` (frames per second, 25 by default) is how you bring the file size down.
 
+A chart with `encoding.time` records its [playback](/docs/change-over-time/playback/) instead of an entrance: every period from first to last, then the end hold, at the length its `playback` block sets, with `loop` taken from that block too. Pass `durationMs` for a shorter file.
+
 ## File sizes
 
 These are the turnout chart's exports from Chromium, with the chart 656px wide and 420px tall, the size it has in this article's column. Your sizes will differ with the chart.

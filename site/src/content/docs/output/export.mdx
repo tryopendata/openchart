@@ -44,7 +44,7 @@ The demos name each file after the demo, such as `output-export-range.svg`. In R
 
 ## Playback charts
 
-A chart with `encoding.time` exports the frame on screen. Pause a [bubble playback](/docs/correlation/bubble-playback/) on 1990 and `chart.export("svg")` or `"png"` gives the 1990 bubbles on the same axes as every other frame. The player below the chart is not part of the file. `chart.export("csv")` returns every row of the spec's data, one per key and period, whichever period is showing.
+A chart with `encoding.time` exports the frame on screen. Pause a [bubble playback](/docs/correlation/bubble-playback/) on 1990 and `chart.export("svg")` or `"png"` gives the 1990 bubbles on the same axes as every other frame. The player below the chart is not part of the file. `chart.export("gif")` records the whole run instead, from the first period through the final hold, with trails and the period label. `chart.export("csv")` returns every row of the spec's data, one per key and period, whichever period is showing.
 
 Static rendering draws the final period. Pass `t`, a period index counted from zero, to draw another one:
 
