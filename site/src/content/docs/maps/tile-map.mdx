@@ -31,6 +31,10 @@ When the values are strings, the map colors by category, and `colors` assigns a 
 
 <Demo id="maps/tile-rows" />
 
+## Over time
+
+With `encoding.time`, a tile map plays through periods and reshades each tile from one color scale fixed for the whole run. It needs rows with `encoding.state` and a quantitative `encoding.value`, and no categorical `colors`. The [time-lapse map](/docs/maps/time-lapse/) page shows it with 2020 unemployment data.
+
 ## Fields that matter
 
 | Field | What it does |
@@ -45,6 +49,7 @@ When the values are strings, the map colors by category, and `colors` assigns a 
 ## Related
 
 - [Choropleth](/docs/maps/choropleth/) for real state shapes.
+- [Time-lapse map](/docs/maps/time-lapse/) for a tile map played through periods.
 - [Bar](/docs/comparison/bar/) for the same values in rank order.
 - [Data table](/docs/tables/data-table/) for the values with their state names.
 - [TileMapSpec reference](/docs/spec/tilemap-spec/) lists every tile map field.

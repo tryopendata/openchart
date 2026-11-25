@@ -47,9 +47,14 @@ With `stack: "zero"` the segments stack end to end, so each bar shows its total 
 
 <Demo id="comparison/bar-highlight" />
 
+## Mirrored bars
+
+`mark: { type: "bar", mirror: true }` draws two groups back to back from a center column of category labels, the layout of a population pyramid. The `color` field must have exactly two values, and the first goes on the left. The [population pyramid](/docs/comparison/pyramid/) page covers the layout and how to play it through the years.
+
 ## Related
 
 - [Column](/docs/comparison/column/) for categories that run along time.
 - [Grouped and stacked bars](/docs/comparison/grouped-stacked/) for splitting each bar into series.
+- [Population pyramid](/docs/comparison/pyramid/) for two groups back to back.
 - [Stacked to 100%](/docs/part-to-whole/stacked-100/) when the share of each part matters more than the totals.
 - [Marks reference](/docs/spec/marks/) lists the channels and options each mark type takes.

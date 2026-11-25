@@ -55,6 +55,10 @@ A map draws only the features in its topology, so passing a subset of the states
 
 Classes default to evenly spaced breaks. `scale: { type: "quantile" }` puts the same number of regions in each class instead, which suits skewed data but moves the breaks whenever the data changes.
 
+## Over time
+
+`encoding.time` plays the map through periods, recoloring each region one period at a time with the classes and legend fixed for the whole run. The color must be quantitative. The [time-lapse map](/docs/maps/time-lapse/) page covers the spec, missing values and the period label.
+
 ## Fields that matter
 
 | Field | What it does |
@@ -72,5 +76,6 @@ Classes default to evenly spaced breaks. `scale: { type: "quantile" }` puts the 
 
 - [Symbol map](/docs/maps/symbol-map/) for totals placed as sized circles.
 - [Tile map](/docs/maps/tile-map/) for US states at equal size.
+- [Time-lapse map](/docs/maps/time-lapse/) for a choropleth played through periods.
 - [Bar](/docs/comparison/bar/) for ranking the same values.
 - [GeoMapSpec reference](/docs/spec/geomap-spec/) lists every map field.

@@ -42,14 +42,17 @@ The data and mark are unchanged; only the two channels trade places. With the ca
 }
 ```
 
-`time` works on point, circle and bar marks. It is an error on any other mark, with `facet`, inside a layer and with `youDrawIt`. The [bubble playback](/docs/correlation/bubble-playback/) page walks through a full example, and the [playback](/docs/change-over-time/playback/) page covers the timing options.
+`time` works on point, circle and bar marks, on choropleths and tile maps, and as `points.time` on a map's points layer. It is an error on any other mark, with `facet`, inside a layer and with `youDrawIt`. The [bubble playback](/docs/correlation/bubble-playback/), [population pyramid](/docs/comparison/pyramid/) and [time-lapse map](/docs/maps/time-lapse/) pages walk through full examples, and the [playback](/docs/change-over-time/playback/) page covers the timing options.
 
 Playback matches each mark in one period to the same mark in the next by its identity:
 
-| Mark | Identity | Required |
+| Mark or map | Identity | Required |
 | --- | --- | --- |
 | `point`, `circle` | The `key` field. | Yes. Without it the spec fails validation. |
-| `bar` | The category field together with the `color` field, the same pair that identifies a bar without `time`. | No. Every category and color pair is already one bar. |
+| `bar`, mirrored or not | The category field together with the `color` field, the same pair that identifies a bar without `time`. | No. Every category and color pair is already one bar. |
+| Choropleth | The `key` field, which also joins rows to features. | Yes, as on any choropleth. |
+| Tile map | The `state` field. | Yes, as on any tile map with rows. |
+| Map points layer | `points.key`. | Yes, once the layer has `points.time`. |
 
 Each identity can have one row per period. Two rows with the same identity and period fail validation with a message naming both values; aggregate them first.
 
@@ -63,7 +66,7 @@ Each identity can have one row per period. Two rows with the same identity and p
 | `theta` | The slice value on pie and donut charts. |
 | `sort` | Category order. `"x"` on a bar chart's `y` and `"-y"` on a column chart's `x` put the largest value first. |
 | `tooltip` | Extra fields shown on hover, independent of the other channels. |
-| `time` | The period field a chart plays through. Point, circle and bar marks only. |
+| `time` | The period field a chart or map plays through. Point, circle and bar marks, choropleths and tile maps. |
 | `key` | The field that identifies a point across periods. Required on point and circle charts with `time`. |
 
 ## Related

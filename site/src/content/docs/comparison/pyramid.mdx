@@ -1,0 +1,90 @@
+---
+title: Population pyramid
+description: Draw two groups back to back with mirrored bars, such as men and women by age, then play the pyramid through the years.
+section: comparison
+order: 7
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A population pyramid puts two groups back to back: men extend left from a center column of age groups and women extend right. Its shape shows a population's history at a glance, a broad base for a young country and a top-heavy column for an aging one. The same mirrored bars suit any two-group comparison over shared categories, such as imports and exports by sector.
+
+<Demo id="comparison/pyramid-2025" />
+
+## Mirrored bars
+
+`mark: { type: "bar", mirror: true }` turns horizontal bars into a pyramid. Put the categories on `y`, the values on `x`, and a field with exactly two values on `color`.
+
+```json title="pyramid.json"
+{
+  "mark": { "type": "bar", "mirror": true },
+  "data": [
+    { "age": "0-4", "sex": "Male", "pop": 2006000 },
+    { "age": "0-4", "sex": "Female", "pop": 1914000 }
+  ],
+  "encoding": {
+    "y": { "field": "age", "type": "ordinal", "sort": ["0-4", "5-9", "10-14", "...", "100+"] },
+    "x": { "field": "pop", "type": "quantitative", "format": ".2~s" },
+    "color": { "field": "sex", "type": "nominal", "sort": ["Male", "Female"] }
+  }
+}
+```
+
+The first value in the color channel's `sort` list goes on the left, or the first one in the data when there is no `sort`. An ordinal `y` axis runs from the bottom up, so listing the age groups from youngest to oldest puts 0-4 at the base and 100+ on top.
+
+## What mirror changes
+
+Both halves share one value scale that starts at zero on each side of the center column, so equal values draw equal lengths on either side. The ticks read as positive values in both directions, here 0 to 6M.
+
+- The category labels sit in the center column, which is as wide as the longest label. There is no separate y axis.
+- The two color values label the halves above the plot, and the chart has no legend.
+- Value labels sit past the outer end of each bar, in the `x` format unless `labels.format` sets another. `labels.placement` is ignored, and `labels.density: "none"` turns the labels off.
+- There is no crosshair by default, as on any bar chart.
+
+The spec fails validation when `color` is missing or has more or fewer than two values in the data, when `y` is quantitative (which would draw vertical bars), and when `x` has a `stack` of any value, `null` included, since mirrored bars never stack. A negative value draws as a zero-length bar.
+
+<Demo id="comparison/pyramid-1950" />
+
+In 1950 every age group in Japan was smaller than the one below it, the shape that gives the chart its name. By 2025 the base had narrowed to fewer than four million children under five, and the widest bars were the 50-54 and 75-79 groups.
+
+## Play it through the years
+
+<Demo id="comparison/pyramid-playback" />
+
+Add `encoding.time` and one row per age group, sex and year. Each bar keeps its identity from its category and color value, the same pair that identifies it without time, so a pyramid needs no `key`. Two rows with the same age, sex and year fail validation and ask you to aggregate them.
+
+```json title="pyramid-playback.json"
+"encoding": {
+  "y": { "field": "age", "type": "ordinal", "sort": ["0-4", "5-9", "...", "100+"] },
+  "x": { "field": "pop", "type": "quantitative", "format": ".2~s" },
+  "color": { "field": "sex", "type": "nominal", "sort": ["Male", "Female"] },
+  "time": { "field": "year", "type": "temporal" }
+},
+"playback": { "duration": 15000 }
+```
+
+The value axis is computed once over every period and stays still for the run. This one runs to 8M on each side, enough for the 6 million boys under five in 1950, while a static 2025 pyramid stops at 6M. Between two periods each bar grows or shrinks in a straight line.
+
+The large faint year sits in the upper right on a pyramid, where the oldest age groups leave room. When a bar or value label in any period would cover it, the label shrinks, to 20 px at the smallest. `playback.period` changes its format or position, and the [playback page](/docs/change-over-time/playback/) lists every timing and control option.
+
+## Sorting by value
+
+A pyramid keeps its categories in a fixed order, and so does any bar chart with time. A `sort` by value, such as `"-x"` on `y`, ranks the categories once over every period, so the bars never overtake one another, and the engine warns. For bars that re-rank each period, use a [race](/docs/change-over-time/race/).
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `mark.mirror` | `true` draws the two color values back to back. Horizontal bars only. |
+| `encoding.y` | The categories, in the center column. A `sort` list sets their order from the bottom up. |
+| `encoding.x` | The values. `format` applies to the ticks and value labels. Never takes `stack`. |
+| `encoding.color` | A field with exactly two values. Its `sort` puts the first one on the left. |
+| `encoding.time` | The period field. Each bar is identified by its category and color value. |
+| `labels` | `density: "none"` hides the value labels; `format` overrides the `x` format. |
+
+## Related
+
+- [Bar](/docs/comparison/bar/): the same categories with one value each.
+- [Playback](/docs/change-over-time/playback/): timing, controls, keyboard and the `chart.playback` API.
+- [Encoding channels](/docs/the-spec/encoding/#time): how bars keep their identity across periods.
+- [Marks reference](/docs/spec/marks/) lists the options each mark type takes.
