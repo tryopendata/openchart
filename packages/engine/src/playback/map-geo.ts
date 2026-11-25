@@ -1,31 +1,20 @@
 /**
- * Geo map playback: pivoting the choropleth and points layer over time, the scope that
- * freezes a geo compile's scales over every period, and the fills, points and text each
- * frame reads back from the frozen scales.
+ * Geo map playback planning: pivoting the choropleth and points layer over time, the scope
+ * that freezes a geo compile's scales over every period, the spec one frame compiles, and
+ * the context frames and tooltips read back (see map-geo-frames.ts and map-geo-tooltips.ts).
  */
-import type {
-  EncodingChannel,
-  GeoMapPointsLayer,
-  TooltipContent,
-} from '@opendata-ai/openchart-core';
+import type { EncodingChannel, GeoMapLayout, GeoMapPointsLayer } from '@opendata-ai/openchart-core';
 import type { NormalizedGeoMapSpec } from '../geo/types';
 import { type PreparedMapSpec, prepareMapSpec, seriesTime } from './map-run';
 import {
-  contextRow,
   everyPeriodRows,
   hasMissingCell,
   type MapSeries,
+  parsedPeriodValues,
   pivotMapSeries,
-  rawPeriodValues,
   rowsAtPlayhead,
-  SHOWN_PRESENCE,
 } from './map-series';
-import type {
-  GeoMapFrozenScales,
-  GeoMapPlaybackScope,
-  MapFillFrame,
-  MapPointFrame,
-} from './map-types';
+import type { GeoMapFrozenScales, GeoMapPlaybackScope } from './map-types';
 import type { PlaybackChannel } from './matrix';
 
 /** A geo map spec pivoted for playback. */
@@ -38,6 +27,17 @@ export interface GeoPlan {
   /** The series whose periods the run plays: the choropleth's, else the points'. */
   primary: MapSeries;
   time: EncodingChannel;
+}
+
+/** What geo frames and tooltips read: the plan, the frozen scales and the feature names. */
+export interface GeoPlaybackContext {
+  plan: GeoPlan;
+  scales: GeoMapFrozenScales;
+  periodLabels: string[];
+  /** Display name per feature id, for the features the base layout names. */
+  names: Map<string, string>;
+  /** Data key per feature id, the reverse of `scales.featureIds`. */
+  keys: Map<string, string>;
 }
 
 function pointChannels(points: GeoMapPointsLayer): PlaybackChannel[] {
@@ -63,21 +63,21 @@ export function planGeoPlayback(spec: unknown, warn: (message: string) => void):
   const prepared = prepareMapSpec<NormalizedGeoMapSpec>(spec);
   const { encoding, data, points } = prepared.normalized;
   const gaps = prepared.block?.gaps ?? 'interpolate';
-  const featureTime = encoding.time;
-  const pointTime = points?.time;
+  const featureTime = encoding.time && seriesTime(encoding.time);
+  const pointTime = points?.time && seriesTime(points.time);
   const features =
     featureTime && encoding.key && encoding.color
       ? pivotMapSeries(
           data,
           {
             identity: encoding.key.field,
-            time: seriesTime(featureTime),
+            time: featureTime,
             channels: [{ name: 'color', field: encoding.color.field }],
             noun: 'features',
           },
           gaps,
           warn,
-          points && pointTime ? rawPeriodValues(points.data, pointTime.field) : [],
+          points && pointTime ? parsedPeriodValues(points.data, pointTime) : [],
         )
       : null;
   const pointSeries =
@@ -86,17 +86,17 @@ export function planGeoPlayback(spec: unknown, warn: (message: string) => void):
           points.data,
           {
             identity: points.key.field,
-            time: seriesTime(pointTime),
+            time: pointTime,
             channels: pointChannels(points),
             noun: 'points',
           },
           gaps,
           warn,
-          featureTime ? rawPeriodValues(data, featureTime.field) : [],
+          featureTime ? parsedPeriodValues(data, featureTime) : [],
         )
       : null;
   const primary = features ?? pointSeries;
-  const time = featureTime ?? pointTime;
+  const time = encoding.time ?? points?.time;
   if (!primary || !time) {
     throw new Error(
       'Geo map playback needs encoding.time with encoding.key and a color, or points.time with points.key. Map time validation should have rejected this spec.',
@@ -138,136 +138,20 @@ export function geoFrameSpec(plan: GeoPlan, t: number, holdPoints: boolean): unk
   return frame;
 }
 
-/** Each joined feature's fill at `t`: its class while shown, the no-data fill otherwise. */
-export function geoFillsAt(
-  series: MapSeries | null,
-  scales: GeoMapFrozenScales,
-  t: number,
-): MapFillFrame[] {
-  if (!series) return [];
-  const fills: MapFillFrame[] = [];
-  for (const [key, keyIndex] of series.keyIndex) {
-    const featureId = scales.featureIds.get(key);
-    if (featureId === undefined || !series.sampler.everPresent(keyIndex)) continue;
-    const { values, presence } = series.sampler.stateAt(keyIndex, t);
-    const value = values[0];
-    const shown = presence >= SHOWN_PRESENCE && Number.isFinite(value) && scales.classScale;
-    fills.push(
-      shown && scales.classScale
-        ? {
-            key: String(featureId),
-            fill: scales.classScale.color(value),
-            binIndex: scales.classScale.binIndex(value),
-            noData: false,
-          }
-        : { key: String(featureId), fill: scales.neutralFill, noData: true },
-    );
-  }
-  return fills;
-}
-
-/** Each point's radius, fill and fade at `t`. */
-export function geoPointsAt(
-  series: MapSeries | null,
-  points: GeoMapPointsLayer | undefined,
-  scales: GeoMapFrozenScales,
-  t: number,
-): MapPointFrame[] {
-  if (!series || !points) return [];
-  const channels = series.options.channels.map(({ name }) => name);
-  const sizeAt = channels.indexOf('size');
-  const colorAt = channels.indexOf('color');
-  const frames: MapPointFrame[] = [];
-  for (const [key, keyIndex] of series.keyIndex) {
-    if (!series.sampler.everPresent(keyIndex)) continue;
-    const { values, presence } = series.sampler.stateAt(keyIndex, t);
-    const color =
-      colorAt >= 0
-        ? values[colorAt]
-        : points.color
-          ? contextRow(series, keyIndex, series.sampler.nearestPeriod(t))[points.color.field]
-          : undefined;
-    frames.push({
-      key,
-      r: scales.pointRadius(sizeAt >= 0 ? values[sizeAt] : undefined),
-      fill: scales.pointFill(color),
-      presence,
-    });
-  }
-  return frames;
-}
-
-/** The color value a data key shows at a period, formatted, or null when it has none. */
-export function geoObservedAt(
-  series: MapSeries | null,
-  field: string | undefined,
-  scales: GeoMapFrozenScales,
-  key: string,
-  period: number,
-): Record<string, string> | null {
-  const keyIndex = series?.keyIndex.get(key);
-  if (!series || !field || keyIndex === undefined) return null;
-  if (!series.sampler.isPresent(keyIndex, period)) return null;
-  const value = series.sampler.matrix.values.color[keyIndex][period];
-  return { [field]: scales.formatValue(value) };
-}
-
-/** What the geo tooltip names for each driven feature. */
-export interface GeoTooltipContext {
-  plan: GeoPlan;
-  scales: GeoMapFrozenScales;
-  periodLabels: string[];
-  /** Display name per feature id, from the base layout. */
-  names: Map<string, string>;
-  /** Data key per feature id, the reverse of `scales.featureIds`. */
-  keys: Map<string, string>;
-}
-
 /**
- * The hovered feature's value at the period nearest `t`, titled with the feature and that
- * period; a gap-filled period says it was estimated. Undefined for features the choropleth
- * playback doesn't drive.
+ * The context geo frames and tooltips read. Features without a name are left out of
+ * `names`, so readers fall back to the data key.
  */
-export function geoTooltipAt(
-  context: GeoTooltipContext,
-  domKey: string,
-  t: number,
-): TooltipContent | undefined {
-  const { plan, scales, periodLabels, names, keys } = context;
-  const series = plan.features;
-  const color = plan.prepared.normalized.encoding.color;
-  if (!series || !color) return undefined;
-  const key = keys.get(domKey);
-  const keyIndex = key === undefined ? undefined : series.keyIndex.get(key);
-  if (keyIndex === undefined) return undefined;
-  const period = series.sampler.nearestPeriod(t);
-  const present = series.sampler.isPresent(keyIndex, period);
-  const estimated = present && !series.sampler.isObserved(keyIndex, period);
-  const value = series.sampler.matrix.values.color[keyIndex][period];
-  return {
-    title: `${names.get(domKey) ?? key}, ${periodLabels[period]}${estimated ? ' (estimated)' : ''}`,
-    fields: [
-      {
-        label: color.title ?? color.field,
-        value: present ? scales.formatValue(value) : 'No data',
-        role: 'value',
-      },
-    ],
-  };
-}
-
-/** The choropleth's shown values at a period, named for the live-region summary. */
-export function geoNamedValues(
-  series: MapSeries | null,
+export function geoPlaybackContext(
+  plan: GeoPlan,
   scales: GeoMapFrozenScales,
-  period: number,
-): Array<{ name: string; text: string; value: number }> {
-  if (!series) return [];
-  const named: Array<{ name: string; text: string; value: number }> = [];
-  for (const [key, keyIndex] of series.keyIndex) {
-    if (!series.sampler.isPresent(keyIndex, period)) continue;
-    const value = series.sampler.matrix.values.color[keyIndex][period];
-    named.push({ name: key, text: scales.formatValue(value), value });
+  periodLabels: string[],
+  layout: GeoMapLayout,
+): GeoPlaybackContext {
+  const names = new Map<string, string>();
+  for (const mark of layout.features) {
+    if (mark.name) names.set(String(mark.id), mark.name);
   }
-  return named;
+  const keys = new Map([...scales.featureIds].map(([key, id]) => [String(id), key]));
+  return { plan, scales, periodLabels, names, keys };
 }

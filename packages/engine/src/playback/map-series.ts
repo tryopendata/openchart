@@ -58,8 +58,8 @@ function indexSourceRows(
 }
 
 /**
- * Pivot one layer's rows. `sharedPeriods` are raw time values from another layer, added as
- * empty periods so both layers index the same period list.
+ * Pivot one layer's rows. `sharedPeriods` are another layer's period values (see
+ * `parsedPeriodValues`), added as empty periods so both layers index the same period list.
  *
  * @throws {PlaybackDataError} DUPLICATE_KEY_PERIOD when two rows share a key and period.
  */
@@ -156,7 +156,19 @@ export function hasMissingCell(series: MapSeries): boolean {
   return false;
 }
 
-/** The distinct raw time values in `rows`, for seeding another layer's periods. */
-export function rawPeriodValues(rows: DataRow[], timeField: string): unknown[] {
-  return [...new Set(rows.map((row) => row[timeField]).filter((value) => value != null))];
+/**
+ * The distinct periods in `rows` as the matrix reads them, for seeding another layer's
+ * periods. Reading first collapses Date objects for one instant into one value and leaves
+ * out values that aren't periods, which would otherwise seed duplicate or skipped rows.
+ */
+export function parsedPeriodValues(
+  rows: DataRow[],
+  time: MapSeriesOptions['time'],
+): Array<string | number> {
+  const values = new Set<string | number>();
+  for (const row of rows) {
+    const period = readPeriod(row[time.field], time.type);
+    if (period) values.add(period.value);
+  }
+  return [...values];
 }

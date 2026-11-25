@@ -78,8 +78,8 @@ export function tileFrameSpec(plan: TilePlan, t: number): unknown {
   return { ...plan.prepared.expanded, data };
 }
 
-/** A tile mark's paint as a frame entry. */
-function tileFill(tile: TileMapTileMark): MapFillFrame {
+/** A tile mark's paint as a frame entry, labelled for the nearest period. */
+function tileFill(tile: TileMapTileMark, ariaLabel: string): MapFillFrame {
   return {
     key: tile.stateCode,
     fill: tile.fill,
@@ -91,37 +91,37 @@ function tileFill(tile: TileMapTileMark): MapFillFrame {
       valueText: tile.valueLabel.text,
       valueFill: tile.valueLabel.style.fill,
     },
+    ariaLabel,
   };
 }
 
-/** Each drawn tile's paint at `t`: its value's shade while shown, the empty tile otherwise. */
+/** A state's value at a period, or null when it has none there. */
+function valueAtPeriod(series: MapSeries, keyIndex: number, period: number): number | null {
+  if (!series.sampler.isPresent(keyIndex, period)) return null;
+  return series.sampler.matrix.values.value[keyIndex][period];
+}
+
+/**
+ * Each drawn tile's paint at `t`: its value's shade while shown, the empty tile otherwise.
+ * The accessible label reads the nearest period's value, as the tooltip does.
+ */
 export function tileFillsAt(
   series: MapSeries,
   tiles: TileMapFrozenTiles,
   drawn: ReadonlySet<string>,
   t: number,
 ): MapFillFrame[] {
+  const period = series.sampler.nearestPeriod(t);
   const fills: MapFillFrame[] = [];
   for (const [key, keyIndex] of series.keyIndex) {
     if (!drawn.has(key) || !series.sampler.everPresent(keyIndex)) continue;
     const { values, presence } = series.sampler.stateAt(keyIndex, t);
     const value = presence >= SHOWN_PRESENCE && Number.isFinite(values[0]) ? values[0] : null;
-    fills.push(tileFill(tiles.tileAt(key, value)));
+    const labelled = tiles.tileAt(key, valueAtPeriod(series, keyIndex, period));
+    const ariaLabel = labelled.aria.label ?? key;
+    fills.push(tileFill(tiles.tileAt(key, value), ariaLabel));
   }
   return fills;
-}
-
-/** The value a state shows at a period, formatted as its tile prints it, or null. */
-export function tileObservedAt(
-  plan: TilePlan,
-  tiles: TileMapFrozenTiles,
-  key: string,
-  period: number,
-): Record<string, string> | null {
-  const keyIndex = plan.series.keyIndex.get(key);
-  if (keyIndex === undefined || !plan.series.sampler.isPresent(keyIndex, period)) return null;
-  const value = plan.series.sampler.matrix.values.value[keyIndex][period];
-  return { [plan.valueField]: tiles.tileAt(key, value).formattedValue };
 }
 
 /**
@@ -141,10 +141,7 @@ export function tileTooltipAt(
   const period = series.sampler.nearestPeriod(t);
   const present = series.sampler.isPresent(keyIndex, period);
   const estimated = present && !series.sampler.isObserved(keyIndex, period);
-  const tile = tiles.tileAt(
-    stateCode,
-    present ? series.sampler.matrix.values.value[keyIndex][period] : null,
-  );
+  const tile = tiles.tileAt(stateCode, valueAtPeriod(series, keyIndex, period));
   const name = String(tile.data.stateName ?? stateCode);
   const value = plan.prepared.normalized.encoding.value;
   return {

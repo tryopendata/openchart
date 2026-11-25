@@ -88,6 +88,14 @@ export interface MapFillFrame {
   stroke?: string;
   /** Tile maps only: the ink and text of the tile's code and value labels. */
   labels?: { codeFill: string; valueText: string; valueFill: string };
+  /**
+   * Geo maps only, while a feature crossfades between its class and no data (RFC 3.5): the
+   * class `fill` shows at `opacity` over the no-data treatment. `noDataFill` is the plain
+   * no-data color, for maps that define no hatch.
+   */
+  fade?: { opacity: number; noDataFill: string };
+  /** The element's accessible label with the values of the period nearest the playhead. */
+  ariaLabel: string;
 }
 
 /** One map point's size and paint at a playhead, matched by `data-point-key`. */
@@ -97,6 +105,8 @@ export interface MapPointFrame {
   fill: string;
   /** Fade multiplier, 0..1, on top of the point's own fill opacity. */
   presence: number;
+  /** The point's accessible label at the period nearest the playhead. */
+  ariaLabel: string;
 }
 
 /** A compiled map playback: the base layout plus pure functions of the playhead `t`. */
@@ -121,8 +131,11 @@ export interface MapPlayback<Layout> {
    * the period nearest `t`, or undefined for keys the playback doesn't drive.
    */
   tooltipAt(domKey: string, t: number): TooltipContent | undefined;
-  /** A data key's formatted values at a period index, or null when it has none there. */
-  observedAt(key: string, period: number): Record<string, string> | null;
+  /**
+   * The colors the run paints, the ones that carry meaning first (legend classes, the
+   * no-data fill, tile shades as composited), for seeding a GIF palette.
+   */
+  paletteColors(): string[];
   /** One-line summary of the frame at `t` for the live region. */
   describe(t: number): string;
 }

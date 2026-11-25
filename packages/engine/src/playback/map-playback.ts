@@ -15,15 +15,14 @@ import { compileGeoMapFrame } from '../geo/compile-geo-map';
 import { compileTileMapFrame } from '../tilemap/compile-tilemap';
 import {
   type GeoPlan,
-  geoFillsAt,
   geoFrameSpec,
-  geoNamedValues,
-  geoObservedAt,
-  geoPointsAt,
+  geoPlaybackContext,
   geoScope,
-  geoTooltipAt,
   planGeoPlayback,
 } from './map-geo';
+import { geoFillsAt, geoPointsAt } from './map-geo-frames';
+import { geoNamedValues, geoTooltipAt } from './map-geo-tooltips';
+import { geoPaletteColors, tilePaletteColors } from './map-palette';
 import {
   collectWarnings,
   createMapPeriodOverlay,
@@ -37,7 +36,6 @@ import {
   tileFillsAt,
   tileFrameSpec,
   tileNamedValues,
-  tileObservedAt,
   tileScope,
   tileTooltipAt,
 } from './map-tile';
@@ -134,11 +132,10 @@ export function compileGeoMapPlayback(spec: unknown, options: CompileOptions): G
   const { layout, scales: captured } = compileGeoBase(plan, collector.options, run);
   const scales = captured ?? UNDRAWN_GEO_SCALES;
   const overlaysAt = geoPeriodOverlay(run, layout);
-  const names = new Map(layout.features.map((mark) => [String(mark.id), mark.name ?? '']));
-  const keys = new Map([...scales.featureIds].map(([key, id]) => [String(id), key]));
-  const tooltipContext = { plan, scales, periodLabels: run.periodLabels, names, keys };
-  const colorField = plan.prepared.normalized.encoding.color?.field;
+  const context = geoPlaybackContext(plan, scales, run.periodLabels, layout);
   const last = Math.max(0, run.periods.length - 1);
+
+  const pointsAt = (t: number) => geoPointsAt(context, t);
 
   return {
     base: { ...layout, playbackOverlays: overlaysAt(last) },
@@ -146,18 +143,15 @@ export function compileGeoMapPlayback(spec: unknown, options: CompileOptions): G
     periodLabels: run.periodLabels,
     timing: run.timing,
     warnings: collector.warnings,
-    fillsAt: (t) => geoFillsAt(plan.features, scales, t),
-    pointsAt: (t) => geoPointsAt(plan.points, plan.prepared.normalized.points, scales, t),
+    fillsAt: (t) => geoFillsAt(context, t),
+    pointsAt,
     overlaysAt,
-    tooltipAt: (domKey, t) => geoTooltipAt(tooltipContext, domKey, t),
-    observedAt: (key, period) => geoObservedAt(plan.features, colorField, scales, key, period),
+    tooltipAt: (domKey, t) => geoTooltipAt(context, domKey, t),
+    paletteColors: () => geoPaletteColors(scales, run.periods.length, pointsAt),
     describe: (t) => {
       if (run.periods.length === 0) return 'No periods to play.';
       const period = plan.primary.sampler.nearestPeriod(t);
-      return describeExtremes(
-        run.periodLabels[period],
-        geoNamedValues(plan.features, scales, period),
-      );
+      return describeExtremes(run.periodLabels[period], geoNamedValues(context, period));
     },
   };
 }
@@ -214,6 +208,7 @@ export function compileTileMapPlayback(spec: unknown, options: CompileOptions): 
   const overlaysAt = tilePeriodOverlay(run, layout);
   const drawn = new Set(layout.tiles.map((tile) => tile.stateCode));
   const last = Math.max(0, run.periods.length - 1);
+  const fillsAt = (t: number) => (tiles ? tileFillsAt(plan.series, tiles, drawn, t) : []);
 
   return {
     base: { ...layout, playbackOverlays: overlaysAt(last) },
@@ -221,12 +216,12 @@ export function compileTileMapPlayback(spec: unknown, options: CompileOptions): 
     periodLabels: run.periodLabels,
     timing: run.timing,
     warnings: collector.warnings,
-    fillsAt: (t) => (tiles ? tileFillsAt(plan.series, tiles, drawn, t) : []),
+    fillsAt,
+    paletteColors: () => tilePaletteColors(layout.theme, run.periods.length, fillsAt),
     pointsAt: () => [],
     overlaysAt,
     tooltipAt: (stateCode, t) =>
       tiles ? tileTooltipAt(plan, tiles, run.periodLabels, stateCode, t) : undefined,
-    observedAt: (key, period) => (tiles ? tileObservedAt(plan, tiles, key, period) : null),
     describe: (t) => {
       if (run.periods.length === 0) return 'No periods to play.';
       const period = plan.series.sampler.nearestPeriod(t);

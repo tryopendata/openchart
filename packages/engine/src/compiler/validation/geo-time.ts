@@ -2,9 +2,10 @@
  * Validation of time channels on maps (RFC 2.7): `encoding.time` on geo and tile maps and
  * `points.time` on a geo map's points layer. Checks the time channel's shape and type, the
  * identity each layer plays by, the quantitative value it recolors with, one row per
- * identity and period, and the `playback` block.
+ * identity and period, matching time types across layers, and the `playback` block.
  */
 import { jsonPointer } from '@opendata-ai/openchart-core';
+import { type PlaybackTimeType, readPeriod } from '../../playback/periods';
 import type { ValidationError } from '../types';
 import { validatePlaybackBlock } from './playback';
 
@@ -14,12 +15,27 @@ const TIME_TYPES = ['temporal', 'ordinal', 'quantitative'];
 /** Playback options that only point charts draw. */
 const POINT_ONLY_OPTIONS = ['labels', 'trails'];
 
+/** Rows sharing one identity and one period, as the playback matrix reads periods. */
+interface KeyPeriodCell {
+  identity: string;
+  period: string | number;
+  count: number;
+}
+
 function isRecord(value: unknown): value is Record_ {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function fieldOf(channel: unknown): string | undefined {
   return isRecord(channel) && typeof channel.field === 'string' ? channel.field : undefined;
+}
+
+/** The time type a channel declares, when it's one playback reads. */
+function timeTypeOf(channel: unknown): PlaybackTimeType | undefined {
+  const type = isRecord(channel) ? channel.type : undefined;
+  return typeof type === 'string' && TIME_TYPES.includes(type)
+    ? (type as PlaybackTimeType)
+    : undefined;
 }
 
 function invalid(path: string, message: string, suggestion: string): ValidationError {
@@ -38,43 +54,60 @@ function checkTimeChannel(channel: unknown, path: string, errors: ValidationErro
     });
     return;
   }
-  const type = (channel as Record_).type;
-  if (typeof type === 'string' && TIME_TYPES.includes(type)) return;
+  if (timeTypeOf(channel)) return;
   errors.push(
     invalid(
       `${path}/type`,
-      `time type must be one of ${TIME_TYPES.join(', ')}, received ${JSON.stringify(type)}`,
+      `time type must be one of ${TIME_TYPES.join(', ')}, received ${JSON.stringify((channel as Record_).type)}`,
       'Use temporal for dates and years, quantitative for numbers, ordinal for labels in order.',
     ),
   );
+}
+
+/** Rows per identity and period. Rows whose period doesn't read are left to the matrix. */
+function countRowsPerCell(
+  rows: unknown[],
+  identityField: string,
+  timeField: string,
+  timeType: PlaybackTimeType,
+): KeyPeriodCell[] {
+  const cells = new Map<string, KeyPeriodCell>();
+  for (const row of rows) {
+    if (!isRecord(row) || row[identityField] == null) continue;
+    const period = readPeriod(row[timeField], timeType);
+    if (!period) continue;
+    const identity = String(row[identityField]);
+    // The matrix keys periods by value, so the year 2020 and the string '2020' differ.
+    const cell = `${identity}\u0000${typeof period.value}\u0000${String(period.value)}`;
+    const seen = cells.get(cell);
+    if (seen) seen.count += 1;
+    else cells.set(cell, { identity, period: period.value, count: 1 });
+  }
+  return [...cells.values()];
 }
 
 /** Error for the first identity and period pair more than one row carries. */
 function checkUniqueRows(
   rows: unknown,
   identityField: string,
-  timeField: string,
+  time: unknown,
   path: string,
   errors: ValidationError[],
 ): void {
-  if (!Array.isArray(rows)) return;
-  const seen = new Set<string>();
-  for (const row of rows) {
-    if (!isRecord(row) || row[timeField] == null || row[identityField] == null) continue;
-    const cell = `${String(row[identityField])}\u0000${String(row[timeField])}`;
-    if (!seen.has(cell)) {
-      seen.add(cell);
-      continue;
-    }
-    errors.push(
-      invalid(
-        path,
-        `2 rows have ${identityField} = '${String(row[identityField])}' and ${timeField} = ${String(row[timeField])}. Aggregate them first.`,
-        `Aggregate the data so each ${identityField} has one row per ${timeField}.`,
-      ),
-    );
-    return;
-  }
+  const timeField = fieldOf(time);
+  const timeType = timeTypeOf(time);
+  if (!Array.isArray(rows) || !timeField || !timeType) return;
+  const collision = countRowsPerCell(rows, identityField, timeField, timeType).find(
+    ({ count }) => count > 1,
+  );
+  if (!collision) return;
+  errors.push(
+    invalid(
+      path,
+      `${collision.count} rows have ${identityField} = '${collision.identity}' and ${timeField} = '${String(collision.period)}'. Aggregate them first.`,
+      `Aggregate the data so each ${identityField} has one row per ${timeField}.`,
+    ),
+  );
 }
 
 /** Errors for a playback block option only point charts support. */
@@ -96,7 +129,6 @@ function checkPlaybackBlock(spec: Record_, errors: ValidationError[]): void {
 
 /** Errors for `encoding.time` on a geo map's choropleth. */
 function checkChoroplethTime(spec: Record_, encoding: Record_, errors: ValidationError[]): void {
-  const timeField = fieldOf(encoding.time);
   checkTimeChannel(encoding.time, '/encoding/time', errors);
   const keyField = fieldOf(encoding.key);
   if (!keyField) {
@@ -118,12 +150,11 @@ function checkChoroplethTime(spec: Record_, encoding: Record_, errors: Validatio
       ),
     );
   }
-  if (keyField && timeField) checkUniqueRows(spec.data, keyField, timeField, '/data', errors);
+  if (keyField) checkUniqueRows(spec.data, keyField, encoding.time, '/data', errors);
 }
 
 /** Errors for `points.time` on a geo map's points layer. */
 function checkPointsTime(points: Record_, errors: ValidationError[]): void {
-  const timeField = fieldOf(points.time);
   checkTimeChannel(points.time, '/points/time', errors);
   const keyField = fieldOf(points.key);
   if (!keyField) {
@@ -135,16 +166,36 @@ function checkPointsTime(points: Record_, errors: ValidationError[]): void {
         'Add points.key: { field: "<id field>" } so each point can be followed over time.',
     });
   }
-  if (keyField && timeField) {
-    checkUniqueRows(points.data, keyField, timeField, '/points/data', errors);
-  }
+  if (keyField) checkUniqueRows(points.data, keyField, points.time, '/points/data', errors);
+}
+
+/**
+ * Error for a choropleth and points layer that both play but read time differently: one
+ * playhead indexes both layers' periods, so they must order periods the same way.
+ */
+function checkLayersShareTimeType(
+  encoding: Record_,
+  points: Record_,
+  errors: ValidationError[],
+): void {
+  const featureType = timeTypeOf(encoding.time);
+  const pointType = timeTypeOf(points.time);
+  if (!featureType || !pointType || featureType === pointType) return;
+  errors.push(
+    invalid(
+      '/points/time/type',
+      `encoding.time is ${featureType} but points.time is ${pointType}; both layers play on one timeline`,
+      `Give encoding.time and points.time the same type, e.g. both "${featureType}".`,
+    ),
+  );
 }
 
 /**
  * Append errors for a geo map with `encoding.time` or `points.time`: a time channel without a
  * field or with a type other than temporal, ordinal or quantitative; a missing
  * `encoding.key` / `points.key`; a choropleth without a quantitative color; two rows with
- * the same key and period; and problems in the `playback` block. No-op without time.
+ * the same key and period; layers whose time types differ; and problems in the `playback`
+ * block. No-op without time.
  */
 export function validateGeoMapTime(spec: Record_, errors: ValidationError[]): void {
   const encoding = isRecord(spec.encoding) ? spec.encoding : {};
@@ -154,13 +205,48 @@ export function validateGeoMapTime(spec: Record_, errors: ValidationError[]): vo
   if (!choroplethTime && !pointsTime) return;
   if (choroplethTime) checkChoroplethTime(spec, encoding, errors);
   if (points && pointsTime) checkPointsTime(points, errors);
+  if (points && choroplethTime && pointsTime) checkLayersShareTimeType(encoding, points, errors);
   checkPlaybackBlock(spec, errors);
+}
+
+/** Errors for tile map coloring playback can't shade: categorical color, or a non-numeric value. */
+function checkTileColoring(spec: Record_, encoding: Record_, errors: ValidationError[]): void {
+  const value = encoding.value;
+  // Without a type the static tile map reads the value as quantitative, and so does playback.
+  if (isRecord(value) && value.type !== undefined && value.type !== 'quantitative') {
+    errors.push(
+      invalid(
+        '/encoding/value',
+        `a tile map with encoding.time needs a quantitative encoding.value, received type ${JSON.stringify(value.type)}`,
+        'Set encoding.value to a numeric field with type: "quantitative".',
+      ),
+    );
+  }
+  if (encoding.color !== undefined) {
+    errors.push(
+      invalid(
+        '/encoding/color',
+        'a tile map with encoding.time shades encoding.value, so it cannot use categorical encoding.color',
+        'Remove encoding.color, or remove encoding.time for a categorical tile map.',
+      ),
+    );
+  }
+  if (spec.colors !== undefined) {
+    errors.push(
+      invalid(
+        '/colors',
+        'a tile map with encoding.time shades encoding.value, so it cannot use categorical colors',
+        'Remove colors, or remove encoding.time for a categorical tile map.',
+      ),
+    );
+  }
 }
 
 /**
  * Append errors for a tile map with `encoding.time`: a malformed time channel, data that
- * isn't an array of rows, categorical coloring (playback shades a quantitative value), two
- * rows with the same state and period, and problems in the `playback` block. No-op without time.
+ * isn't an array of rows, categorical coloring or a non-quantitative value (playback shades a
+ * quantitative value), two rows with the same state and period, and problems in the
+ * `playback` block. No-op without time.
  */
 export function validateTileMapTime(spec: Record_, errors: ValidationError[]): void {
   const encoding = isRecord(spec.encoding) ? spec.encoding : {};
@@ -175,22 +261,8 @@ export function validateTileMapTime(spec: Record_, errors: ValidationError[]): v
         'Give one row per state and period, e.g. { state: "CA", month: "2020-04", rate: 5.1 }.',
     });
   }
-  const value = encoding.value;
-  if (
-    encoding.color !== undefined ||
-    spec.colors !== undefined ||
-    (isRecord(value) && value.type !== 'quantitative')
-  ) {
-    errors.push(
-      invalid(
-        '/encoding/value',
-        'a tile map with encoding.time needs a quantitative encoding.value and no categorical color',
-        'Set encoding.value to a numeric field with type: "quantitative", and remove encoding.color and colors.',
-      ),
-    );
-  }
+  checkTileColoring(spec, encoding, errors);
   const stateField = fieldOf(encoding.state);
-  const timeField = fieldOf(encoding.time);
-  if (stateField && timeField) checkUniqueRows(spec.data, stateField, timeField, '/data', errors);
+  if (stateField) checkUniqueRows(spec.data, stateField, encoding.time, '/data', errors);
   checkPlaybackBlock(spec, errors);
 }

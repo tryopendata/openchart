@@ -6,6 +6,9 @@ import type { ChartSpec } from '@opendata-ai/openchart-core';
 import type { ChartPlayback } from '@opendata-ai/openchart-engine';
 import type { PlaybackClockState } from './clock';
 
+/** The parts of a compiled playback, chart or map, that the update rules read. */
+export type PlaybackTimeline = Pick<ChartPlayback, 'periods' | 'timing'>;
+
 function markType(spec: ChartSpec): string {
   return typeof spec.mark === 'string' ? spec.mark : spec.mark.type;
 }
@@ -40,7 +43,11 @@ export function samePlaybackShape(previous: ChartSpec, next: ChartSpec): boolean
  * the progress toward the following period, or on the period nearest by sort key when that
  * value is gone.
  */
-export function carriedPlayhead(previous: ChartPlayback, next: ChartPlayback, t: number): number {
+export function carriedPlayhead(
+  previous: PlaybackTimeline,
+  next: PlaybackTimeline,
+  t: number,
+): number {
   const last = next.periods.length - 1;
   if (last < 0) return 0;
   const index = Math.max(0, Math.min(previous.periods.length - 1, Math.floor(t)));
@@ -60,7 +67,7 @@ export function carriedPlayhead(previous: ChartPlayback, next: ChartPlayback, t:
  * The opening state after an update that starts over: the final period when autoplay is off,
  * else undefined so the session opens as on a fresh mount.
  */
-export function resetPlayhead(next: ChartPlayback): PlaybackClockState | undefined {
+export function resetPlayhead(next: PlaybackTimeline): PlaybackClockState | undefined {
   if (next.timing.autoplay !== false) return undefined;
   return { t: Math.max(0, next.periods.length - 1), playing: false, speed: 1, ended: false };
 }

@@ -34,6 +34,7 @@ import type {
   GeoMapLayout,
   GeoMapSpec,
   ThemeConfig,
+  TooltipContent,
 } from '@opendata-ai/openchart-core';
 import { compileGeoMap } from '@opendata-ai/openchart-engine';
 import { cancelAnimations } from './animation';
@@ -70,6 +71,11 @@ import { createMapZoomController, type MapZoomController } from './map-zoom';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { prefersReducedMotion } from './motion/tween';
 import { geoMapPlaybackAdapter } from './playback/map-adapters';
+import {
+  FEATURE_UNDERLAY_CLASS,
+  featurePaintAnchor,
+  featurePaintGroup,
+} from './playback/map-feature-paint';
 import { createMapPlaybackHost } from './playback/map-playback-host';
 import type { PlaybackController } from './playback/types';
 import { observeResize } from './resize-observer';
@@ -113,6 +119,16 @@ function layoutHasContent(layout: GeoMapLayout): boolean {
  */
 const featureOrigin = new WeakMap<Element, Element | null>();
 
+/**
+ * The next feature after `el`, skipping crossfade underlays: an underlay comes and goes
+ * with its feature's fade, so it can't mark where `el` goes back to.
+ */
+function nextFeature(el: Element): Element | null {
+  let next = el.nextElementSibling;
+  while (next && !next.classList.contains('oc-map-feature')) next = next.nextElementSibling;
+  return next;
+}
+
 function raiseFeature(el: Element, svg: SVGElement): void {
   // Re-appending restarts the element's CSS entrance keyframe. While the map is
   // still animating in, keep paint order and settle for the outline class
@@ -122,9 +138,9 @@ function raiseFeature(el: Element, svg: SVGElement): void {
   const parent = el.parentNode;
   if (!parent || el === parent.lastChild) return;
   if (!featureOrigin.has(el)) {
-    featureOrigin.set(el, el.nextSibling as Element | null);
+    featureOrigin.set(el, nextFeature(el));
   }
-  parent.appendChild(el);
+  parent.append(...featurePaintGroup(el));
 }
 
 function restoreFeatureOrder(el: Element): void {
@@ -132,10 +148,12 @@ function restoreFeatureOrder(el: Element): void {
   if (!parent || !featureOrigin.has(el)) return;
   const next = featureOrigin.get(el) ?? null;
   featureOrigin.delete(el);
+  const group = featurePaintGroup(el);
   if (next && next.parentNode === parent) {
-    parent.insertBefore(el, next);
+    const anchor = featurePaintAnchor(next);
+    for (const element of group) parent.insertBefore(element, anchor);
   } else if (!next) {
-    parent.appendChild(el);
+    parent.append(...group);
   }
 }
 
@@ -288,8 +306,12 @@ export function createGeoMap(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // Re-shows the hovered mark's tooltip; playback calls it when the period changes.
+  let refreshHoveredTooltip: (() => void) | null = null;
   // A time spec's motion is the playback itself: no entrance, no update tween.
-  const playback = createMapPlaybackHost(container, geoMapPlaybackAdapter);
+  const playback = createMapPlaybackHost(container, geoMapPlaybackAdapter, {
+    onPeriodChange: () => refreshHoveredTooltip?.(),
+  });
 
   // Camera state
   let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
@@ -390,7 +412,7 @@ export function createGeoMap(
             const view = viewCameras.view(id);
             driveInset(id, cameraForGeoView({ ...view, focus: null }), USER_ZOOM_MS);
           },
-          hideTooltip: () => tooltipManager?.hide(),
+          hideTooltip,
           onGestureStart() {
             labelGesture = true;
             emitReader('gesture-start');
@@ -480,6 +502,30 @@ export function createGeoMap(
   // Tooltip and interaction wiring
   // ---------------------------------------------------------------------------
 
+  /**
+   * Show `content()` at the pointer, and keep showing the hovered mark's current content
+   * there as playback moves the period.
+   */
+  function showTooltipAt(
+    svg: SVGSVGElement,
+    content: () => TooltipContent | undefined,
+    event: MouseEvent,
+  ): void {
+    const svgRect = svg.getBoundingClientRect();
+    const x = event.clientX - svgRect.left;
+    const y = event.clientY - svgRect.top;
+    refreshHoveredTooltip = () => {
+      const shown = content();
+      if (shown && tooltipManager && options?.tooltip !== false) tooltipManager.show(shown, x, y);
+    };
+    refreshHoveredTooltip();
+  }
+
+  function hideTooltip(): void {
+    refreshHoveredTooltip = null;
+    tooltipManager?.hide();
+  }
+
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: GeoMapLayout): () => void {
     const cleanups: Array<() => void> = [];
     const navigation: NavigableMark[] = [];
@@ -512,13 +558,7 @@ export function createGeoMap(
         // Reparenting a focused SVG node drops native keyboard focus.
         if (document.activeElement !== el) raiseFeature(el, svg);
         el.classList.add('oc-map-feature--hover');
-        const content = tooltipContent();
-        if (content && tooltipManager && options?.tooltip !== false) {
-          const svgRect = svg.getBoundingClientRect();
-          const x = mouseEvent.clientX - svgRect.left;
-          const y = mouseEvent.clientY - svgRect.top;
-          tooltipManager.show(content, x, y);
-        }
+        showTooltipAt(svg, tooltipContent, mouseEvent);
         if (feature) {
           options?.onMarkHover?.({
             kind: 'feature',
@@ -531,14 +571,7 @@ export function createGeoMap(
       };
 
       const handleMouseMove = (e: Event) => {
-        const content = tooltipContent();
-        if (content && tooltipManager && options?.tooltip !== false) {
-          const mouseEvent = e as MouseEvent;
-          const svgRect = svg.getBoundingClientRect();
-          const x = mouseEvent.clientX - svgRect.left;
-          const y = mouseEvent.clientY - svgRect.top;
-          tooltipManager.show(content, x, y);
-        }
+        showTooltipAt(svg, tooltipContent, e as MouseEvent);
       };
 
       const handleMouseLeave = () => {
@@ -547,7 +580,7 @@ export function createGeoMap(
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('cursor');
         el.classList.remove('oc-map-feature--hover');
         restoreFeatureOrder(el);
-        tooltipManager?.hide();
+        hideTooltip();
         options?.onMarkHover?.(null);
       };
 
@@ -625,13 +658,7 @@ export function createGeoMap(
         const mouseEvent = e as MouseEvent;
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('filter', 'brightness(1.15)');
-        const content = tooltipContent();
-        if (content && tooltipManager && options?.tooltip !== false) {
-          const svgRect = svg.getBoundingClientRect();
-          const x = mouseEvent.clientX - svgRect.left;
-          const y = mouseEvent.clientY - svgRect.top;
-          tooltipManager.show(content, x, y);
-        }
+        showTooltipAt(svg, tooltipContent, mouseEvent);
         if (pointMark) {
           options?.onMarkHover?.({
             kind: 'point',
@@ -643,14 +670,7 @@ export function createGeoMap(
       };
 
       const handlePointMouseMove = (e: Event) => {
-        const content = tooltipContent();
-        if (content && tooltipManager && options?.tooltip !== false) {
-          const mouseEvent = e as MouseEvent;
-          const svgRect = svg.getBoundingClientRect();
-          const x = mouseEvent.clientX - svgRect.left;
-          const y = mouseEvent.clientY - svgRect.top;
-          tooltipManager.show(content, x, y);
-        }
+        showTooltipAt(svg, tooltipContent, e as MouseEvent);
       };
 
       const handlePointMouseLeave = () => {
@@ -658,7 +678,7 @@ export function createGeoMap(
         activeLeave = null;
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('cursor');
         (el as SVGElement & ElementCSSInlineStyle).style.removeProperty('filter');
-        tooltipManager?.hide();
+        hideTooltip();
         options?.onMarkHover?.(null);
       };
 
@@ -856,7 +876,7 @@ export function createGeoMap(
           driveCamera(cam, USER_ZOOM_MS);
         },
         reset: () => resetCamera(USER_ZOOM_MS),
-        hideTooltip: () => tooltipManager?.hide(),
+        hideTooltip,
         onGestureStart() {
           labelGesture = true;
           emitReader('gesture-start');
@@ -893,8 +913,9 @@ export function createGeoMap(
 
   function applyFocusDim(ids: Array<string | number> | null, target = svgElement): void {
     if (!target) return;
+    // Crossfade underlays carry their feature's id, so they dim with it.
     const features = (findGeoViewScene(target, 'root') ?? target).querySelectorAll(
-      '.oc-map-feature',
+      `.oc-map-feature, .${FEATURE_UNDERLAY_CLASS}`,
     );
     if (!ids || ids.length === 0) {
       for (const el of features) {
@@ -918,7 +939,7 @@ export function createGeoMap(
 
   function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
-    tooltipManager?.hide();
+    hideTooltip();
     // Cancel the running entrance; one still waiting to be seen re-arms.
     entrance.reset();
     if (fillTransitionHandle) {
@@ -1489,7 +1510,7 @@ export function createGeoMap(
       readerOwned = true;
       cleanupTooltipEvents?.();
       cleanupTooltipEvents = null;
-      tooltipManager?.hide();
+      hideTooltip();
       return () => {
         readerOwned = false;
         if (!destroyed && svgElement)
