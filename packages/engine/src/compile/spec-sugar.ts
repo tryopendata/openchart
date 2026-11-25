@@ -1,6 +1,6 @@
 import { assertMarkOptions } from '../compiler/mark-options';
 import { collectRemovedSpecErrors } from '../compiler/removed-spec-fields';
-import { hasTimeEncoding } from '../playback/time-spec';
+import { hasTimeEncoding, playbackWithoutTimeWarning } from '../playback/time-spec';
 import { SOURCE_MARK_TYPE, type SourceMarkSpec } from './source-mark';
 /**
  * Pre-validation spec sugar expansion.
@@ -829,8 +829,9 @@ function applyHistogramNormalize(spec: Record<string, unknown>): Record<string, 
 
 /** A `playback` block does nothing on a chart without `encoding.time`. */
 function warnOnPlaybackWithoutTime(spec: Record<string, unknown>, warnings: string[]): void {
-  if (spec.playback === undefined || hasTimeEncoding(spec)) return;
-  warnings.push('playback is ignored without encoding.time');
+  if (hasTimeEncoding(spec)) return;
+  const ignored = playbackWithoutTimeWarning(spec, 'encoding.time');
+  if (ignored) warnings.push(ignored);
 }
 
 function expandChartSugar(

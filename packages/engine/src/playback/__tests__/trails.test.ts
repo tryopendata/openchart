@@ -75,6 +75,11 @@ describe('trailsAt', () => {
       expect.closeTo(x(1500), 6),
     ]);
   });
+
+  it('draws no trails when the matrix has no y channel (a categorical y)', () => {
+    const { y: _y, ...values } = matrix.values;
+    expect(trailsAt({ ...matrix, values }, logFrame, ['Avalon'], 1)).toEqual([]);
+  });
 });
 
 describe('resolveTrailKeys', () => {

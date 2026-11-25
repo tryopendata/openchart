@@ -61,34 +61,64 @@ function headPosition(
   );
 }
 
+/** A trail key with its x and y series, resolved once per run. */
+interface TrailSeries {
+  key: string;
+  xValues: Float64Array;
+  yValues: Float64Array;
+}
+
+/** The x and y series of each key in `keys` that the matrix has, in request order. */
+function trailSeries(matrix: PlaybackMatrix, keys: string[]): TrailSeries[] {
+  const { x, y } = matrix.values;
+  // A categorical x or y has no matrix channel; validation rejects trails there.
+  if (!(x && y)) return [];
+  const indexOf = new Map(matrix.keys.map((key, index) => [key, index]));
+  const series: TrailSeries[] = [];
+  for (const key of keys) {
+    const index = indexOf.get(key);
+    if (index !== undefined) series.push({ key, xValues: x[index], yValues: y[index] });
+  }
+  return series;
+}
+
 /**
- * Trails for `keys` at playhead `t`: the frozen-scale positions of every period up to
- * floor(t) where the key has x and y values, plus the interpolated head at `t`
- * (geometric on log channels). Reads the matrix's `x` and `y` channels. Keys missing from
- * the matrix or with no position at `t` are left out. When the head's period or the next
- * one has no value, the head holds at the last observed position.
+ * Trails for `keys` as a function of playhead `t`: the frozen-scale positions of every
+ * period up to floor(t) where the key has x and y values, plus the interpolated head at `t`
+ * (geometric on log channels). Reads the matrix's `x` and `y` channels, resolved once, and
+ * draws nothing when either is missing. Keys missing from the matrix or with no position at
+ * `t` are left out. When the head's period or the next one has no value, the head holds at
+ * the last observed position.
  */
+export function createTrailsAt(
+  matrix: PlaybackMatrix,
+  frame: FrozenChartFrame,
+  keys: string[],
+): (t: number) => TrailPath[] {
+  const scales = pixelScales(frame);
+  const series = trailSeries(matrix, keys);
+  const lastPeriod = matrix.periods.length - 1;
+  if (!scales || lastPeriod < 0 || series.length === 0) return () => [];
+  return (t) => {
+    const playhead = Math.min(Math.max(t, 0), lastPeriod);
+    const trails: TrailPath[] = [];
+    for (const { key, xValues, yValues } of series) {
+      const points = observedPoints(scales, xValues, yValues, Math.floor(playhead));
+      const head = headPosition(scales, xValues, yValues, playhead) ?? points[points.length - 1];
+      if (head) trails.push({ key, points, head });
+    }
+    return trails;
+  };
+}
+
+/** `createTrailsAt` evaluated once, at playhead `t`. */
 export function trailsAt(
   matrix: PlaybackMatrix,
   frame: FrozenChartFrame,
   keys: string[],
   t: number,
 ): TrailPath[] {
-  const scales = pixelScales(frame);
-  if (!scales || matrix.periods.length === 0) return [];
-  const playhead = Math.min(Math.max(t, 0), matrix.periods.length - 1);
-  const trails: TrailPath[] = [];
-  for (const key of keys) {
-    const index = matrix.keys.indexOf(key);
-    if (index < 0) continue;
-    const xValues = matrix.values.x[index];
-    const yValues = matrix.values.y[index];
-    const points = observedPoints(scales, xValues, yValues, Math.floor(playhead));
-    const head = headPosition(scales, xValues, yValues, playhead) ?? points[points.length - 1];
-    if (!head) continue;
-    trails.push({ key, points, head });
-  }
-  return trails;
+  return createTrailsAt(matrix, frame, keys)(t);
 }
 
 /**

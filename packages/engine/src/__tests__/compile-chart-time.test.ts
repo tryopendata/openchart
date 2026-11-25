@@ -1,4 +1,4 @@
-import type { PointMark } from '@opendata-ai/openchart-core';
+import type { ChartSpec, PointMark, RectMark } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../compile';
 import {
@@ -62,6 +62,37 @@ describe('compileChart on a time spec', () => {
 
   it('rejects empty data like every other chart', () => {
     expect(() => compileChart(bubbleSpec([]), compileOptions)).toThrow(/non-empty array/);
+  });
+
+  it('fades a bar that leaves between periods, as the live frames do', () => {
+    const barRows = ['a', 'b', 'c'].flatMap((category, index) =>
+      [2000, 2001, 2002].map((year) => ({ category, year, value: (index + 1) * 10 + year - 2000 })),
+    );
+    const spec = {
+      mark: 'bar',
+      data: barRows.filter((row) => !(row.category === 'c' && row.year === 2002)),
+      encoding: {
+        x: { field: 'value', type: 'quantitative' },
+        y: { field: 'category', type: 'nominal' },
+        time: { field: 'year', type: 'temporal' },
+      },
+    } as ChartSpec;
+    const playback = compileChartPlayback(spec, compileOptions);
+    const presence = playback.marksAt(1.25).find(({ key }) => key === '|c')?.presence ?? 1;
+    expect(presence).toBeLessThan(1);
+    const layout = compileChart(spec, { ...compileOptions, playbackT: 1.25 });
+    const leaving = layout.marks.find((mark): mark is RectMark => mark.key === '|c');
+    expect(leaving?.fillOpacity).toBeCloseTo(presence, 6);
+    const staying = layout.marks.find((mark): mark is RectMark => mark.key === '|a');
+    expect(staying?.fillOpacity).toBeUndefined();
+  });
+
+  it('rejects trails on a point chart with a categorical y instead of crashing', () => {
+    const spec = bubbleSpec(rows, { playback: { trails: true } });
+    const encoding = { ...spec.encoding, y: { field: 'region', type: 'nominal' } };
+    expect(() => compileChart({ ...spec, encoding } as ChartSpec, compileOptions)).toThrow(
+      /playback\.trails/,
+    );
   });
 
   it('leaves a spec without time on the ordinary compile path', () => {

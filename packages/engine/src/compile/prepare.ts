@@ -13,6 +13,7 @@ import type {
   Transform,
 } from '@opendata-ai/openchart-core';
 import { getBreakpoint, resolveChromeEconomy } from '@opendata-ai/openchart-core';
+import { mirrorSidesWarning } from '../charts/bar/mirror-sides';
 import { compile as compileSpec } from '../compiler/index';
 import type { NormalizedChartSpec } from '../compiler/types';
 import { validatePreparedLabelPlacement } from '../compiler/validation/label-placement';
@@ -69,6 +70,17 @@ export function applySpecSize<T extends CompileOptions>(spec: unknown, options: 
   };
 }
 
+/** Mirrored bars whose transformed rows don't split into two sides draw a lopsided chart. */
+function warnOnTransformedMirrorSides(
+  chartSpec: NormalizedChartSpec,
+  onWarn: CompileOptions['onWarn'],
+): void {
+  const color = chartSpec.encoding.color;
+  if (chartSpec.markDef.mirror !== true || !color || !('field' in color)) return;
+  const warning = mirrorSidesWarning(chartSpec.data, color.field);
+  if (warning) emitSpecWarnings([warning], onWarn);
+}
+
 export function prepareChartSpec(
   spec: unknown,
   optionsInput: InternalCompileOptions,
@@ -121,6 +133,7 @@ export function prepareChartSpec(
   const rawTransforms = rawSpec.transform as Transform[] | undefined;
   if (rawTransforms && rawTransforms.length > 0) {
     chartSpec = { ...chartSpec, data: runTransforms(chartSpec.data, rawTransforms) };
+    warnOnTransformedMirrorSides(chartSpec, options.onWarn);
   }
 
   // Height-dependent responsive state (strategy, watermark, note reserve) is

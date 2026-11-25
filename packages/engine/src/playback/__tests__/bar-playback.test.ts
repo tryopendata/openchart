@@ -193,6 +193,10 @@ describe('mirrored bars over time', () => {
     expect(presence('Male|0-9', 0)).toBe(1);
   });
 
+  it('describes a frame in bars, counting the bars present at the period reached', () => {
+    expect(playback.describe(0.6)).toBe('2000: 4 of 6 bars shown.');
+  });
+
   it('keeps the gutter category labels and the half labels in the base layout', () => {
     const expected = compileChart(staticPeriodSpec(pyramidSpec(), 2002, playback), compileOptions);
     for (const prefix of ['oc-mirror-category|', 'oc-mirror-half|']) {

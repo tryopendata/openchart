@@ -34,7 +34,7 @@ function resolveDurationMs(
       )
     );
   }
-  const durationMs = block.step * (periodCount - 1);
+  const durationMs = block.step * Math.max(0, periodCount - 1);
   if (!Number.isFinite(durationMs)) {
     throw new RangeError(
       `${blockName}.step is too large for ${periodCount} periods. Use a shorter step.`,
@@ -52,7 +52,7 @@ function resolvePeriod(period: PlaybackTimingConfig['period']): ResolvedPlayback
 /**
  * Apply the shared playback defaults: holdEnd 1500, loop false, autoplay "visible",
  * controls true, gaps "interpolate", period { position: "auto" }. Duration is `step x
- * (periods - 1)` when step is set, else the authored duration, else periods x 700 clamped
+ * (periods - 1)` when step is set (0 with no periods), else the authored duration, else periods x 700 clamped
  * to 8000..90000 (the race's rule).
  *
  * @param blockName Names the block in the step overflow message. Defaults to `playback`.

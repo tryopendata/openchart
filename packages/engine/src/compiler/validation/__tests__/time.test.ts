@@ -198,6 +198,45 @@ describe('validateTimeEncoding through validateSpec', () => {
     expect(errorsOf({ ...scatter, data: [] }).map((error) => error.code)).toEqual(['EMPTY_DATA']);
   });
 
+  it.each([
+    ['y', { y: { field: 'region', type: 'nominal' } }],
+    ['x', { x: { field: 'region', type: 'nominal' } }],
+  ])('rejects playback.trails when %s is not quantitative', (channel, override) => {
+    const spec = {
+      ...scatter,
+      encoding: { ...scatter.encoding, ...override },
+      playback: { trails: true },
+    };
+    const error = errorsOf(spec).find((e) => e.path === '/playback/trails');
+    expect(error?.message).toContain(`${channel} is not quantitative`);
+    expect(errorsOf({ ...spec, playback: { trails: false } })).toEqual([]);
+  });
+
+  it.each([
+    ['row', '/encoding/row'],
+    ['column', '/encoding/column'],
+  ])('rejects time with a %s facet channel at its path', (channel, path) => {
+    const spec = {
+      ...scatter,
+      encoding: { ...scatter.encoding, [channel]: { field: 'region', type: 'nominal' } },
+    };
+    const error = errorsOf(spec).find((e) => e.path === path);
+    expect(error?.message).toMatch(/facet/);
+  });
+
+  it('keeps the year 2020 and the string "2020" apart as periods', () => {
+    const mixed = [
+      { country: 'France', region: 'Europe', year: 2020, gdp: 1, life: 70 },
+      { country: 'France', region: 'Europe', year: '2020', gdp: 2, life: 71 },
+    ];
+    const spec = {
+      ...scatter,
+      data: mixed,
+      encoding: { ...scatter.encoding, time: { field: 'year', type: 'ordinal' } },
+    };
+    expect(messages(spec)).not.toContain('rows have');
+  });
+
   it('adds nothing for a spec without time', () => {
     const { time: _time, key: _key, ...encoding } = scatter.encoding;
     expect(errorsOf({ ...scatter, encoding, data: [...rows, rows[0]] })).toEqual([]);

@@ -5,6 +5,7 @@
  * fits the tallest stack any single frame draws.
  */
 import type { ChartSpec, DataRow, Encoding, EncodingChannel } from '@opendata-ai/openchart-core';
+import { barIdentityKey } from '../charts/bar/identity-key';
 import { finiteNumber } from '../data/finite-number';
 
 /** The fields of a bar chart whose value axis is sized from summed stacks. */
@@ -90,8 +91,7 @@ export function tallestStackRows(
   timeField: string,
 ): DataRow[] {
   const tallest = tallestPeriods(rows, fields, timeField);
-  const keyOf = (row: DataRow) =>
-    `${String(row[fields.color] ?? '')}|${String(row[fields.category] ?? '')}`;
+  const keyOf = (row: DataRow) => barIdentityKey(row, fields.category, fields.color);
   const inTallest = (row: DataRow) =>
     row[timeField] === tallest.get(String(row[fields.category] ?? ''));
   const keysKept = new Set(rows.filter(inTallest).map(keyOf));

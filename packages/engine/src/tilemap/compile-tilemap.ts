@@ -54,7 +54,7 @@ import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
 import { compileTileMapAtPlayhead } from '../playback/map-playback';
 import type { TileMapPlaybackScope } from '../playback/map-types';
-import { hasTimeEncoding } from '../playback/time-spec';
+import { hasTimeEncoding, playbackWithoutTimeWarning } from '../playback/time-spec';
 import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
 import type { NormalizedTileMapSpec } from './types';
 
@@ -137,6 +137,8 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
   // A spec with encoding.time compiles one frame of its playback (options.playbackT, else
   // the final period).
   if (hasTimeEncoding(spec)) return compileTileMapAtPlayhead(spec, options);
+  const ignored = playbackWithoutTimeWarning(spec, 'encoding.time');
+  if (ignored) emitSpecWarnings([ignored], options.onWarn);
   return compileTileMapFrame(spec, options);
 }
 

@@ -244,6 +244,10 @@ describe('text and labels', () => {
     expect(playback.describe(2)).toContain('2002');
   });
 
+  it('describes the period the playhead has reached, like the period label', () => {
+    expect(compile().describe(1.6)).toBe('2001: 4 of 4 points shown.');
+  });
+
   it('labels periods and resolves timing', () => {
     const playback = compile(bubbleRows(), { playback: { step: 500, loop: true } });
     expect(playback.periodLabels).toEqual(['2000', '2001', '2002']);

@@ -22,7 +22,13 @@ export interface FrameSampler {
   isPresent(keyIndex: number, period: number): boolean;
   /** Has an observed value on every channel at the period, before gap filling. */
   isObserved(keyIndex: number, period: number): boolean;
+  /** The period closest to `t`, clamped: what tooltips and observed values read. */
   nearestPeriod(t: number): number;
+  /**
+   * The period the playhead has reached, `floor(t)` clamped: what the period label, the
+   * controls and the live-region summary show.
+   */
+  reachedPeriod(t: number): number;
   stateAt(keyIndex: number, t: number): KeyState;
 }
 
@@ -133,6 +139,7 @@ export function createFrameSampler(
     isPresent: (keyIndex, period) => present[keyIndex][period] === 1,
     isObserved: (keyIndex, period) => observedMask[keyIndex][period] === 1,
     nearestPeriod: (t) => Math.round(clamp(t)),
+    reachedPeriod: (t) => Math.floor(clamp(t)),
     stateAt: (keyIndex, t) => {
       const { from, to, fraction, presence } = spanAt(keyIndex, t);
       const values = series.map((keyed, channel) =>

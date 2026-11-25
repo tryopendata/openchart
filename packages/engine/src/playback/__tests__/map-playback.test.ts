@@ -177,6 +177,27 @@ describe('compileGeoMapPlayback', () => {
     expect(playback.describe(2)).toBe('Mar 2020: highest California 20, lowest New York 9.');
   });
 
+  it('labels and describes the period the playhead has reached, as charts do', () => {
+    const playback = compileGeoMapPlayback(geoSpec(), OPTIONS);
+    expect(playback.overlaysAt(1.5).map(({ text }) => text)).toEqual(['Feb 2020']);
+    expect(playback.describe(1.6)).toMatch(/^Feb 2020:/);
+    const layout = compileGeoMap(geoSpec(), { ...OPTIONS, playbackT: 1.5 }) as ReturnType<
+      typeof compileGeoMap
+    > &
+      PlaybackOverlayLayout;
+    expect(layout.playbackOverlays?.map(({ text }) => text)).toEqual(['Feb 2020']);
+  });
+
+  it('warns that playback is ignored on a geo map without time', () => {
+    const { time: _time, ...encoding } = geoSpec().encoding as Record<string, unknown>;
+    const warnings: string[] = [];
+    compileGeoMap(geoSpec({ encoding, playback: { loop: true } } as Partial<GeoMapSpec>), {
+      ...OPTIONS,
+      onWarn: (message) => warnings.push(message),
+    });
+    expect(warnings).toContain('playback is ignored without encoding.time or points.time');
+  });
+
   it('fades points in and out by key and sizes them from the frozen size scale', () => {
     const spec = geoSpec({
       data: [],
@@ -240,6 +261,25 @@ describe('compileTileMapPlayback', () => {
       }
     }
     expect(playback.fillsAt(0.5).find(({ key }) => key === 'CA')?.labels?.valueText).toBe('6');
+  });
+});
+
+describe('tile map playback without time', () => {
+  it('warns that playback is ignored', () => {
+    const warnings: string[] = [];
+    compileTileMap(
+      {
+        type: 'tilemap',
+        data: [{ code: 'CA', rate: 2 }],
+        encoding: {
+          state: { field: 'code', type: 'nominal' },
+          value: { field: 'rate', type: 'quantitative' },
+        },
+        playback: { loop: true },
+      } as TileMapSpec,
+      { ...OPTIONS, onWarn: (message) => warnings.push(message) },
+    );
+    expect(warnings).toContain('playback is ignored without encoding.time');
   });
 });
 

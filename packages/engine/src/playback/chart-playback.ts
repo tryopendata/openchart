@@ -29,7 +29,7 @@ import { createOverlaysAt } from './overlay-plan';
 import { paintOrder } from './overlays';
 import { formatPeriodLabels } from './period-labels';
 import type { PlaybackTimeEncoding, PlaybackTimeType } from './periods';
-import { resolveTrailKeys, trailsAt } from './trails';
+import { createTrailsAt, resolveTrailKeys } from './trails';
 
 /**
  * @throws {Error} When the spec names no identity. Validation rejects such specs before
@@ -78,6 +78,8 @@ interface PivotedSpec {
   time: EncodingChannel & PlaybackTimeEncoding;
   channels: PlaybackChannel[];
   observed: PlaybackMatrix;
+  /** What the marks are called in messages and the live-region summary. */
+  noun: 'bars' | 'points';
 }
 
 /**
@@ -109,7 +111,7 @@ function pivotSpecRows(
     'drop',
     warn,
   );
-  return { source, identity: identity.field, time, channels, observed };
+  return { source, identity: identity.field, time, channels, observed, noun };
 }
 
 /** A compiled playback plus each frame's marks and overlays in paint order. */
@@ -201,9 +203,9 @@ export function compilePaintedChartPlayback(
 
   const describe = (t: number): string => {
     if (matrix.periods.length === 0) return 'No periods to play.';
-    const period = sampler.nearestPeriod(t);
+    const period = sampler.reachedPeriod(t);
     const shown = order.filter((keyIndex) => sampler.isPresent(keyIndex, period)).length;
-    return `${periodLabels[period]}: ${shown} of ${order.length} points shown.`;
+    return `${periodLabels[period]}: ${shown} of ${order.length} ${pivot.noun} shown.`;
   };
 
   const playback: ChartPlayback = {
@@ -223,7 +225,7 @@ export function compilePaintedChartPlayback(
       const { behind, above } = overlaysFor(t);
       return [...behind, ...above];
     },
-    trailsAt: (t) => (trailKeys.length ? trailsAt(matrix, frame, trailKeys, t) : []),
+    trailsAt: createTrailsAt(matrix, frame, trailKeys),
     observedAt,
     describe,
   };

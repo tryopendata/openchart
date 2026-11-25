@@ -5,7 +5,7 @@
  * bars read the same mapping with their derived `color|category` identity.
  */
 import type { DataRow, Encoding, EncodingChannel, MarkType } from '@opendata-ai/openchart-core';
-import { serializeKeyValue } from '../compiler/keys';
+import { barIdentityKey } from '../charts/bar/identity-key';
 import type { PlaybackChannel } from './matrix';
 
 /** Encoding channels whose quantitative values position or size a point. */
@@ -130,10 +130,11 @@ export function playbackIdentity(
   const categoryField = channelField(horizontal ? encoding.y : encoding.x);
   if (!categoryField) return undefined;
   const colorField = channelField(encoding.color);
-  const keyOf = (row: DataRow) =>
-    `${colorField ? String(row[colorField] ?? '') : ''}|${serializeKeyValue(row[categoryField])}`;
   return {
     field: DERIVED_KEY_FIELD,
-    rows: rows.map((row) => ({ ...row, [DERIVED_KEY_FIELD]: keyOf(row) })),
+    rows: rows.map((row) => ({
+      ...row,
+      [DERIVED_KEY_FIELD]: barIdentityKey(row, categoryField, colorField),
+    })),
   };
 }

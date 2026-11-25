@@ -20,7 +20,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { isGradientDef, NARROW_VIEWPORT_MAX } from '@opendata-ai/openchart-core';
 import type { ScaleBand, ScaleLinear } from 'd3-scale';
-import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
+import { dedupeKeys } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { finiteNumber } from '../../data/finite-number';
 import type { ResolvedScales } from '../../layout/scales';
@@ -35,6 +35,7 @@ import {
   stackSeamStroke,
   valueEndCorners,
 } from '../utils';
+import { barIdentityKey } from './identity-key';
 
 /**
  * Draw a 1px seam in the canvas color between adjacent stacked segments so
@@ -256,12 +257,7 @@ export function computeBarMarks(
 
 /** Stamp stable identity keys on bar marks for data-update transitions. */
 function stampBarKeys(marks: RectMark[], categoryField: string, colorField?: string): void {
-  const rawKeys = marks.map((m) => {
-    const series = colorField ? String(m.data[colorField] ?? '') : '';
-    const cat = serializeKeyValue(m.data[categoryField]);
-    return `${series}|${cat}`;
-  });
-  const keys = dedupeKeys(rawKeys);
+  const keys = dedupeKeys(marks.map((m) => barIdentityKey(m.data, categoryField, colorField)));
   for (let i = 0; i < marks.length; i++) {
     marks[i].key = keys[i];
   }
