@@ -10,16 +10,16 @@ import type {
   EncodingChannel,
   Mark,
 } from '@opendata-ai/openchart-core';
+import { createFrameDrawer, type FrameDrawer } from '../charts/scatter/playback-frames';
+import { prepareChartSpec } from '../compile/prepare';
+import { emitSpecWarnings } from '../compile/spec-sugar';
+import { computeTooltipDescriptors } from '../tooltips/compute';
 import {
   type PlaybackIdentity,
   playbackChannels,
   playbackIdentity,
   playbackStaticFields,
-} from '../charts/scatter/playback-channels';
-import { createFrameDrawer, type FrameDrawer } from '../charts/scatter/playback-frames';
-import { prepareChartSpec } from '../compile/prepare';
-import { emitSpecWarnings } from '../compile/spec-sugar';
-import { computeTooltipDescriptors } from '../tooltips/compute';
+} from './channels';
 import type { ChartPlayback, FrameMark, ObservedValues } from './chart-types';
 import { collectPlaybackWarnings } from './chart-warnings';
 import { createFrameSampler, type FrameSampler } from './frame-sampler';

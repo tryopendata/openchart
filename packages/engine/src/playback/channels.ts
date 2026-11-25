@@ -5,8 +5,8 @@
  * bars read the same mapping with their derived `color|category` identity.
  */
 import type { DataRow, Encoding, EncodingChannel, MarkType } from '@opendata-ai/openchart-core';
-import { serializeKeyValue } from '../../compiler/keys';
-import type { PlaybackChannel } from '../../playback/matrix';
+import { serializeKeyValue } from '../compiler/keys';
+import type { PlaybackChannel } from './matrix';
 
 /** Encoding channels whose quantitative values position or size a point. */
 const POINT_DRAWN_CHANNELS = ['x', 'y', 'size', 'color'] as const;

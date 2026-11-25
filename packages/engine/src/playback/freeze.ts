@@ -12,15 +12,11 @@ import type {
   MarkType,
 } from '@opendata-ai/openchart-core';
 import { pointFillOpacity } from '../charts/scatter/compute';
-import {
-  channelField,
-  isDrawnChannel,
-  matrixChannelEncoding,
-} from '../charts/scatter/playback-channels';
 import { freezePointRenderSpec } from '../charts/scatter/playback-spec';
 import { compileChartInternal } from '../compile/chart';
 import type { FrameCapture } from '../compile/internal-options';
 import { resolveFieldFormatter } from '../format/field-format';
+import { channelField, isDrawnChannel, matrixChannelEncoding } from './channels';
 import type { FrozenChartFrame } from './chart-types';
 import type { PlaybackMatrix } from './matrix';
 
