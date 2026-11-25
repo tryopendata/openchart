@@ -1,4 +1,8 @@
+/**
+ * Reading raw time values into periods and putting the distinct periods in playback order.
+ */
 import type { EncodingChannel } from '@opendata-ai/openchart-core';
+import { finiteNumber } from '../data/finite-number';
 
 /** How a time channel's values are read and ordered. */
 export type PlaybackTimeType = 'temporal' | 'ordinal' | 'quantitative';
@@ -21,6 +25,13 @@ export interface PlaybackTimeEncoding {
   format?: string;
 }
 
+const ISO_TIME_WITHOUT_OFFSET = /T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/i;
+
+function temporalSortKey(value: string | number): number {
+  if (typeof value === 'number') return value;
+  return Date.parse(ISO_TIME_WITHOUT_OFFSET.test(value) ? `${value}Z` : value);
+}
+
 /**
  * Read one raw period value. Temporal values sort by year number or epoch milliseconds
  * (ISO times without an offset read as UTC), quantitative values numerically, and ordinal
@@ -28,9 +39,27 @@ export interface PlaybackTimeEncoding {
  * Returns undefined when the value can't be a period of that type.
  */
 export function readPeriod(raw: unknown, type: PlaybackTimeType): PlaybackPeriod | undefined {
-  void raw;
-  void type;
-  throw new Error('not implemented');
+  const value = raw instanceof Date && Number.isFinite(raw.getTime()) ? raw.toISOString() : raw;
+  if (typeof value !== 'string' && typeof value !== 'number') return undefined;
+
+  let sortKey = 0;
+  if (type === 'temporal') sortKey = temporalSortKey(value);
+  else if (type === 'quantitative') sortKey = finiteNumber(value) ?? NaN;
+  return Number.isFinite(sortKey) ? { value, sortKey } : undefined;
+}
+
+function orderOrdinals(periods: PlaybackPeriod[], sort: EncodingChannel['sort']): void {
+  if (Array.isArray(sort)) {
+    const positions = new Map([...new Set(sort)].map((value, index) => [value, index]));
+    const position = (period: PlaybackPeriod) =>
+      positions.get(String(period.value)) ?? positions.size;
+    periods.sort((a, b) => position(a) - position(b));
+  } else if (sort === 'descending') {
+    periods.reverse();
+  }
+  periods.forEach((period, index) => {
+    period.sortKey = index;
+  });
 }
 
 /**
@@ -43,7 +72,14 @@ export function orderPeriods(
   periods: PlaybackPeriod[],
   time: Pick<PlaybackTimeEncoding, 'sort'> & { type: PlaybackTimeType },
 ): void {
-  void periods;
-  void time;
-  throw new Error('not implemented');
+  if (time.type === 'ordinal') {
+    orderOrdinals(periods, time.sort);
+    return;
+  }
+  if (time.type === 'temporal' && periods.some(({ value }) => typeof value === 'string')) {
+    for (const period of periods) {
+      if (typeof period.value === 'number') period.sortKey = Date.UTC(period.value, 0, 1);
+    }
+  }
+  periods.sort((a, b) => a.sortKey - b.sortKey);
 }

@@ -1,6 +1,7 @@
 import {
   type Chrome,
   inferFieldType,
+  type RaceConfig,
   type RaceMarkDef,
   type RaceSpec,
 } from '@opendata-ai/openchart-core';
@@ -27,14 +28,42 @@ function normalizeChrome(chrome: Chrome | undefined): NormalizedChrome {
 }
 
 /**
- * Fill defaults on a validated race spec. Leave an omitted `duration` undefined
- * for phase 2 to resolve from the period count.
+ * The race block with the top-level `playback` timing fields filled in underneath it.
+ * Validation rejects a field set in both, so neither block silently wins.
+ */
+function mergePlaybackTiming(spec: RaceSpec): RaceConfig | undefined {
+  if (!spec.playback) return spec.race;
+  const { duration, step, gaps, holdEnd, loop, autoplay, controls, period } = spec.playback;
+  const timing: RaceConfig = { duration, step, gaps, holdEnd, loop, autoplay, controls };
+  if (period !== undefined) {
+    timing.period = period === false ? false : { format: period.format };
+  }
+  const merged: RaceConfig = { ...spec.race };
+  for (const [field, value] of Object.entries(timing)) {
+    if (value !== undefined && merged[field as keyof RaceConfig] === undefined) {
+      Object.assign(merged, { [field]: value });
+    }
+  }
+  return merged;
+}
+
+/** Names the block that supplied `step` when it was the top-level `playback` block. */
+function stepBlock(spec: RaceSpec): 'playback' | undefined {
+  return spec.race?.step === undefined && spec.playback?.step !== undefined
+    ? 'playback'
+    : undefined;
+}
+
+/**
+ * Fill defaults on a validated race spec, reading timing from `playback` where `race` leaves
+ * it out. Leave an omitted `duration` undefined for phase 2 to resolve from the period count.
  *
  * Force autoplay off when `animation === false`. Append a warning to `warnings`
  * when `controls: false` would leave an autoplaying race without a pause control.
  */
 export function normalizeRaceSpec(spec: RaceSpec, warnings: string[]): NormalizedRaceSpec {
-  const { encoding, race } = spec;
+  const { encoding } = spec;
+  const race = mergePlaybackTiming(spec);
   const mark: RaceMarkDef = typeof spec.mark === 'string' ? { type: spec.mark } : spec.mark;
   const timeType = encoding.time.type ?? inferFieldType(spec.data, encoding.time.field);
   const autoplay = spec.animation === false ? false : (race?.autoplay ?? 'visible');
@@ -69,6 +98,7 @@ export function normalizeRaceSpec(spec: RaceSpec, warnings: string[]): Normalize
       top: race?.top ?? 10,
       duration: race?.duration,
       step: race?.step,
+      stepBlock: stepBlock(spec),
       swap: race?.swap ?? 400,
       rescale: race?.rescale ?? 'frame',
       gaps: race?.gaps ?? 'interpolate',

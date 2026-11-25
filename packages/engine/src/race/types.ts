@@ -26,6 +26,8 @@ export interface ResolvedRaceOptions {
   top: number;
   duration?: number;
   step?: number;
+  /** Set when `step` came from the top-level `playback` block, so errors name that block. */
+  stepBlock?: 'playback';
   swap: number;
   rescale: 'frame' | 'fixed' | { min: number };
   gaps: 'interpolate' | 'hold' | 'drop';

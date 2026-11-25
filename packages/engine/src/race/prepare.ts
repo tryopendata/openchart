@@ -2,6 +2,7 @@ import { type CompileWarning, resolveTheme } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings, type WarnSink } from '../compile/spec-sugar';
 import { compile } from '../compiler/index';
 import { resolveFieldFormatter } from '../format/field-format';
+import { resolvePlayback } from '../playback/options';
 import { assignRaceColors, resolveRaceColors } from './colors';
 import { buildRaceMatrix } from './matrix';
 import { formatPeriodLabels } from './period-labels';
@@ -30,14 +31,8 @@ function createRaceWarn(warnings: string[], onWarn?: RaceWarningSink): WarnSink 
 }
 
 function resolveDurationMs(race: ResolvedRaceOptions, periodCount: number): number {
-  if (race.step === undefined) {
-    return race.duration ?? Math.max(8000, Math.min(90000, periodCount * 700));
-  }
-  const durationMs = race.step * (periodCount - 1);
-  if (!Number.isFinite(durationMs)) {
-    throw new RangeError(`race.step is too large for ${periodCount} periods. Use a shorter step.`);
-  }
-  return durationMs;
+  const timing = { duration: race.duration, step: race.step };
+  return resolvePlayback(timing, periodCount, race.stepBlock ?? 'race').durationMs;
 }
 
 function authoredWatermark(spec: unknown, normalized: boolean): boolean | undefined {
