@@ -3,12 +3,13 @@
  * playhead, manual updates, and how updates carry or reset the run.
  */
 import type { ChartSpec, DataRow, PointMark } from '@opendata-ai/openchart-core';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { createFakeObserver, stubPageLayout } from '../__test-fixtures__/visibility';
 import { createChart } from '../mount';
 import { createFakePlayback } from '../playback/__tests__/fake-playback';
 import { carriedPlayhead } from '../playback/chart-update';
+import { createReader } from '../reader';
 import { setObserverFactory } from '../visibility';
 
 const COUNTRIES = ['Avalon', 'Borea', 'Cydonia'];
@@ -111,6 +112,46 @@ describe('reading a playback chart', () => {
     expect(openingCx).not.toBe(finalCx);
     expect(String(openingCx)).toBe(circlePositions(container).Avalon);
     expect(avalonCx(chart.sampleLayout())).toBe(openingCx);
+  });
+
+  it('gives the same layout object for a paused frame until the playhead moves', () => {
+    const { chart, controller } = mount(timeSpec({ animation: false }));
+    controller.seek(1);
+    const layout = chart.layout;
+    expect(chart.sampleLayout()).toBe(layout);
+    expect(chart.layout).toBe(layout);
+    controller.seek(0);
+    expect(chart.layout).not.toBe(layout);
+    expect(chart.sampleLayout()).toBe(chart.layout);
+  });
+
+  it('lets a reader settle a pin that carries its previous value through an update', async () => {
+    const spec: ChartSpec = {
+      mark: 'bar',
+      animation: false,
+      data: rows(),
+      encoding: {
+        y: { field: 'country', type: 'nominal' },
+        x: { field: 'gdp', type: 'quantitative' },
+        time: { field: 'year', type: 'temporal' },
+      },
+    };
+    const { container, chart } = mount(spec);
+    const reader = createReader(container, chart, spec, () => {});
+    cleanup.push(() => reader.destroy());
+    const pinned = spec.data[0] as DataRow;
+    reader.pin(pinned);
+    const [observation] = reader.selection.pinned;
+    reader.setSelection({
+      ...reader.selection,
+      pinned: [{ ...observation, previous: { ...pinned, gdp: 1 } }],
+    });
+
+    const legendMoved: ChartSpec = { ...spec, legend: { position: 'bottom' } };
+    chart.update(legendMoved);
+    reader.update(legendMoved);
+    expect(reader.selection.pinned[0]?.previous).toBeDefined();
+    await vi.waitFor(() => expect(reader.selection.pinned[0]?.previous).toBeUndefined());
   });
 
   it('exports the frame on screen as SVG', () => {

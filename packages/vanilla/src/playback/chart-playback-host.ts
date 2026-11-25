@@ -94,6 +94,29 @@ export interface ChartPlaybackHost {
 }
 
 /**
+ * `layoutAtPlayhead` that returns the same layout object while the source, playback, hidden
+ * keys and playhead stay the same, so readers that compare `chart.layout` with
+ * `sampleLayout()` see a paused frame as settled.
+ */
+function memoizeFrameLayout(): (source: PlaybackExportSource, t: number) => ChartLayout {
+  let last: { source: PlaybackExportSource; t: number; layout: ChartLayout } | null = null;
+  return (source, t) => {
+    if (
+      last &&
+      last.t === t &&
+      last.source.layout === source.layout &&
+      last.source.playback === source.playback &&
+      last.source.hiddenKeys === source.hiddenKeys
+    ) {
+      return last.layout;
+    }
+    const layout = layoutAtPlayhead(source.playback, t, source.layout, source.hiddenKeys);
+    last = { source, t, layout };
+    return layout;
+  };
+}
+
+/**
  * Create the playback host for one chart mount. `editing` opens every playback on its final
  * period without autoplay.
  */
@@ -112,6 +135,7 @@ export function createChartPlaybackHost(options: {
     hiddenKeys: Set<string>;
   } | null = null;
   let tooltips: PlaybackTooltips | null = null;
+  const frameLayoutAt = memoizeFrameLayout();
 
   const playhead = run.playhead;
   const currentPlayback = () => current?.playback ?? null;
@@ -181,8 +205,7 @@ export function createChartPlaybackHost(options: {
     },
     frameLayout(compiled) {
       const source = exportSource(compiled);
-      if (!source) return null;
-      return layoutAtPlayhead(source.playback, playhead(), source.layout, source.hiddenKeys);
+      return source ? frameLayoutAt(source, playhead()) : null;
     },
     exportSource,
     invalidate() {
