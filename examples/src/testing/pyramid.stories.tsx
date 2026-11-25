@@ -14,12 +14,12 @@ const japan2025: ChartSpec = {
   data: japanPopulation.data.filter((row) => row.year === 2025),
   encoding: {
     y: { field: 'age', type: 'ordinal', sort: JAPAN_AGE_GROUPS },
-    x: { field: 'pop', type: 'quantitative' },
+    x: { field: 'pop', type: 'quantitative', format: '.2~s' },
     color: { field: 'sex', type: 'nominal', sort: ['Male', 'Female'] },
   },
   chrome: {
     title: 'Japan is getting older',
-    subtitle: 'Population by age and sex, 2025 (thousands)',
+    subtitle: 'Population by age and sex, 2025',
     source: japanPopulation.source,
   },
 };

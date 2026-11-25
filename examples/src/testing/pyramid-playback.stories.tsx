@@ -22,14 +22,14 @@ const japanPyramid: ChartSpec = {
   data: japanPopulation.data,
   encoding: {
     y: { field: 'age', type: 'ordinal', sort: JAPAN_AGE_GROUPS },
-    x: { field: 'pop', type: 'quantitative', format: '~s' },
+    x: { field: 'pop', type: 'quantitative', format: '.2~s' },
     color: { field: 'sex', type: 'nominal', sort: ['Male', 'Female'] },
     time: { field: 'year', type: 'temporal' },
   },
   playback: { duration: 15000 },
   chrome: {
     title: "Japan's population ages: the base narrows as the bulge moves up",
-    subtitle: 'Population by age and sex, 1950 to 2100 (thousands); 2025 onward projected',
+    subtitle: 'Population by age and sex, 1950 to 2100; 2025 onward projected',
     source: 'Source: UN World Population Prospects 2024',
   },
 };

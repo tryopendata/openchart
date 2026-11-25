@@ -4,7 +4,7 @@
  *
  * From the UN World Population Prospects 2024, medium variant
  * (WPP2024_PopulationByAge5GroupSex_Medium.csv, downloaded 2026-11-25).
- * Values are thousands of people on 1 July. Years up to 2023 are estimates;
+ * The table below holds thousands of people on 1 July; rows carry whole people. Years up to 2023 are estimates;
  * 2025 onward are projections.
  */
 
@@ -280,7 +280,7 @@ export type PopulationPyramidRow = {
   year: number;
   age: string;
   sex: 'Male' | 'Female';
-  /** Thousands of people. */
+  /** People. */
   pop: number;
 };
 
@@ -292,8 +292,8 @@ export const japanPopulation = {
   url: 'https://population.un.org/wpp/',
   data: groups.flatMap(([age, male, female]) =>
     YEARS.flatMap((year, index): PopulationPyramidRow[] => [
-      { year, age, sex: 'Male', pop: male[index] },
-      { year, age, sex: 'Female', pop: female[index] },
+      { year, age, sex: 'Male', pop: male[index] * 1000 },
+      { year, age, sex: 'Female', pop: female[index] * 1000 },
     ]),
   ),
 };
