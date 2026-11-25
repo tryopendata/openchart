@@ -5,7 +5,7 @@ import type { NormalizedChartSpec } from '../../compiler/types';
 import { finiteNumber } from '../../data/finite-number';
 import { resolveFieldFormatter } from '../../format/field-format';
 import { resolveRendererKey } from '../post-process';
-import { mirrorHalfLabelBand } from './mirror';
+import { mirrorHalfLabelBand } from './mirror-labels';
 
 export type BarLabelPlacement = 'adaptive' | 'inside' | 'outside' | 'column' | 'suppress';
 export interface BarLabelPlan {
