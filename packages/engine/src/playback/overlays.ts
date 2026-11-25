@@ -11,12 +11,9 @@ import {
   type TextMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
-import {
-  labelOverflowsRight,
-  labelPlaybackPoint,
-  type PlaybackLabelSide,
-} from '../charts/scatter/playback-labels';
+import { labelOverflowsRight, type PlaybackLabelSide } from '../charts/scatter/playback-labels';
 import type { FrameMark } from './chart-types';
+import { type NameLabelPlan, placeNameLabels } from './name-label-placement';
 
 /** Key of the period label's text mark. */
 export const PERIOD_LABEL_KEY = 'oc-playback-period';
@@ -138,14 +135,14 @@ export function periodLabelMark(
   };
 }
 
-/** What a chart's overlays need, fixed for the whole run. */
-export interface OverlayPlan {
+/**
+ * What a chart's overlays need, fixed for the whole run. `labelSides` is the side of its
+ * bubble each labelled point key's name label prefers for the whole run.
+ */
+export interface OverlayPlan extends NameLabelPlan {
   /** Period label text per period index, or null when there's no period label. */
   periodTexts: string[] | null;
   placement: PeriodLabelPlacement;
-  /** The side of its bubble each labelled point key's name label sits on, for the whole run. */
-  labelSides: ReadonlyMap<string, PlaybackLabelSide>;
-  theme: ResolvedTheme;
 }
 
 /** One frame's overlays, split by where they paint relative to the marks. */
@@ -182,7 +179,8 @@ export function decideLabelSides(
 
 /**
  * The overlays for one frame: the period label for `period` (the period the playhead has
- * reached) and a name label beside each labelled point in `marks`, sharing its presence.
+ * reached) and a name label beside each labelled point in `marks`, sharing its presence and
+ * clear of the other name labels where a side allows (`placeNameLabels`).
  */
 export function buildFrameOverlays(
   plan: OverlayPlan,
@@ -195,14 +193,7 @@ export function buildFrameOverlays(
     const mark = periodLabelMark(periodText, plan.placement, plan.theme);
     behind.push({ key: PERIOD_LABEL_KEY, mark, presence: 1 });
   }
-  const above: FrameMark[] = [];
-  for (const { key, mark, presence } of marks) {
-    const side = plan.labelSides.get(key);
-    if (mark.type !== 'point' || side === undefined) continue;
-    const label = labelPlaybackPoint(mark, key, plan.theme, side);
-    above.push({ key: String(label.key), mark: label, presence });
-  }
-  return { behind, above };
+  return { behind, above: placeNameLabels(plan, marks) };
 }
 
 /**

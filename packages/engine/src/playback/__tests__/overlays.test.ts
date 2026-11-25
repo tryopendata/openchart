@@ -1,9 +1,10 @@
-import type {
-  ChartSpec,
-  DataRow,
-  PointMark,
-  Rect,
-  TextMarkLayout,
+import {
+  type ChartSpec,
+  type DataRow,
+  estimateTextWidth,
+  type PointMark,
+  type Rect,
+  type TextMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../../compile';
@@ -16,6 +17,17 @@ const LABEL_KEY = 'oc-playback-label|Cydonia';
 
 function compile(rows: DataRow[] = bubbleRows(), overrides = {}): ChartPlayback {
   return compileChartPlayback(bubbleSpec(rows, overrides), compileOptions);
+}
+
+/** A centrally aligned text mark's box from the engine's width estimate. */
+function labelBox(mark: TextMarkLayout): Rect {
+  const width = estimateTextWidth(mark.text, mark.fontSize, mark.fontWeight);
+  const shift = { start: 0, middle: width / 2, end: width }[mark.textAnchor];
+  return { x: mark.x - shift, y: mark.y - mark.fontSize / 2, width, height: mark.fontSize };
+}
+
+function boxesOverlap(a: Rect, b: Rect): boolean {
+  return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 }
 
 function overlays(playback: ChartPlayback, t: number): FrameMark[] {
@@ -214,6 +226,42 @@ describe('name labels', () => {
       const bubble = point(playback.marksAt(t), 'Cydonia');
       const label = overlays(playback, t).find((entry) => entry.key === LABEL_KEY);
       expect(label?.presence).toBe(bubble.presence);
+    }
+  });
+
+  it('moves a label off another label it would cover, keeping it inside the plot', () => {
+    // United States sits at the right edge, so its label goes left, onto China's label.
+    const places = { China: 80, 'United States': 97, India: 10 };
+    const data = Object.entries(places).flatMap(([country, gdp]) =>
+      [2022, 2023].map((year) => ({ country, year, gdp, life: 50 })),
+    );
+    const spec = {
+      mark: 'point',
+      data,
+      encoding: {
+        x: { field: 'gdp', type: 'quantitative', scale: { domain: [0, 100] } },
+        y: { field: 'life', type: 'quantitative', scale: { domain: [0, 100] } },
+        key: { field: 'country', type: 'nominal' },
+        time: { field: 'year', type: 'temporal' },
+      },
+      playback: { labels: Object.keys(places) },
+    } as ChartSpec;
+    const playback = compileChartPlayback(spec, compileOptions);
+    const area = playback.frame.chartArea;
+    for (const t of [0, 0.5, 1]) {
+      const boxes = overlays(playback, t)
+        .map(({ mark }) => mark)
+        .filter((mark): mark is TextMarkLayout => mark.type === 'textMark')
+        .filter((mark) => mark.key !== PERIOD_LABEL_KEY)
+        .map(labelBox);
+      expect(boxes).toHaveLength(3);
+      for (const box of boxes) {
+        expect(box.x).toBeGreaterThanOrEqual(area.x - 0.01);
+        expect(box.x + box.width).toBeLessThanOrEqual(area.x + area.width + 0.01);
+      }
+      for (const [index, box] of boxes.entries()) {
+        for (const other of boxes.slice(index + 1)) expect(boxesOverlap(box, other)).toBe(false);
+      }
     }
   });
 

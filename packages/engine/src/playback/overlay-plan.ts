@@ -176,6 +176,7 @@ export function planOverlays(input: OverlayPlanInput): OverlayPlan {
       frame.chartArea,
     ),
     theme: frame.theme,
+    area: frame.chartArea,
   };
 }
 
