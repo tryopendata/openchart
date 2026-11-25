@@ -20,15 +20,28 @@ import {
   playbackTooltipDescriptors,
   wirePlaybackTooltips,
 } from './chart-tooltips';
-import { carriedPlayhead, resetPlayhead, samePlaybackShape } from './chart-update';
 import { layoutAtPlayhead } from './frame-layout';
 import { createPlaybackCompiler } from './playback-compiler';
 import { createPlaybackRun, onNearestPeriodChange } from './playback-run';
 import { applySeriesHiding, hiddenSeriesKeys } from './series-hiding';
 import { stripHeight } from './strip';
 import type { PlaybackController } from './types';
+import {
+  carriedPlayhead,
+  channelField,
+  resetPlayhead,
+  samePlaybackShape,
+  timeShape,
+} from './update-rules';
 
 type MountSpec = ChartSpec | LayerSpec;
+
+/** What an update must keep to carry a chart's run: mark type, time field and type, identity. */
+function shapeOf(spec: ChartSpec): unknown[] {
+  const encoding = spec.encoding as Record<string, unknown>;
+  const markType = typeof spec.mark === 'string' ? spec.mark : spec.mark.type;
+  return [markType, ...timeShape(encoding.time), channelField(encoding.key)];
+}
 
 /** Whether a mounted spec plays over time. */
 export function isPlaybackSpec(spec: MountSpec): spec is ChartSpec {
@@ -194,7 +207,7 @@ export function createChartPlaybackHost(options: {
       const hiddenKeys = hiddenKeysFor(args.layout, spec, playback);
       const next = { spec, layout: args.layout, playback, hiddenKeys };
       const { mounted } = run;
-      if (!mounted || !current || !samePlaybackShape(current.spec, spec)) {
+      if (!mounted || !current || !samePlaybackShape(shapeOf(current.spec), shapeOf(spec))) {
         restart(args, next);
       } else {
         const t = carriedPlayhead(current.playback, playback, playhead());

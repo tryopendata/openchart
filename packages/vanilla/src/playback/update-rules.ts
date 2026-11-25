@@ -1,41 +1,40 @@
 /**
- * The `update()` rules for a playback chart (RFC 4.4): which spec changes keep the running
- * playback, and where its playhead lands in the new period list.
+ * The `update()` rules for a playback chart or map (RFC 4.4): which spec changes keep the
+ * running playback, and where its playhead lands in the new period list. Each host
+ * describes its spec's shape as a list of values; an update keeps the run when the lists
+ * match.
  */
-import type { ChartSpec } from '@opendata-ai/openchart-core';
-import type { ChartPlayback } from '@opendata-ai/openchart-engine';
+import type { PlaybackPeriod, ResolvedPlayback } from '@opendata-ai/openchart-engine';
 import type { PlaybackClockState } from './clock';
 
 /** The parts of a compiled playback, chart or map, that the update rules read. */
-export type PlaybackTimeline = Pick<ChartPlayback, 'periods' | 'timing'>;
-
-function markType(spec: ChartSpec): string {
-  return typeof spec.mark === 'string' ? spec.mark : spec.mark.type;
+export interface PlaybackTimeline {
+  periods: PlaybackPeriod[];
+  timing: ResolvedPlayback;
 }
 
-function channelField(channel: unknown): string | undefined {
+/** The `field` of an encoding channel, or undefined when the channel is absent or has none. */
+export function channelField(channel: unknown): unknown {
   if (typeof channel !== 'object' || channel === null) return undefined;
-  const { field } = channel as { field?: unknown };
-  return typeof field === 'string' ? field : undefined;
+  return (channel as { field?: unknown }).field;
 }
 
-function timeType(spec: ChartSpec): unknown {
-  return (spec.encoding as { time?: { type?: unknown } }).time?.type;
+function channelType(channel: unknown): unknown {
+  if (typeof channel !== 'object' || channel === null) return undefined;
+  return (channel as { type?: unknown }).type;
+}
+
+/** The part of a time channel's shape an update must keep: its field and type. */
+export function timeShape(time: unknown): unknown[] {
+  return [channelField(time), channelType(time)];
 }
 
 /**
- * Whether an update can keep the running playback: the same mark type, time field and type,
- * and identity field. Anything else starts over.
+ * Whether an update can keep the running playback: the spec shapes (as a host's `shapeOf`
+ * lists them) are equal value for value. Anything else starts over.
  */
-export function samePlaybackShape(previous: ChartSpec, next: ChartSpec): boolean {
-  const before = previous.encoding as Record<string, unknown>;
-  const after = next.encoding as Record<string, unknown>;
-  return (
-    markType(previous) === markType(next) &&
-    channelField(before.time) === channelField(after.time) &&
-    timeType(previous) === timeType(next) &&
-    channelField(before.key) === channelField(after.key)
-  );
+export function samePlaybackShape(previous: readonly unknown[], next: readonly unknown[]): boolean {
+  return JSON.stringify(previous) === JSON.stringify(next);
 }
 
 /**

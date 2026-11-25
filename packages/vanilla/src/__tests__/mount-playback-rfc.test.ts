@@ -8,7 +8,7 @@ import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
 import { createFakeObserver, stubPageLayout } from '../__test-fixtures__/visibility';
 import { createChart } from '../mount';
 import { createFakePlayback } from '../playback/__tests__/fake-playback';
-import { carriedPlayhead } from '../playback/chart-update';
+import { carriedPlayhead } from '../playback/update-rules';
 import { createReader } from '../reader';
 import { setObserverFactory } from '../visibility';
 

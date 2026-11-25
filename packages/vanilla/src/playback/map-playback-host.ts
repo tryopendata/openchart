@@ -6,13 +6,13 @@
 import type { CompileOptions, TooltipContent } from '@opendata-ai/openchart-core';
 import { hasMapTimeEncoding } from '@opendata-ai/openchart-engine';
 import type { GIFExportOptions } from '../export-gif';
-import { carriedPlayhead, resetPlayhead } from './chart-update';
 import { exportPlaybackGIF, playbackGIFTiming } from './export-gif';
 import { createMapFrameWriter, type MapFrameWriter } from './map-frames';
 import { type AnyMapPlayback, type MapPlaybackMount, mountMapPlayback } from './map-session';
 import { createPlaybackRun, onNearestPeriodChange } from './playback-run';
 import { stripHeight } from './strip';
 import type { PlaybackController } from './types';
+import { carriedPlayhead, resetPlayhead, samePlaybackShape } from './update-rules';
 
 /** The layout fields the host reads and replaces. */
 interface TooltipLayout {
@@ -99,7 +99,7 @@ export function createMapPlaybackHost<Spec, Layout extends TooltipLayout>(
 ): MapPlaybackHost<Spec, Layout> {
   const compiled = new WeakMap<object, AnyMapPlayback>();
   const run = createPlaybackRun<MapPlaybackMount>();
-  let current: { shape: string; playback: AnyMapPlayback } | null = null;
+  let current: { shape: unknown[]; playback: AnyMapPlayback } | null = null;
   const playhead = run.playhead;
   const announcePeriod = onNearestPeriodChange(() => options.onPeriodChange?.());
 
@@ -150,9 +150,9 @@ export function createMapPlaybackHost<Spec, Layout extends TooltipLayout>(
         teardown();
         return;
       }
-      const shape = JSON.stringify(adapter.shapeOf(args.spec));
+      const shape = adapter.shapeOf(args.spec);
       const { mounted } = run;
-      if (!mounted || !current || current.shape !== shape) {
+      if (!mounted || !current || !samePlaybackShape(current.shape, shape)) {
         current = { shape, playback };
         restart(args, playback);
         return;
