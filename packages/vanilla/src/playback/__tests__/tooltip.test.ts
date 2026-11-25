@@ -1,4 +1,5 @@
-import type { ObservedValues } from '@opendata-ai/openchart-engine';
+import type { ChartSpec } from '@opendata-ai/openchart-core';
+import { compileChartPlayback, type ObservedValues } from '@opendata-ai/openchart-engine';
 import { describe, expect, it } from 'vitest';
 import { playbackTooltip } from '../tooltip';
 import { createFakePlayback, PERIOD_LABELS } from './fake-playback';
@@ -46,5 +47,52 @@ describe('playback tooltip', () => {
 
   it('has no fields for a key with no values near t', () => {
     expect(playbackTooltip(playback, 'Borea', 1).fields).toEqual([]);
+  });
+});
+
+describe('playback tooltip on bars', () => {
+  const pyramidRows = [2000, 2001].flatMap((year) => [
+    { sex: 'Male', age: '0-4', pop: 50, year },
+    { sex: 'Female', age: '0-4', pop: 48, year },
+    { sex: 'Male', age: '5-9', pop: 30, year },
+    { sex: 'Female', age: '5-9', pop: 31, year },
+  ]);
+  const compile = (spec: ChartSpec) =>
+    compileChartPlayback(spec, { width: 600, height: 400, onWarn: () => {} });
+  const titlesAt = (spec: ChartSpec, t: number) => {
+    const playback = compile(spec);
+    return playback.keys.map((key) => playbackTooltip(playback, key, t).title).sort();
+  };
+
+  it('titles a pyramid bar with its age group and sex, not the internal key', () => {
+    const pyramid: ChartSpec = {
+      mark: { type: 'bar', mirror: true },
+      data: pyramidRows,
+      encoding: {
+        y: { field: 'age', type: 'ordinal' },
+        x: { field: 'pop', type: 'quantitative' },
+        color: { field: 'sex', type: 'nominal' },
+        time: { field: 'year', type: 'temporal' },
+      },
+    };
+    expect(titlesAt(pyramid, 0)).toEqual([
+      '0-4, Female, 2000',
+      '0-4, Male, 2000',
+      '5-9, Female, 2000',
+      '5-9, Male, 2000',
+    ]);
+  });
+
+  it('titles a plain bar with its category alone', () => {
+    const bars: ChartSpec = {
+      mark: 'bar',
+      data: pyramidRows.filter((row) => row.sex === 'Male'),
+      encoding: {
+        y: { field: 'age', type: 'nominal' },
+        x: { field: 'pop', type: 'quantitative' },
+        time: { field: 'year', type: 'temporal' },
+      },
+    };
+    expect(titlesAt(bars, 1)).toEqual(['0-4, 2001', '5-9, 2001']);
   });
 });
