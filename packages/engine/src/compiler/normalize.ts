@@ -418,6 +418,27 @@ function applyWaffleOther(
   return [...kept, ...bucketed];
 }
 
+/**
+ * Warn about options playback bars ignore: the crosshair on mirrored bars and time specs
+ * (tooltips use element hit-testing there), and `encoding.key` on a bar (bars are matched
+ * by color and category).
+ */
+function warnIgnoredBarOptions(spec: ChartSpec, markDef: NormalizedMarkDef, warnings: string[]) {
+  const isBar = markDef.type === 'bar';
+  const mirrored = isBar && markDef.mirror === true;
+  const timed = (spec.encoding as Record<string, unknown> | undefined)?.time !== undefined;
+  if (spec.crosshair === true && (mirrored || timed)) {
+    warnings.push(
+      `[openchart] crosshair: true is ignored on ${mirrored ? 'mirrored bars' : 'specs with encoding.time'}, which use element hit-testing for tooltips.`,
+    );
+  }
+  if (isBar && spec.encoding?.key !== undefined) {
+    warnings.push(
+      '[openchart] encoding.key is ignored on bars: bars are matched across data updates and periods by color and category.',
+    );
+  }
+}
+
 function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChartSpec {
   const inferred = inferEncodingTypes(spec.encoding, spec.data, warnings);
   const markType = resolveMarkType(spec.mark);
@@ -431,6 +452,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   const data =
     markType === 'waffle' ? applyWaffleOther(spec, encoding, markDef, warnings) : spec.data;
   const display = spec.display ?? 'full';
+  warnIgnoredBarOptions(spec, markDef, warnings);
 
   if (
     display === 'sparkline' &&
