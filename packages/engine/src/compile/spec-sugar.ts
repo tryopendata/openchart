@@ -1,5 +1,6 @@
 import { assertMarkOptions } from '../compiler/mark-options';
 import { collectRemovedSpecErrors } from '../compiler/removed-spec-fields';
+import { hasTimeEncoding } from '../playback/time-spec';
 import { SOURCE_MARK_TYPE, type SourceMarkSpec } from './source-mark';
 /**
  * Pre-validation spec sugar expansion.
@@ -826,11 +827,18 @@ function applyHistogramNormalize(spec: Record<string, unknown>): Record<string, 
 // Composition: chart and layer expansion
 // ---------------------------------------------------------------------------
 
+/** A `playback` block does nothing on a chart without `encoding.time`. */
+function warnOnPlaybackWithoutTime(spec: Record<string, unknown>, warnings: string[]): void {
+  if (spec.playback === undefined || hasTimeEncoding(spec)) return;
+  warnings.push('playback is ignored without encoding.time');
+}
+
 function expandChartSugar(
   spec: Record<string, unknown>,
   warnings: string[],
   inheritedData?: DataRow[],
 ): Record<string, unknown> {
+  warnOnPlaybackWithoutTime(spec, warnings);
   let out = unwrapDataValues(spec);
   out = {
     ...out,
