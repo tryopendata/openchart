@@ -3,6 +3,7 @@
  * It clones the live SVG once, snapshots the page styles the clone would lose when
  * detached, then has the caller draw each sampled playhead onto the clone.
  */
+import type { ResolvedPlayback } from '@opendata-ai/openchart-engine';
 import { embedFonts } from '../export';
 import type { GIFExportOptions } from '../export-gif';
 import { encodeSVGFrames } from '../gif-frame-encoder';
@@ -37,6 +38,25 @@ export type PlaybackGIFOptions = Pick<
   GIFExportOptions,
   'fps' | 'dpi' | 'loop' | 'embedFonts' | 'backgroundColor' | 'theme'
 >;
+
+/** A playback run's resolved timing, as the engine resolves `playback` for charts and maps. */
+export type PlaybackRunTiming = Pick<ResolvedPlayback, 'durationMs' | 'holdEndMs' | 'loop'>;
+
+/**
+ * The run length, end hold and loop a playback GIF uses: `durationMs` and `loop` from the
+ * export options when given, else the playback's own timing. The hold always comes from the
+ * playback.
+ */
+export function playbackGIFTiming(
+  timing: PlaybackRunTiming,
+  options?: Pick<GIFExportOptions, 'durationMs' | 'loop'>,
+): { durationMs: number; holdEndMs: number; loop: boolean | number } {
+  return {
+    durationMs: options?.durationMs ?? timing.durationMs,
+    holdEndMs: timing.holdEndMs,
+    loop: options?.loop ?? timing.loop,
+  };
+}
 
 const DEFAULT_FPS = 25;
 const DEFAULT_NOUN = 'playback';

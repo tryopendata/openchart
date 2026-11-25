@@ -7,7 +7,7 @@ import type { CompileOptions, TooltipContent } from '@opendata-ai/openchart-core
 import { hasMapTimeEncoding } from '@opendata-ai/openchart-engine';
 import type { GIFExportOptions } from '../export-gif';
 import { carriedPlayhead, resetPlayhead } from './chart-update';
-import { exportPlaybackGIF } from './export-gif';
+import { exportPlaybackGIF, playbackGIFTiming } from './export-gif';
 import { createMapFrameWriter, type MapFrameWriter } from './map-frames';
 import { type AnyMapPlayback, type MapPlaybackMount, mountMapPlayback } from './map-session';
 import { createPlaybackRun, onNearestPeriodChange } from './playback-run';
@@ -170,6 +170,7 @@ export function createMapPlaybackHost<Spec, Layout extends TooltipLayout>(
     exportGIF(svg, options) {
       if (!current) return null;
       const { playback } = current;
+      const { durationMs, holdEndMs, loop } = playbackGIFTiming(playback.timing, options);
       let writer: MapFrameWriter | null = null;
       return exportPlaybackGIF(
         {
@@ -179,13 +180,13 @@ export function createMapPlaybackHost<Spec, Layout extends TooltipLayout>(
             writer ??= createMapFrameWriter(frame, playback);
             writer.draw(t);
           },
-          durationMs: playback.timing.durationMs,
-          holdEndMs: playback.timing.holdEndMs,
+          durationMs,
+          holdEndMs,
           styleSelectors: adapter.styleSelectors,
           paletteSeed: playback.paletteColors(),
           noun: 'playback',
         },
-        options,
+        { ...options, loop },
       );
     },
     destroy: teardown,
