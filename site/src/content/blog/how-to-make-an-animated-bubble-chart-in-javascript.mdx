@@ -1,0 +1,337 @@
+---
+title: How to make an animated bubble chart in JavaScript
+description: An animated bubble chart plays a scatter plot one year at a time. This post builds the Gapminder chart from World Bank data, with trails, labels and controls.
+published: 2026-11-25
+author: OpenChart
+tags: [developers]
+related: [correlation/bubble-playback, change-over-time/playback, correlation/bubble, output/export]
+lead: blog/wealth-health-playback
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+China's life expectancy rose from 33.4 years in 1960 to 64.8 in 1981, and through all of those years its GDP per person stayed under $200, according to the World Bank. An animated bubble chart shows that climb as movement: each country is a bubble placed by income and life expectancy, sized by population, and the bubbles move one year at a time from 1960 to 2023.
+
+Hans Rosling made this chart famous in his Gapminder talks. In OpenChart it is a scatter plot spec with two extra encoding fields, `time` and `key`, and one row per country per year.
+
+<Demo id="blog/wealth-health-playback" />
+
+The chart runs for 25 seconds, about 400 milliseconds for each of the 64 years, and holds on 2023 for a second and a half. The strip under it plays, pauses and scrubs to any year. With focus on the strip, the arrow keys step one year at a time.
+
+China's 1960 figure falls in the famine that followed the Great Leap Forward, so part of the early climb is recovery: life expectancy was back to 51 by 1962.
+
+## The data: one row per country per year
+
+A playback chart reads long data, one row for each country in each year:
+
+```ts
+const rows = [
+  { country: "China", region: "Asia & Pacific", year: 1960, gdp: 90, life: 33.4, pop: 667070000 },
+  { country: "China", region: "Asia & Pacific", year: 1961, gdp: 76, life: 40.2, pop: 660330000 },
+  { country: "India", region: "Asia & Pacific", year: 1960, gdp: 85, life: 45.6, pop: 435990338 },
+  // ...one row per country and year
+];
+```
+
+The three World Bank indicators (GDP per capita, life expectancy at birth and total population) come as separate tables keyed by country code and year. Join them on those two columns before building the rows. This post uses 62 large countries from OpenData's mirrors of the three indicators, with a region assigned to each.
+
+Leave a missing value as `null` rather than 0. A country with no value in a year has no bubble that year, so it enters the chart when its data starts and fades out when it stops. Only 51 of the 62 countries have all three values in 1960. Russia's series starts in 1988, so its bubble appears that year, and Cuba's GDP figures stop after 2020, so its bubble fades out.
+
+A gap between two observed years is filled by interpolating between them; `playback.gaps: "hold"` carries the last value forward instead, and `"drop"` hides the bubble until its next value.
+
+Each country gets one row per year. Two rows with the same country and year stop the chart with an error that names them and asks you to aggregate first.
+
+## A complete spec
+
+The spec is an ordinary [bubble chart](/docs/correlation/bubble/), `mark: "point"` with `x`, `y`, `size` and `color`, plus two fields. `encoding.time` names the field that splits the rows into periods, and `encoding.key` names the field that identifies a bubble from one year to the next. This one keeps the 10 most populous countries and every fifth year, 130 rows, so the whole spec fits on the page.
+
+```json demo source="World Bank, World Development Indicators" height=500 phone-height=540
+{
+  "mark": "point",
+  "encoding": {
+    "x": {
+      "field": "gdp",
+      "type": "quantitative",
+      "scale": {
+        "type": "log"
+      },
+      "axis": {
+        "title": "GDP per capita (current US$, log scale)",
+        "format": "$,.0f"
+      }
+    },
+    "y": {
+      "field": "life",
+      "type": "quantitative",
+      "axis": {
+        "title": "Life expectancy at birth (years)"
+      }
+    },
+    "size": {
+      "field": "pop",
+      "type": "quantitative",
+      "title": "Population"
+    },
+    "color": {
+      "field": "region",
+      "type": "nominal",
+      "scale": {
+        "domain": [
+          "Asia & Pacific",
+          "Africa",
+          "Americas",
+          "Europe"
+        ]
+      }
+    },
+    "key": {
+      "field": "country",
+      "type": "nominal"
+    },
+    "time": {
+      "field": "year",
+      "type": "temporal"
+    }
+  },
+  "playback": {
+    "labels": [
+      "China",
+      "Nigeria"
+    ]
+  },
+  "chrome": {
+    "title": "Of the 10 most populous countries, only Nigeria's life expectancy is under 60",
+    "subtitle": "GDP per capita and life expectancy every 5 years, 1963-2023. Circle size is population."
+  },
+  "data": [
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1963, "gdp": 94, "life": 45.7, "pop": 56504402 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1968, "gdp": 114, "life": 48.4, "pop": 65408276 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1973, "gdp": 110, "life": 49.9, "pop": 73722294 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1978, "gdp": 158, "life": 51.6, "pop": 83889655 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1983, "gdp": 185, "life": 53.4, "pop": 95335155 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1988, "gdp": 248, "life": 55.2, "pop": 107216008 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1993, "gdp": 281, "life": 57.1, "pop": 118132360 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 1998, "gdp": 386, "life": 60.4, "pop": 129622332 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 2003, "gdp": 427, "life": 64.3, "pop": 140970351 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 2008, "gdp": 613, "life": 67, "pop": 149474264 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 2013, "gdp": 958, "life": 69.5, "pop": 156532141 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 2018, "gdp": 1965, "life": 72.1, "pop": 163523103 },
+    { "country": "Bangladesh", "region": "Asia & Pacific", "year": 2023, "gdp": 2551, "life": 74.7, "pop": 171466990 },
+    { "country": "Brazil", "region": "Americas", "year": 1963, "gdp": 294, "life": 54.5, "pop": 79164235 },
+    { "country": "Brazil", "region": "Americas", "year": 1968, "gdp": 374, "life": 56.5, "pop": 90741240 },
+    { "country": "Brazil", "region": "Americas", "year": 1973, "gdp": 815, "life": 58.7, "pop": 102600976 },
+    { "country": "Brazil", "region": "Americas", "year": 1978, "gdp": 1733, "life": 60.9, "pop": 115600942 },
+    { "country": "Brazil", "region": "Americas", "year": 1983, "gdp": 1461, "life": 63.1, "pop": 129790077 },
+    { "country": "Brazil", "region": "Americas", "year": 1988, "gdp": 2141, "life": 65.2, "pop": 143826357 },
+    { "country": "Brazil", "region": "Americas", "year": 1993, "gdp": 2349, "life": 66.9, "pop": 156794577 },
+    { "country": "Brazil", "region": "Americas", "year": 1998, "gdp": 5106, "life": 68.8, "pop": 169159655 },
+    { "country": "Brazil", "region": "Americas", "year": 2003, "gdp": 3091, "life": 70.9, "pop": 180622688 },
+    { "country": "Brazil", "region": "Americas", "year": 2008, "gdp": 8908, "life": 73.1, "pop": 190367302 },
+    { "country": "Brazil", "region": "Americas", "year": 2013, "gdp": 12459, "life": 74.6, "pop": 198478299 },
+    { "country": "Brazil", "region": "Americas", "year": 2018, "gdp": 9301, "life": 75.6, "pop": 206107261 },
+    { "country": "Brazil", "region": "Americas", "year": 2023, "gdp": 10378, "life": 75.8, "pop": 211140729 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1963, "gdp": 74, "life": 51.7, "pop": 682335000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1968, "gdp": 92, "life": 55.2, "pop": 774510000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1973, "gdp": 157, "life": 59.5, "pop": 881940000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1978, "gdp": 157, "life": 63.1, "pop": 956165000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1983, "gdp": 226, "life": 65.7, "pop": 1023310000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1988, "gdp": 284, "life": 67.6, "pop": 1101630000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1993, "gdp": 379, "life": 69.5, "pop": 1178440000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 1998, "gdp": 835, "life": 71.6, "pop": 1241935000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 2003, "gdp": 1307, "life": 73.4, "pop": 1288400000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 2008, "gdp": 3523, "life": 74.8, "pop": 1324655000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 2013, "gdp": 7147, "life": 76.5, "pop": 1363240000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 2018, "gdp": 10086, "life": 77.7, "pop": 1402760000 },
+    { "country": "China", "region": "Asia & Pacific", "year": 2023, "gdp": 12951, "life": 78, "pop": 1410710000 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1963, "gdp": 103, "life": 46.5, "pop": 468138575 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1968, "gdp": 102, "life": 47.9, "pop": 522716889 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1973, "gdp": 147, "life": 49.6, "pop": 583465598 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1978, "gdp": 209, "life": 52.4, "pop": 655728229 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1983, "gdp": 296, "life": 55.3, "pop": 737372681 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1988, "gdp": 358, "life": 57.7, "pop": 827342990 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1993, "gdp": 303, "life": 59.8, "pop": 922118387 },
+    { "country": "India", "region": "Asia & Pacific", "year": 1998, "gdp": 414, "life": 61.9, "pop": 1018665080 },
+    { "country": "India", "region": "Asia & Pacific", "year": 2003, "gdp": 544, "life": 64.1, "pop": 1116803006 },
+    { "country": "India", "region": "Asia & Pacific", "year": 2008, "gdp": 993, "life": 66.2, "pop": 1207930964 },
+    { "country": "India", "region": "Asia & Pacific", "year": 2013, "gdp": 1433, "life": 68.5, "pop": 1295829511 },
+    { "country": "India", "region": "Asia & Pacific", "year": 2018, "gdp": 1966, "life": 70.4, "pop": 1374659064 },
+    { "country": "India", "region": "Asia & Pacific", "year": 2023, "gdp": 2530, "life": 72, "pop": 1438069596 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1963, "gdp": null, "life": 48.7, "pop": 96051424 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1968, "gdp": 65, "life": 51.9, "pop": 109450006 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1973, "gdp": 130, "life": 54.9, "pop": 125288515 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1978, "gdp": 362, "life": 57.6, "pop": 141953163 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1983, "gdp": 508, "life": 60.3, "pop": 159651381 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1988, "gdp": 477, "life": 62.4, "pop": 176855065 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1993, "gdp": 817, "life": 64.9, "pop": 193305168 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 1998, "gdp": 455, "life": 65.9, "pop": 209826788 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 2003, "gdp": 1043, "life": 67.1, "pop": 225048008 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 2008, "gdp": 2125, "life": 68.1, "pop": 240157903 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 2013, "gdp": 3567, "life": 69.1, "pop": 255852467 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 2018, "gdp": 3861, "life": 70.1, "pop": 269951846 },
+    { "country": "Indonesia", "region": "Asia & Pacific", "year": 2023, "gdp": 4876, "life": 71.1, "pop": 281190067 },
+    { "country": "Mexico", "region": "Americas", "year": 1963, "gdp": 420, "life": 55.5, "pop": 40424065 },
+    { "country": "Mexico", "region": "Americas", "year": 1968, "gdp": 616, "life": 58.2, "pop": 47668303 },
+    { "country": "Mexico", "region": "Americas", "year": 1973, "gdp": 993, "life": 60.5, "pop": 55667284 },
+    { "country": "Mexico", "region": "Americas", "year": 1978, "gdp": 1604, "life": 63.4, "pop": 63979046 },
+    { "country": "Mexico", "region": "Americas", "year": 1983, "gdp": 2170, "life": 65.8, "pop": 71971240 },
+    { "country": "Mexico", "region": "Americas", "year": 1988, "gdp": 2279, "life": 68.3, "pop": 79695531 },
+    { "country": "Mexico", "region": "Americas", "year": 1993, "gdp": 6048, "life": 70, "pop": 87653807 },
+    { "country": "Mexico", "region": "Americas", "year": 1998, "gdp": 5833, "life": 71.8, "pop": 95575245 },
+    { "country": "Mexico", "region": "Americas", "year": 2003, "gdp": 7434, "life": 73.3, "pop": 102978515 },
+    { "country": "Mexico", "region": "Americas", "year": 2008, "gdp": 10524, "life": 73.7, "pop": 110374288 },
+    { "country": "Mexico", "region": "Americas", "year": 2013, "gdp": 11217, "life": 74.3, "pop": 118343573 },
+    { "country": "Mexico", "region": "Americas", "year": 2018, "gdp": 10085, "life": 74.3, "pop": 124573711 },
+    { "country": "Mexico", "region": "Americas", "year": 2023, "gdp": 13861, "life": 75.1, "pop": 129739759 },
+    { "country": "Nigeria", "region": "Africa", "year": 1963, "gdp": 108, "life": 37.8, "pop": 47973575 },
+    { "country": "Nigeria", "region": "Africa", "year": 1968, "gdp": 97, "life": 38.6, "pop": 53432783 },
+    { "country": "Nigeria", "region": "Africa", "year": 1973, "gdp": 252, "life": 41.8, "pop": 60082139 },
+    { "country": "Nigeria", "region": "Africa", "year": 1978, "gdp": 527, "life": 45.3, "pop": 69326532 },
+    { "country": "Nigeria", "region": "Africa", "year": 1983, "gdp": 1207, "life": 46.4, "pop": 80438260 },
+    { "country": "Nigeria", "region": "Africa", "year": 1988, "gdp": 540, "life": 45.8, "pop": 92020090 },
+    { "country": "Nigeria", "region": "Africa", "year": 1993, "gdp": 540, "life": 45.8, "pop": 105122069 },
+    { "country": "Nigeria", "region": "Africa", "year": 1998, "gdp": 1822, "life": 46.1, "pop": 119846254 },
+    { "country": "Nigeria", "region": "Africa", "year": 2003, "gdp": 763, "life": 48.6, "pop": 137202644 },
+    { "country": "Nigeria", "region": "Africa", "year": 2008, "gdp": 2154, "life": 50.7, "pop": 157595014 },
+    { "country": "Nigeria", "region": "Africa", "year": 2013, "gdp": 2873, "life": 51.8, "pop": 181049443 },
+    { "country": "Nigeria", "region": "Africa", "year": 2018, "gdp": 2058, "life": 52.7, "pop": 204938755 },
+    { "country": "Nigeria", "region": "Africa", "year": 2023, "gdp": 2139, "life": 54.5, "pop": 227882945 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1963, "gdp": 94, "life": 46.8, "pop": 49447776 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1968, "gdp": 142, "life": 51.6, "pop": 56810507 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1973, "gdp": 98, "life": 54.1, "pop": 65461912 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1978, "gdp": 233, "life": 56.1, "pop": 76307379 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1983, "gdp": 311, "life": 58.7, "pop": 92227711 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1988, "gdp": 354, "life": 59.4, "pop": 108724739 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1993, "gdp": 408, "life": 60.1, "pop": 127020117 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 1998, "gdp": 424, "life": 61.1, "pop": 146522356 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 2003, "gdp": 672, "life": 62.8, "pop": 167110248 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 2008, "gdp": 1067, "life": 64, "pop": 189499113 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 2013, "gdp": 1225, "life": 65.1, "pop": 211073978 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 2018, "gdp": 1569, "life": 66.5, "pop": 226928892 },
+    { "country": "Pakistan", "region": "Asia & Pacific", "year": 2023, "gdp": 1360, "life": 67.6, "pop": 247504495 },
+    { "country": "Russia", "region": "Europe", "year": 1963, "gdp": null, "life": 68.3, "pop": 123960000 },
+    { "country": "Russia", "region": "Europe", "year": 1968, "gdp": null, "life": 68.3, "pop": 128928000 },
+    { "country": "Russia", "region": "Europe", "year": 1973, "gdp": null, "life": 68.3, "pop": 132669000 },
+    { "country": "Russia", "region": "Europe", "year": 1978, "gdp": null, "life": 67.4, "pop": 137060000 },
+    { "country": "Russia", "region": "Europe", "year": 1983, "gdp": null, "life": 67.7, "pop": 141668000 },
+    { "country": "Russia", "region": "Europe", "year": 1988, "gdp": 3778, "life": 69.5, "pop": 146857000 },
+    { "country": "Russia", "region": "Europe", "year": 1993, "gdp": 2931, "life": 64.9, "pop": 148458777 },
+    { "country": "Russia", "region": "Europe", "year": 1998, "gdp": 1835, "life": 67, "pop": 147670784 },
+    { "country": "Russia", "region": "Europe", "year": 2003, "gdp": 2975, "life": 65, "pop": 144648618 },
+    { "country": "Russia", "region": "Europe", "year": 2008, "gdp": 11635, "life": 67.9, "pop": 142742366 },
+    { "country": "Russia", "region": "Europe", "year": 2013, "gdp": 15941, "life": 70.6, "pop": 143805638 },
+    { "country": "Russia", "region": "Europe", "year": 2018, "gdp": 11212, "life": 72.7, "pop": 145398106 },
+    { "country": "Russia", "region": "Europe", "year": 2023, "gdp": 14159, "life": 73.3, "pop": 143826130 },
+    { "country": "United States", "region": "Americas", "year": 1963, "gdp": 3366, "life": 69.9, "pop": 189242000 },
+    { "country": "United States", "region": "Americas", "year": 1968, "gdp": 4685, "life": 70, "pop": 200706000 },
+    { "country": "United States", "region": "Americas", "year": 1973, "gdp": 6726, "life": 71.4, "pop": 211909000 },
+    { "country": "United States", "region": "Americas", "year": 1978, "gdp": 10565, "life": 73.4, "pop": 222585000 },
+    { "country": "United States", "region": "Americas", "year": 1983, "gdp": 15544, "life": 74.5, "pop": 233792000 },
+    { "country": "United States", "region": "Americas", "year": 1988, "gdp": 21417, "life": 74.8, "pop": 244499000 },
+    { "country": "United States", "region": "Americas", "year": 1993, "gdp": 26387, "life": 75.4, "pop": 259919000 },
+    { "country": "United States", "region": "Americas", "year": 1998, "gdp": 32854, "life": 76.6, "pop": 275854000 },
+    { "country": "United States", "region": "Americas", "year": 2003, "gdp": 39490, "life": 77, "pop": 290107933 },
+    { "country": "United States", "region": "Americas", "year": 2008, "gdp": 48570, "life": 78, "pop": 304093966 },
+    { "country": "United States", "region": "Americas", "year": 2013, "gdp": 53179, "life": 78.7, "pop": 316726282 },
+    { "country": "United States", "region": "Americas", "year": 2018, "gdp": 62500, "life": 78.6, "pop": 328529577 },
+    { "country": "United States", "region": "Americas", "year": 2023, "gdp": 81032, "life": 78.4, "pop": 336755052 }
+  ]
+}
+```
+The chart at the top of this post is the same encoding over all 3,968 rows, with `playback.duration` set to 25 seconds.
+
+The key is required. Without it the chart can't tell which 1961 bubble is the same country as which 1960 bubble, and validation stops with "point charts with encoding.time need encoding.key". The time field can be `temporal`, `quantitative` or `ordinal`. Years and dates sort by value, and four-digit years print as plain years in the period label and the readout.
+
+Pass a container and the spec to `createChart`:
+
+```ts
+import { createChart } from "@opendata-ai/openchart-vanilla";
+
+const chart = createChart(document.getElementById("chart"), spec);
+```
+
+The control strip takes 44 pixels under the chart, so give the container room for both.
+
+## Log scale and fixed axes
+
+GDP per capita runs from $12 (Myanmar in 1966) to $81,032 (the United States in 2023), and on a linear axis every country below $5,000 would sit in a pile at the left edge. On the log axis each step of ten times the income gets the same width. Bubbles also move in log space between years, so a country that goes from $100 to $10,000 passes $1,000 halfway through the step, which is where the eye expects it.
+
+The axes are computed once from all 64 years and never move while the chart plays. A reader can compare a bubble's 1975 position with its 2023 position against the same gridlines, and a bubble never jumps because the axis under it rescaled.
+
+The World Bank figures are in current US dollars, not adjusted for inflation or for prices in each country. Part of the drift to the right is inflation, and exchange rates move the bubbles too. Iraq's figure falls from $10,261 in 1990 to $23 in 1991, which sends its bubble to the far left of the chart. Say which measure you plotted in the subtitle, as this one does.
+
+A value of zero or less can't sit on a log scale, so playback treats it as missing and warns with the count of values it dropped.
+
+## Speed, labels and the year
+
+Everything about playback lives in the top-level `playback` block, which the [playback docs](/docs/change-over-time/playback/) cover option by option. By default a chart takes 700 milliseconds per period, with the total kept between 8 and 90 seconds; 64 years would run 44.8 seconds. `playback.duration` sets the total in milliseconds, 25000 here, and `playback.step` sets the time per period instead. Set one or the other, not both. The last frame holds for 1.5 seconds (`holdEnd`), and `loop: true` starts over after it.
+
+`playback.labels` names the countries whose name is drawn beside the bubble for the whole run. Labels are never hidden to avoid a collision, so none of them blinks on and off mid-run, but two labelled countries that end up close together will overlap. Label a few that stay apart. This chart labels China, India and Nigeria, whose life expectancy in 2023, 54.5 years, was the lowest of the 62 countries.
+
+The large faint year behind the bubbles is the period label. It sits in the middle of the plot by default and uses the time field's format. `playback.period: { format, position }` changes the format or moves it to `"top-right"` or `"bottom-left"`, and `period: false` hides it.
+
+## Trails
+
+`playback.trails` draws each named country's path as a thin line with a dot for every year it has passed. `true` traces every country, which with 62 countries covers the chart in lines, and a list of names traces only those.
+
+<Demo id="blog/wealth-health-trails" />
+
+South Korea and China both reached a life expectancy of 60 on about $160 a person, in 1967 and 1974, and India got there in 1994 at $348. South Korea's path then runs right, to $35,674 by 2023, while India's is still under $3,000.
+
+## Controls and the playback API
+
+`playback.autoplay` defaults to `"visible"`, which starts the chart once a quarter of it is in view. `true` starts it at mount and `false` waits for the play button. `playback.controls: false` removes the strip; if autoplay is also on, the engine warns, because a reader then has no way to pause moving content, which WCAG 2.2.2 requires.
+
+Readers who have asked their system for reduced motion get no autoplay, and the chart opens on the last year. The scrubber and arrow keys still work, and they step from year to year without sliding the bubbles between them. `animation: false` in the spec does the same for every reader.
+
+The chart that `createChart` returns has a `playback` property, `null` for charts without `encoding.time`:
+
+```ts
+const playback = chart.playback;
+
+playback?.pause();
+playback?.seek(1980 - 1960); // a zero-based period index; fractions land between years
+playback?.setSpeed(2); // twice as fast as the authored duration
+playback?.play();
+
+const unsubscribe = playback?.on("period", (period) => {
+  caption.textContent = period.label;
+});
+```
+
+`getState()` returns the playhead as a continuous period index, whether the chart is playing, the speed, whether it has ended and the current period. The `period` event fires as the playhead crosses each year and when a seek lands, which is enough to keep a caption or a step in a scrolling story in sync.
+
+The rest of the chart keeps working while it plays: tooltips follow the bubbles, and clicking a region in the legend hides its countries without resetting the axes. After pausing, stepping or scrubbing, a screen reader hears the year and how many countries are on the chart.
+
+## React, Vue and Svelte
+
+The framework packages render the same spec with their `Chart` component, and the chart's ref reaches the same instance:
+
+```tsx
+import type { ChartSpec } from "@opendata-ai/openchart-core";
+import { Chart, type ChartHandle } from "@opendata-ai/openchart-react";
+import { useRef } from "react";
+
+export function WealthAndHealth({ spec }: { spec: ChartSpec }) {
+  const chart = useRef<ChartHandle>(null);
+  return (
+    <>
+      <Chart ref={chart} spec={spec} style={{ height: 600 }} />
+      <button type="button" onClick={() => chart.current?.instance?.playback?.seek(1980 - 1960)}>
+        Show 1980
+      </button>
+    </>
+  );
+}
+```
+
+Vue and Svelte import `Chart` from `@opendata-ai/openchart-vue` and `@opendata-ai/openchart-svelte`.
+
+## Static frames and exports
+
+Server renders and static exports show one frame, the last year by default. `renderStaticSVG(spec, { t })` from `@opendata-ai/openchart-vanilla/static` takes the period index to draw, so `t: 20` draws 1980, and `compileChart` takes the same index as `playbackT`. Use a static frame for a social preview image or a no-JavaScript fallback, and remove it before mounting the live chart. The static render leaves trails out.
+
+On a mounted chart, `chart.export("svg")` and `chart.export("png")` save the frame on screen with its trails, so seek to the year you want first. The [export docs](/docs/output/export/) cover the options both formats take.
+
+`chart.export("gif")` on a playback chart works from the frame on screen and doesn't record the run from 1960 to 2023. A race does record its whole run with `player.export("gif")`, as [How to make a bar chart race in JavaScript](/blog/how-to-make-a-bar-chart-race-in-javascript/) shows. For a bubble chart, record the screen while the live chart plays to get the run as a video.
+
+The [bubble playback docs page](/docs/correlation/bubble-playback/) covers keys, trails, labels and the fixed axes in more detail.
