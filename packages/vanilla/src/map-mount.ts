@@ -71,6 +71,11 @@ import { createMapZoomController, type MapZoomController } from './map-zoom';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { prefersReducedMotion } from './motion/tween';
 import { geoMapPlaybackAdapter } from './playback/map-adapters';
+import {
+  FEATURE_UNDERLAY_CLASS,
+  featurePaintAnchor,
+  featurePaintGroup,
+} from './playback/map-feature-paint';
 import { createMapPlaybackHost } from './playback/map-playback-host';
 import type { PlaybackController } from './playback/types';
 import { observeResize } from './resize-observer';
@@ -114,6 +119,16 @@ function layoutHasContent(layout: GeoMapLayout): boolean {
  */
 const featureOrigin = new WeakMap<Element, Element | null>();
 
+/**
+ * The next feature after `el`, skipping crossfade underlays: an underlay comes and goes
+ * with its feature's fade, so it can't mark where `el` goes back to.
+ */
+function nextFeature(el: Element): Element | null {
+  let next = el.nextElementSibling;
+  while (next && !next.classList.contains('oc-map-feature')) next = next.nextElementSibling;
+  return next;
+}
+
 function raiseFeature(el: Element, svg: SVGElement): void {
   // Re-appending restarts the element's CSS entrance keyframe. While the map is
   // still animating in, keep paint order and settle for the outline class
@@ -123,9 +138,9 @@ function raiseFeature(el: Element, svg: SVGElement): void {
   const parent = el.parentNode;
   if (!parent || el === parent.lastChild) return;
   if (!featureOrigin.has(el)) {
-    featureOrigin.set(el, el.nextSibling as Element | null);
+    featureOrigin.set(el, nextFeature(el));
   }
-  parent.appendChild(el);
+  parent.append(...featurePaintGroup(el));
 }
 
 function restoreFeatureOrder(el: Element): void {
@@ -133,10 +148,12 @@ function restoreFeatureOrder(el: Element): void {
   if (!parent || !featureOrigin.has(el)) return;
   const next = featureOrigin.get(el) ?? null;
   featureOrigin.delete(el);
+  const group = featurePaintGroup(el);
   if (next && next.parentNode === parent) {
-    parent.insertBefore(el, next);
+    const anchor = featurePaintAnchor(next);
+    for (const element of group) parent.insertBefore(element, anchor);
   } else if (!next) {
-    parent.appendChild(el);
+    parent.append(...group);
   }
 }
 
@@ -896,8 +913,9 @@ export function createGeoMap(
 
   function applyFocusDim(ids: Array<string | number> | null, target = svgElement): void {
     if (!target) return;
+    // Crossfade underlays carry their feature's id, so they dim with it.
     const features = (findGeoViewScene(target, 'root') ?? target).querySelectorAll(
-      '.oc-map-feature',
+      `.oc-map-feature, .${FEATURE_UNDERLAY_CLASS}`,
     );
     if (!ids || ids.length === 0) {
       for (const el of features) {

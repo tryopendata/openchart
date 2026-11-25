@@ -3,9 +3,10 @@
  * values at the nearest period, and the choropleth's named values for the live-region
  * summary.
  */
-import type { TooltipContent, TooltipField } from '@opendata-ai/openchart-core';
+import type { TooltipContent } from '@opendata-ai/openchart-core';
 import type { GeoPlaybackContext } from './map-geo';
 import { geoValueText } from './map-geo-frames';
+import { pointTooltipAt } from './map-geo-point-tooltip';
 import type { NamedValue } from './map-run';
 import type { MapSeries } from './map-series';
 
@@ -45,37 +46,6 @@ function featureTooltipAt(
     title: periodTitle(context, series, name, keyIndex, period),
     fields: [{ label: color.title ?? color.field, value: valueText ?? 'No data', role: 'value' }],
   };
-}
-
-/** The hovered point's size and color values at the period nearest `t`. */
-function pointTooltipAt(
-  context: GeoPlaybackContext,
-  key: string,
-  t: number,
-): TooltipContent | undefined {
-  const { plan, scales } = context;
-  const series = plan.points;
-  const points = plan.prepared.normalized.points;
-  const keyIndex = series?.keyIndex.get(key);
-  if (!series || !points || keyIndex === undefined) return undefined;
-  const period = series.sampler.nearestPeriod(t);
-  const present = series.sampler.isPresent(keyIndex, period);
-  const fields: TooltipField[] = [];
-  const channels = [
-    ['color', points.color],
-    ['size', points.size],
-  ] as const;
-  for (const [name, channel] of channels) {
-    // Only quantitative channels play, so a categorical color has no matrix values.
-    const values = series.sampler.matrix.values[name];
-    if (!channel || !values) continue;
-    fields.push({
-      label: channel.title ?? channel.field,
-      value: present ? scales.formatValue(values[keyIndex][period]) : 'No data',
-      role: 'value',
-    });
-  }
-  return { title: periodTitle(context, series, key, keyIndex, period), fields };
 }
 
 /**

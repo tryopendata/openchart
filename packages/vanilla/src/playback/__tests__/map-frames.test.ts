@@ -190,4 +190,27 @@ describe('createMapFrameWriter', () => {
     writer.draw(0.7);
     expect(label()).toEqual(['CA at 0.7', 'LA at 0.7']);
   });
+
+  it('moves the underlay back behind its path when the path moved mid-fade', () => {
+    const svg = geoSvg();
+    const texas = svg.querySelectorAll('path')[1];
+    texas.setAttribute('data-feature-id', 'TX');
+    const fading: MapFillFrame = {
+      key: 'TX',
+      fill: '#08519c',
+      noData: false,
+      binIndex: 3,
+      fade: { opacity: 0.6, noDataFill: '#eeeeee' },
+      ariaLabel: 'Texas: 30',
+    };
+    const writer = createMapFrameWriter(svg, fakePlayback({ fills: [[fading]] }));
+    writer.draw(0);
+    svg.append(texas);
+    writer.draw(0);
+    const underlay = texas.previousElementSibling;
+    expect(underlay?.getAttribute('class')).toBe(FEATURE_UNDERLAY_CLASS);
+    expect(underlay?.getAttribute('data-feature-id')).toBe('TX');
+    expect(underlay?.getAttribute('data-bin-index')).toBe('3');
+    expect(svg.querySelectorAll(`.${FEATURE_UNDERLAY_CLASS}`)).toHaveLength(1);
+  });
 });

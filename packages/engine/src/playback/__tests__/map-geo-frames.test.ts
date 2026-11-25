@@ -139,15 +139,13 @@ describe('geo map playback frames', () => {
 
   it('reads point tooltips and aria labels at the nearest period, with no data when absent', () => {
     const playback = compileGeoMapPlayback(geoSpec({ points: POINTS }), OPTIONS);
-    expect(playback.tooltipAt('point:Austin', 0)).toEqual({
-      title: 'Austin, Jan 2020',
-      fields: [{ label: 'Jobs', value: '10', role: 'value' }],
-    });
-    expect(playback.tooltipAt('point:Austin', 1)?.fields[0].value).toBe('40');
-    expect(playback.tooltipAt('point:Fresno', 0)).toEqual({
-      title: 'Fresno, Jan 2020',
-      fields: [{ label: 'Jobs', value: 'No data', role: 'value' }],
-    });
+    const jobs = (key: string, t: number) =>
+      playback.tooltipAt(`point:${key}`, t)?.fields.find(({ label }) => label === 'Jobs')?.value;
+    expect(playback.tooltipAt('point:Austin', 0)?.title).toBe('Austin, Jan 2020');
+    expect(jobs('Austin', 0)).toBe('10');
+    expect(jobs('Austin', 1)).toBe('40');
+    expect(playback.tooltipAt('point:Fresno', 0)?.title).toBe('Fresno, Jan 2020');
+    expect(jobs('Fresno', 0)).toBe('No data');
     const point = (t: number, key: string) => playback.pointsAt(t).find((p) => p.key === key);
     expect(point(0, 'Fresno')?.ariaLabel).toBe('Fresno: no data');
     expect(point(1, 'Fresno')?.ariaLabel).toBe('Fresno');

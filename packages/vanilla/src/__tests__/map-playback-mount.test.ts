@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import type { DataRow, GeoMapSpec, TileMapSpec } from '@opendata-ai/openchart-core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer } from '../__test-fixtures__/dom';
@@ -198,6 +200,10 @@ function tooltipTitle(container: HTMLElement): string | null | undefined {
   return container.querySelector('.oc-tooltip-title')?.textContent;
 }
 
+function tooltipValues(container: HTMLElement): Array<string | null> {
+  return [...container.querySelectorAll('.oc-tooltip-value')].map((el) => el.textContent);
+}
+
 function hover(element: Element | null) {
   element?.dispatchEvent(new MouseEvent('mouseenter', { clientX: 10, clientY: 10 }));
 }
@@ -260,8 +266,87 @@ describe('map playback tooltips and labels', () => {
     expect(fresno?.getAttribute('pointer-events')).toBe('none');
     hover(container.querySelector('[data-point-key="Austin"]'));
     expect(tooltipTitle(container)).toBe('Austin, Jan 2020');
-    expect(container.querySelector('.oc-tooltip-value')?.textContent).toBe('10');
+    expect(tooltipValues(container)).toContain('10');
     hover(fresno);
-    expect(container.querySelector('.oc-tooltip-value')?.textContent).toBe('No data');
+    expect(tooltipValues(container)).toContain('No data');
+  });
+});
+
+/** Texas has no value in March, so it crossfades to no data between February and March. */
+function fadingGeoSpec(): GeoMapSpec {
+  const data = rows().filter((row) => !(row.state === 'Texas' && row.month === '2020-03-01'));
+  return { ...geoSpec(), data };
+}
+
+const UNDERLAY = '.oc-map-feature-underlay';
+
+/** Element order in the features group, underlays named after their feature. */
+function paintOrder(container: HTMLElement): string[] {
+  const group = container.querySelector('.oc-map-features');
+  return [...(group?.children ?? [])].map((element) =>
+    element.matches(UNDERLAY)
+      ? `under:${element.getAttribute('data-feature-id')}`
+      : (element.getAttribute('data-feature-id') ?? ''),
+  );
+}
+
+function leave(element: Element | null) {
+  element?.dispatchEvent(new MouseEvent('mouseleave'));
+}
+
+describe('map crossfade underlays', () => {
+  it('keeps the underlay behind a feature that is raised by hover and put back', () => {
+    const { container, map } = mountGeo(fadingGeoSpec());
+    const controller = controllerOf(map);
+    controller.seek(1);
+    const texas = container.querySelector('[data-key="48"]');
+    hover(texas);
+    controller.seek(1.25);
+    expect(paintOrder(container)).toEqual(['06', '36', 'under:48', '48']);
+    leave(texas);
+    expect(paintOrder(container)).toEqual(['06', 'under:48', '48', '36']);
+  });
+
+  it('puts a raised feature back when the underlay it was raised from is gone', () => {
+    const { container, map } = mountGeo(fadingGeoSpec());
+    const controller = controllerOf(map);
+    controller.seek(1.25);
+    expect(paintOrder(container)).toEqual(['06', 'under:48', '48', '36']);
+    const california = container.querySelector('[data-key="06"]');
+    hover(california);
+    controller.seek(2);
+    leave(california);
+    expect(paintOrder(container)).toEqual(['06', '48', '36']);
+  });
+
+  it('dims the underlay with its feature under a focus', () => {
+    const { container, map } = mountGeo(fadingGeoSpec());
+    controllerOf(map).seek(1.25);
+    map.zoomTo(['06'], { duration: 0 });
+    const underlay = container.querySelector(UNDERLAY) as SVGElement;
+    const texas = container.querySelector('[data-key="48"]') as SVGElement;
+    expect(texas.style.getPropertyValue('opacity')).not.toBe('');
+    expect(underlay.style.getPropertyValue('opacity')).toBe(
+      texas.style.getPropertyValue('opacity'),
+    );
+  });
+
+  it('dims the underlay with its feature on legend-bin hover', () => {
+    const { container, map } = mountGeo(fadingGeoSpec());
+    controllerOf(map).seek(1.25);
+    const underlay = container.querySelector(UNDERLAY) as SVGElement;
+    const texas = container.querySelector('[data-key="48"]') as SVGElement;
+    expect(underlay.getAttribute('data-bin-index')).toBe(texas.getAttribute('data-bin-index'));
+    const css = readFileSync(
+      resolve(__dirname, '../../../core/src/styles/interaction.css'),
+      'utf8',
+    );
+    const dimRule = css.match(/([^{}]+)\{\s*opacity: var\(--oc-map-hover-dim\);/);
+    const selector = dimRule?.[1].trim() ?? '';
+    const group = container.querySelector('.oc-map-features') as SVGElement;
+    const other = Number(texas.getAttribute('data-bin-index')) === 0 ? '1' : '0';
+    group.setAttribute('data-hover', other);
+    expect(texas.matches(selector)).toBe(true);
+    expect(underlay.matches(selector)).toBe(true);
   });
 });

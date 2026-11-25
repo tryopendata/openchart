@@ -90,23 +90,36 @@
   /* Legend-bin hover IS where dim-the-rest belongs: pointing at one class is a
    * deliberate "show me these" gesture, and the answer is the set of features in
    * that class. Static rules per class index keep it to one attribute write on
-   * the group rather than a class toggle per feature. */
-  .oc-map-features[data-hover] .oc-map-feature {
+   * the group rather than a class toggle per feature. A playback crossfade's
+   * underlay carries its feature's class index, so it dims with the feature. */
+  .oc-map-features[data-hover] :is(.oc-map-feature, .oc-map-feature-underlay) {
     transition: opacity var(--oc-hover-duration) ease-out;
   }
 
-  .oc-map-features[data-hover="0"] .oc-map-feature:not([data-bin-index="0"]),
-  .oc-map-features[data-hover="1"] .oc-map-feature:not([data-bin-index="1"]),
-  .oc-map-features[data-hover="2"] .oc-map-feature:not([data-bin-index="2"]),
-  .oc-map-features[data-hover="3"] .oc-map-feature:not([data-bin-index="3"]),
-  .oc-map-features[data-hover="4"] .oc-map-feature:not([data-bin-index="4"]),
-  .oc-map-features[data-hover="5"] .oc-map-feature:not([data-bin-index="5"]),
-  .oc-map-features[data-hover="6"] .oc-map-feature:not([data-bin-index="6"]),
-  .oc-map-features[data-hover="7"] .oc-map-feature:not([data-bin-index="7"]),
-  .oc-map-features[data-hover="8"] .oc-map-feature:not([data-bin-index="8"]),
-  .oc-map-features[data-hover="9"] .oc-map-feature:not([data-bin-index="9"]),
-  .oc-map-features[data-hover="10"] .oc-map-feature:not([data-bin-index="10"]),
-  .oc-map-features[data-hover="11"] .oc-map-feature:not([data-bin-index="11"]) {
+  .oc-map-features[data-hover="0"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="0"]),
+  .oc-map-features[data-hover="1"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="1"]),
+  .oc-map-features[data-hover="2"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="2"]),
+  .oc-map-features[data-hover="3"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="3"]),
+  .oc-map-features[data-hover="4"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="4"]),
+  .oc-map-features[data-hover="5"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="5"]),
+  .oc-map-features[data-hover="6"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="6"]),
+  .oc-map-features[data-hover="7"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="7"]),
+  .oc-map-features[data-hover="8"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="8"]),
+  .oc-map-features[data-hover="9"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="9"]),
+  .oc-map-features[data-hover="10"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="10"]),
+  .oc-map-features[data-hover="11"]
+    :is(.oc-map-feature, .oc-map-feature-underlay):not([data-bin-index="11"]) {
     opacity: var(--oc-map-hover-dim);
   }
 
