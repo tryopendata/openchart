@@ -2,6 +2,7 @@ import type { ChartSpec, DataRow, RectMark } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import { compileChart } from '../../compile';
 import { compileChartPlayback } from '../chart-playback';
+import { warnFrozenValueSort } from '../chart-warnings';
 import { bubbleRows, bubbleSpec, compileOptions } from './chart-fixtures';
 
 const WCAG_WARNING = /controls disabled.*WCAG 2\.2\.2/;
@@ -173,5 +174,61 @@ describe('hidden series', () => {
       ['North', true],
       ['South', false],
     ]);
+  });
+});
+
+describe('bars sorted by value', () => {
+  const FROZEN_SORT_WARNING = /keep one category order.*type: 'race'/;
+  const rows: DataRow[] = [2000, 2001].flatMap((year, period) =>
+    ['North', 'South', 'East'].map((region, index) => ({
+      region,
+      year,
+      sales: (index + 1) * 10 * (period === 0 ? 1 : 4 - 2 * index),
+    })),
+  );
+
+  function barSpec(sort: unknown, orient: 'horizontal' | 'vertical' = 'horizontal'): ChartSpec {
+    const category = { field: 'region', type: 'nominal', sort };
+    const value = { field: 'sales', type: 'quantitative' };
+    return {
+      mark: 'bar',
+      data: rows,
+      encoding: {
+        ...(orient === 'horizontal' ? { y: category, x: value } : { x: category, y: value }),
+        time: { field: 'year', type: 'temporal' },
+      },
+    } as ChartSpec;
+  }
+
+  function sortWarnings(spec: ChartSpec): string[] {
+    const sent: string[] = [];
+    warnFrozenValueSort(spec, (message) => sent.push(message));
+    return sent;
+  }
+
+  it.each<[string, ChartSpec]>([
+    ["'-x' on horizontal bars", barSpec('-x')],
+    ["'y' on vertical columns", barSpec('y', 'vertical')],
+    ['a field sort', barSpec({ field: 'sales', order: 'descending' })],
+  ])('warns that %s holds still and points at the race chart', (_name, spec) => {
+    const [warning, ...rest] = sortWarnings(spec);
+    expect(rest).toEqual([]);
+    expect(warning).toMatch(FROZEN_SORT_WARNING);
+  });
+
+  it('stays quiet for category sorts and for points', () => {
+    for (const sort of [undefined, 'ascending', 'descending', null, ['South', 'North']]) {
+      expect(sortWarnings(barSpec(sort))).toEqual([]);
+    }
+    expect(sortWarnings({ ...barSpec('-x'), mark: 'point' } as ChartSpec)).toEqual([]);
+  });
+
+  // Fails until compileChartPlayback passes the authored spec into collectPlaybackWarnings
+  // (`{ matrix, channels, timing, time: pivot.time, spec }`); sugar has already turned the
+  // sort into a fixed domain in the spec the playback compiles.
+  it.fails('reaches the result and onWarn when the bar chart compiles', () => {
+    const { warnings, sent } = compileCollecting(barSpec('-x'));
+    expect(warnings.filter((message) => FROZEN_SORT_WARNING.test(message))).toHaveLength(1);
+    expect(sent.filter((message) => FROZEN_SORT_WARNING.test(message))).toHaveLength(1);
   });
 });
