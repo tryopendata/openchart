@@ -1,0 +1,159 @@
+---
+title: How to make a population pyramid in JavaScript
+description: A population pyramid draws a country's ages as back-to-back bars. This post builds Japan's from UN data, then animates it from 1950 to 2100.
+published: 2026-11-25
+author: OpenChart
+tags: [developers]
+related: [comparison/pyramid, change-over-time/playback, comparison/bar]
+lead: blog/japan-pyramid-2020
+---
+
+import Demo from "../../components/demo/Demo.astro";
+
+Japan had 126 million people in 2020, and more of them were 45 to 49 years old than any other five-year age group, according to the UN's World Population Prospects. A population pyramid shows that structure at a glance: horizontal bars for each age group, men extending left and women right from a shared center, youngest at the bottom. In OpenChart a pyramid is a horizontal bar chart with one mark option, `mirror: true`, and adding `encoding.time` makes it play through the years.
+
+## The data: one row per age group and sex
+
+A pyramid reads long data, one row for each age group and sex:
+
+```ts
+const rows = [
+  { year: 2020, age: "0-4", sex: "Male", pop: 2375000 },
+  { year: 2020, age: "0-4", sex: "Female", pop: 2254000 },
+  { year: 2020, age: "45-49", sex: "Male", pop: 5054000 },
+  { year: 2020, age: "45-49", sex: "Female", pop: 4953000 },
+  // ...21 age groups times 2 sexes: 42 rows for one year
+];
+```
+
+The UN publishes the figures in thousands of people. These rows multiply them by 1,000, so the axis reads "6M" for six million people; left in thousands, it would read "6k". Both sexes are positive numbers; the chart decides which way each one points.
+
+## A static pyramid with `mirror`
+
+`mark: { type: "bar", mirror: true }` turns a horizontal bar chart into a pyramid. The first value of the color field extends left from the center and the second extends right, both measured on one scale, with the age labels in a gutter between them. The two values label the halves above the plot in place of a legend.
+
+```json demo source="UN World Population Prospects 2024 (medium variant)" height=560
+{
+  "mark": {
+    "type": "bar",
+    "mirror": true
+  },
+  "encoding": {
+    "y": {
+      "field": "age",
+      "type": "ordinal",
+      "sort": ["0-4", "5-9", "10-14", "15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69", "70-74", "75-79", "80-84", "85-89", "90-94", "95-99", "100+"]
+    },
+    "x": {
+      "field": "pop",
+      "type": "quantitative",
+      "format": ".2~s"
+    },
+    "color": {
+      "field": "sex",
+      "type": "nominal",
+      "sort": ["Male", "Female"]
+    }
+  },
+  "chrome": {
+    "title": "Japan's largest age group in 2020 was 45-49",
+    "subtitle": "Population by five-year age group and sex, 2020"
+  },
+  "data": [
+    { "year": 2020, "age": "0-4", "sex": "Male", "pop": 2375000 },
+    { "year": 2020, "age": "0-4", "sex": "Female", "pop": 2254000 },
+    { "year": 2020, "age": "5-9", "sex": "Male", "pop": 2697000 },
+    { "year": 2020, "age": "5-9", "sex": "Female", "pop": 2548000 },
+    { "year": 2020, "age": "10-14", "sex": "Male", "pop": 2861000 },
+    { "year": 2020, "age": "10-14", "sex": "Female", "pop": 2700000 },
+    { "year": 2020, "age": "15-19", "sex": "Male", "pop": 3028000 },
+    { "year": 2020, "age": "15-19", "sex": "Female", "pop": 2861000 },
+    { "year": 2020, "age": "20-24", "sex": "Male", "pop": 3093000 },
+    { "year": 2020, "age": "20-24", "sex": "Female", "pop": 2963000 },
+    { "year": 2020, "age": "25-29", "sex": "Male", "pop": 3088000 },
+    { "year": 2020, "age": "25-29", "sex": "Female", "pop": 2963000 },
+    { "year": 2020, "age": "30-34", "sex": "Male", "pop": 3310000 },
+    { "year": 2020, "age": "30-34", "sex": "Female", "pop": 3187000 },
+    { "year": 2020, "age": "35-39", "sex": "Male", "pop": 3696000 },
+    { "year": 2020, "age": "35-39", "sex": "Female", "pop": 3612000 },
+    { "year": 2020, "age": "40-44", "sex": "Male", "pop": 4292000 },
+    { "year": 2020, "age": "40-44", "sex": "Female", "pop": 4214000 },
+    { "year": 2020, "age": "45-49", "sex": "Male", "pop": 5054000 },
+    { "year": 2020, "age": "45-49", "sex": "Female", "pop": 4953000 },
+    { "year": 2020, "age": "50-54", "sex": "Male", "pop": 4391000 },
+    { "year": 2020, "age": "50-54", "sex": "Female", "pop": 4251000 },
+    { "year": 2020, "age": "55-59", "sex": "Male", "pop": 3993000 },
+    { "year": 2020, "age": "55-59", "sex": "Female", "pop": 3881000 },
+    { "year": 2020, "age": "60-64", "sex": "Male", "pop": 3769000 },
+    { "year": 2020, "age": "60-64", "sex": "Female", "pop": 3744000 },
+    { "year": 2020, "age": "65-69", "sex": "Male", "pop": 4076000 },
+    { "year": 2020, "age": "65-69", "sex": "Female", "pop": 4205000 },
+    { "year": 2020, "age": "70-74", "sex": "Male", "pop": 4509000 },
+    { "year": 2020, "age": "70-74", "sex": "Female", "pop": 4994000 },
+    { "year": 2020, "age": "75-79", "sex": "Male", "pop": 3197000 },
+    { "year": 2020, "age": "75-79", "sex": "Female", "pop": 3857000 },
+    { "year": 2020, "age": "80-84", "sex": "Male", "pop": 2315000 },
+    { "year": 2020, "age": "80-84", "sex": "Female", "pop": 3204000 },
+    { "year": 2020, "age": "85-89", "sex": "Male", "pop": 1339000 },
+    { "year": 2020, "age": "85-89", "sex": "Female", "pop": 2399000 },
+    { "year": 2020, "age": "90-94", "sex": "Male", "pop": 487000 },
+    { "year": 2020, "age": "90-94", "sex": "Female", "pop": 1244000 },
+    { "year": 2020, "age": "95-99", "sex": "Male", "pop": 118000 },
+    { "year": 2020, "age": "95-99", "sex": "Female", "pop": 468000 },
+    { "year": 2020, "age": "100+", "sex": "Male", "pop": 15000 },
+    { "year": 2020, "age": "100+", "sex": "Female", "pop": 97000 }
+  ]
+}
+```
+
+Three encoding choices make it read as a pyramid:
+
+- `y.sort` lists the age groups youngest first, which puts 0-4 at the bottom of the axis and 100+ at the top. Leave the list in that order; reversing it turns the pyramid upside down.
+- `color.sort: ["Male", "Female"]` puts men on the left, the convention in demography. Without a `sort`, the first value in the data goes left.
+- `x.format: ".2~s"` prints the axis in millions, and both sides read as positive numbers going out from the center.
+
+The 2020 pyramid has two bulges. People aged 70 to 74 were born from 1946 to 1950, Japan's postwar baby boom, and the 45-49 group are largely their children. The base is narrow, since under-15s were 12% of the population in 2020, against 35% in 1950. At the top, the women's bar for 100 and older is more than six times the men's, 97,000 women to 15,000 men.
+
+## Why `mirror` and not negative values
+
+The usual workaround, and the one in the Plotly and Highcharts pyramid examples, is to store men's counts as negative numbers and format the axis to hide the minus sign. The minus sign comes back everywhere the formatter doesn't reach: tooltips, CSV exports and the data table a screen reader gets all list -5,054,000 men. The age labels also stay at the left edge of the plot, where they collide with the men's bars, instead of sitting between the halves.
+
+Vega-Lite's pyramid example builds three views side by side with `hconcat`, one of them a reversed x scale, and keeps their scales matched by hand. That's a lot of spec for one chart, and OpenChart has no `hconcat`. With `mirror`, both halves share one scale by construction, so equal counts draw equal bar lengths on both sides.
+
+On a mirrored chart the color field must have exactly two values, the bars must be horizontal (quantitative x, categories on y), and `encoding.x.stack` can't be set, since mirrored bars never stack. A color field with three values fails with a message that names the field and its values.
+
+## Animating the pyramid with `encoding.time`
+
+Add a `time` channel and pass every year's rows, and the pyramid plays. This one runs every fifth year from 1950 to 2100 in 15 seconds:
+
+```ts
+const spec = {
+  mark: { type: "bar", mirror: true },
+  data: rows, // 31 years x 21 age groups x 2 sexes: 1,302 rows
+  encoding: {
+    y: { field: "age", type: "ordinal", sort: ageGroups }, // ["0-4", "5-9", ..., "100+"]
+    x: { field: "pop", type: "quantitative", format: ".2~s" },
+    color: { field: "sex", type: "nominal", sort: ["Male", "Female"] },
+    time: { field: "year", type: "temporal" },
+  },
+  playback: { duration: 15000 },
+};
+```
+
+<Demo id="blog/japan-pyramid-playback" />
+
+Figures from 2025 onward are the UN's medium-variant projection, and the subtitle says so, since a reader watching the bars move has no other cue that the estimates have turned into projections. In 1950 the largest group is the youngest, 0-4. The bulge climbs the pyramid as the years play, and by 2100 the largest group is 85-89 in a population of 77 million, down from 126 million in 2020.
+
+The bars need no `key`. Each bar is identified by its age group and sex, so "Female, 45-49" in 2020 grows or shrinks into "Female, 45-49" in 2025, with lengths interpolated between the two years. The value axis is fixed for the whole run, sized to the largest bar in any year, so a bar's length means the same number of people in every frame. The year appears as a large faint label in the upper right.
+
+Keep the y sort a fixed list. A pyramid sorted by value would rank its rows once over all years and never re-rank them, and OpenChart warns about that sort and suggests `type: "race"` for bars that should re-rank each period.
+
+## Controls, playback and static output
+
+`createChart` returns a chart whose `playback` property has `play()`, `pause()`, `seek(t)`, `setSpeed(speed)`, `getState()` and `on("period", callback)`; it's `null` on a chart without a time channel. `seek` takes a zero-based period index, so `chart.playback?.seek(14)` shows 2020. The control strip under the chart plays, pauses and scrubs, and with focus on it the arrow keys step five years at a time. The `playback` block takes the same options as the bar chart race's `race` block: `duration` or `step`, `holdEnd`, `loop`, `autoplay`, `controls` and `period`.
+
+Readers who have asked their system for reduced motion get the pyramid paused on its last frame, and play steps through the years without a tween. A screen reader hears the year when the reader pauses or steps, not during playback.
+
+For a static image, `renderStaticSVG(spec, { t: 14 })` from `@opendata-ai/openchart-vanilla/static` draws 2020 as an SVG string without a browser. Without `t` it draws the last year, here the 2100 projection, so pass `t` when the final frame isn't the one you want in a preview.
+
+The [population pyramid docs page](/docs/comparison/pyramid/) covers the gutter, value labels and every `mirror` rule.
