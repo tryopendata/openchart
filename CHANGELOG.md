@@ -13,12 +13,13 @@ Charts and maps can now play through time. Add `encoding.time` to a point, circl
 ### Behaviour changes
 
 - A race whose ordinal time field sets `sort: 'descending'` now plays its periods in reverse. It used to ignore the sort and play in first-seen order.
+- `encoding.key` on a bar chart now warns that it is ignored. Bars are matched by colour and category.
 
 ### Added
 
 - `encoding.time` on point, circle and bar charts. Each distinct value is one period. Temporal and quantitative periods sort by value, and ordinal periods follow `sort` or first-seen order. Points and circles are matched across periods by `encoding.key`, and bars by colour and category. Values are interpolated between periods. Axes are sized once over every period, so they hold still while the marks move.
 - A top-level `playback` block for those charts: `duration`, `step`, `gaps` (`interpolate`, `hold` or `drop`), `holdEnd`, `loop`, `autoplay` (default `'visible'`), `controls`, and `period`, the large period label, with its own `format` and `position` (`false` hides it). Point charts also take `labels`, a list of keys whose name label moves with the point, and `trails`, which draws each key's past positions as a line (`true` for every key, or a list of keys), as in a Gapminder-style bubble chart.
-- Mirrored bars, `mark: { type: 'bar', mirror: true }`: two series drawn back to back from a shared category axis, as in a population pyramid. The sides come from the colour domain, category labels sit in the centre gutter, and both value axes read outward from zero. With `encoding.time` the pyramid plays through the years.
+- Mirrored bars, `mark: { type: 'bar', mirror: true }`: two series drawn back to back from a shared category axis, as in a population pyramid. The sides come from the colour domain, category labels sit in the centre gutter, and both value axes read outward from zero. Hovering a half label highlights that half, and the crosshair is off. With `encoding.time` the pyramid plays through the years.
 - Bars sorted by value (`sort: '-x'` and similar) keep one category order, ranked over every period's rows, for the whole run, and warn through `onWarn` that `type: 'race'` is the way to get bars that re-rank.
 - Time-lapse geo maps and tile maps. `encoding.time` recolours the features or tiles each period, and `points.time` moves a map's points layer. The colour scale covers the whole run, so a colour means the same value in every period.
 - `chart.playback` on chart and map instances, with `play()`, `pause()`, `seek()`, `setSpeed()`, `getState()` and a `period` event. It is `null` for specs without a time channel. The React, Vue and Svelte wrappers expose the same controller and re-export the `PlaybackController`, `PlaybackPeriod` and `PlaybackState` types.
@@ -26,6 +27,10 @@ Charts and maps can now play through time. Add `encoding.time` to a point, circl
 - `renderStaticSVG(spec, { t })` draws a playback chart at a period index (0 is the first period; a fraction draws the frame between two periods). It defaults to the final period.
 - Races accept the same `playback` block for timing and controls. Setting a field in both `race` and `playback` is a validation error, and `labels` and `trails` are rejected on races.
 - Docs pages for playback, the animated bubble chart, time-lapse maps and population pyramids.
+
+### Fixed
+
+- Geo map point tooltips formatted size, colour and tooltip values with the region colour format, so a choropleth formatted as a percentage showed city populations as percentages. Each point channel now uses its own `format`.
 
 ## [9.1.0] - 2026-11-24
 
