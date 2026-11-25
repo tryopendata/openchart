@@ -369,11 +369,23 @@ Shared scales means shared **domains**, not just a shared plot rect. `compileLay
 
 `instance.update()` applies a new spec, including its `theme`, and retains the playhead across a mark swap. `instance.setTheme({ theme, darkMode })` swaps the mount-level theme or color scheme in place and keeps the clock (t, playing, ended, speed); the framework wrappers and the docs site call it instead of remounting. Other mount options (`autoResize`, `watermark`) are read once.
 
+## Playback (`encoding.time` on charts and maps)
+
+| Concern | Where to look |
+|---------|---------------|
+| Spec types and validation | `core/src/types/spec.ts`: `PlaybackConfig`, `PlaybackTimingConfig` (the race's `playback` block), `time` on point/circle/bar encodings, map `encoding.time` and `points.time`. Timing and gap resolution in `engine/src/playback/options.ts`; time validation in `engine/src/playback/time-spec.ts`; map time validation in `engine/src/compiler/validation/geo-time.ts`. |
+| Chart compile | `engine/src/playback/chart-playback.ts` → `compileChartPlayback()`: the key x period matrix (`matrix.ts`, `gaps.ts`), one frozen envelope compile (`freeze.ts`, bars in `bar-playback.ts`), per-playhead sampling (`frame-sampler.ts`), `marksAt`/`overlaysAt`/`trailsAt`. Advisory warnings in `chart-warnings.ts`. Static output at a period: `engine/src/compile-chart-time.ts` (`playbackT` / `renderStaticSVG({ t })`), trails as decorative marks from `trail-marks.ts`. |
+| Mirrored bars | `engine/src/charts/bar/mirror.ts` (layout, center gutter, piecewise ticks) and `mirror-labels.ts` (gutter category labels, half labels keyed `oc-mirror-half\|<side>`). |
+| Map compile | `engine/src/playback/map-playback.ts` → `compileGeoMapPlayback` / `compileTileMapPlayback`; frames in `map-geo-frames.ts` and `map-tile.ts`, tooltips in `map-geo-tooltips.ts` / `map-geo-point-tooltip.ts`, GIF palette in `map-palette.ts`. |
+| Mount | Shared: `vanilla/src/playback/playback-mount.ts` (session + frame writer + strip, survives re-renders via `rebind()`), `playback-run.ts` (restart, relay that keeps `chart.playback` stable), `strip.ts`, `session.ts` (clock, controls, announcer, autoplay, reduced motion). Charts: `chart-playback-host.ts`, `chart-session.ts`, `chart-frames.ts`, `chart-trails.ts`. Maps: `map-playback-host.ts`, `map-session.ts`, `map-frames.ts`, `map-feature-paint.ts` (no-data crossfade underlay). |
+| Export | `vanilla/src/playback/export-gif.ts` (frame-stepped GIF shared with the race), `chart-export-gif.ts`; `frame-layout.ts` gives `chart.layout` and SVG/PNG exports the frame on screen. |
+| Examples | `examples/src/testing/playback.stories.tsx`, `pyramid.stories.tsx`, `pyramid-playback.stories.tsx`, `map-playback.stories.tsx`. |
+
 ## Chart playback overlays
 
 | Concern | Where to look |
 |---------|---------------|
-| Period label | `packages/engine/src/playback/overlays.ts`: key `oc-playback-period`, placement (`periodLabelPlacement`; `auto` is centered except upper right on a `mirror: true` bar pyramid), faint ink (`periodInk`), and `paintOrder()`; `overlay-plan.ts` fixes the plan per run, shrinking a corner label until no bar or value label in any period reaches it, which both the base layout and `compile-chart-time.ts` use so the label paints behind the marks. |
+| Period label | `packages/engine/src/playback/overlays.ts`: key `oc-playback-period`, placement (`periodLabelPlacement`; `auto` is centered on point charts and upper right on bars, mirrored or not; maps pick a corner in `map-period-placement.ts`), faint ink (`periodInk`), and `paintOrder()`; `overlay-plan.ts` fixes the plan per run, shrinking a corner label until no bar or value label in any period reaches it, which both the base layout and `compile-chart-time.ts` use so the label paints behind the marks. |
 | Name labels (`playback.labels`) | `packages/engine/src/charts/scatter/playback-labels.ts`: key `oc-playback-label\|<pointKey>`, beside the bubble on one side chosen per run by `decideLabelSides()` in `overlays.ts`. Labels carry the point's `data`, which series hiding reads. |
 | Drawing and reading them | `ChartPlayback.overlaysAt(t)` returns both, behind first. `packages/vanilla/src/playback/chart-frames.ts` writes them per frame by `data-key`; `frame-layout.ts` applies them in `chart.layout` and exports; `chart-tooltips.ts` maps a name label to its point and ignores the period label. `core/src/styles/playback.css` makes them `pointer-events: none`. |
 
