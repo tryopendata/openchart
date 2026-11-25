@@ -264,6 +264,33 @@ export const galleryEntries: readonly WallEntry[] = [
       "New York's average daily high peaked at 30.2°C in July 2023. Error bars span y to y2 for each month, and the figure offers SVG, PNG and CSV downloads.",
     docs: "/docs/distribution/error-bars/",
   },
+  {
+    slug: "wealth-and-health-bubbles",
+    demo: "correlation/bubble-playback",
+    kind: "correlation",
+    title: "China's life expectancy nearly doubled from 1960 to 1980",
+    description:
+      "China's life expectancy rose from 33 to 64 years by 1980 on under $200 a head. encoding.time plays the bubbles year by year, and playback.labels names three.",
+    docs: "/docs/correlation/bubble-playback/",
+  },
+  {
+    slug: "japan-population-pyramid",
+    demo: "comparison/pyramid-playback",
+    kind: "comparison",
+    title: "Japan's population pyramid, 1950 to 2100",
+    description:
+      "People 65 and older went from 5% of Japan in 1950 to 30% in 2025. mark.mirror sets men and women back to back, and encoding.time plays the years.",
+    docs: "/docs/comparison/pyramid/",
+  },
+  {
+    slug: "unemployment-claims-time-lapse",
+    demo: "maps/time-lapse-choropleth",
+    kind: "maps",
+    title: "Unemployment claims by state through 2020",
+    description:
+      "The average state's insured unemployment rate went from 1.1% in January 2020 to 12.0% by July 4. encoding.time plays the weeks on a map joined by encoding.key.",
+    docs: "/docs/maps/time-lapse/",
+  },
 ];
 
 /**

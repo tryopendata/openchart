@@ -69,3 +69,8 @@ function PyramidPlaybackStory({ spec, t }: { spec: ChartSpec; t?: number }) {
 
 export const Japan = () => <PyramidPlaybackStory spec={japanPyramid} />;
 export const Japan2025 = () => <PyramidPlaybackStory spec={paused} t={YEAR_2025} />;
+
+/** Period index of 2100, the last of the 31 five-yearly periods. */
+const YEAR_2100 = 30;
+
+export const Japan2100 = () => <PyramidPlaybackStory spec={paused} t={YEAR_2100} />;

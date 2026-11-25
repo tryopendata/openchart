@@ -79,3 +79,12 @@ function PlaybackStory({ spec, t }: { spec: ChartSpec; t?: number }) {
 export const WealthAndHealth = () => <PlaybackStory spec={wealthAndHealth} />;
 export const WealthAndHealthTrails = () => <PlaybackStory spec={withTrails} />;
 export const WealthAndHealth1990 = () => <PlaybackStory spec={paused} t={30} />;
+
+const pausedWithTrails: ChartSpec = {
+  ...withTrails,
+  playback: { ...withTrails.playback, autoplay: false },
+};
+
+/** Trails and labels at 1990 (mid-run) and at the last period (2023). */
+export const WealthAndHealthTrailsMid = () => <PlaybackStory spec={pausedWithTrails} t={30} />;
+export const WealthAndHealthTrailsEnd = () => <PlaybackStory spec={pausedWithTrails} t={63} />;
