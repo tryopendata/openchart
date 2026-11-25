@@ -2,6 +2,7 @@
  * Hover tooltips for a playback chart's keyed marks. Content comes from `playbackTooltip`
  * at the current playhead, so an open tooltip follows the frame as playback moves.
  */
+import type { TooltipContent } from '@opendata-ai/openchart-core';
 import type { ChartPlayback } from '@opendata-ai/openchart-engine';
 import type { HoverEmphasis } from '../interactions/hover-emphasis';
 import type { TooltipManager } from '../tooltip';
@@ -100,4 +101,41 @@ export function wirePlaybackTooltips(options: PlaybackTooltipOptions): PlaybackT
       hovered = null;
     },
   };
+}
+
+/**
+ * Tooltip descriptors whose lookups read a keyed mark's values at the playhead, for the
+ * keyboard navigation that reads descriptors by `data-mark-id`. Marks without a `data-key`
+ * element keep their base content.
+ */
+class PlaybackTooltipDescriptors extends Map<string, TooltipContent> {
+  readonly #svg: SVGElement;
+  readonly #read: (key: string) => TooltipContent | null;
+
+  constructor(
+    base: Map<string, TooltipContent>,
+    svg: SVGElement,
+    read: (key: string) => TooltipContent | null,
+  ) {
+    super(base);
+    this.#svg = svg;
+    this.#read = read;
+  }
+
+  override get(markId: string): TooltipContent | undefined {
+    const element = this.#svg.querySelector(`[data-mark-id="${CSS.escape(markId)}"]`);
+    const key = element?.getAttribute('data-key');
+    return (key ? this.#read(key) : null) ?? super.get(markId);
+  }
+}
+
+/** Wrap `base` so each lookup reads the playback at the playhead, as hover tooltips do. */
+export function playbackTooltipDescriptors(
+  base: Map<string, TooltipContent>,
+  options: Pick<PlaybackTooltipOptions, 'svg' | 'playback' | 'playhead'>,
+): Map<string, TooltipContent> {
+  return new PlaybackTooltipDescriptors(base, options.svg, (key) => {
+    const playback = options.playback();
+    return playback ? playbackTooltip(playback, key, options.playhead()) : null;
+  });
 }

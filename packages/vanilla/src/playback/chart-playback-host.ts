@@ -1,33 +1,33 @@
 /**
- * The chart mount's side of playback: compiles time specs into playbacks (once per spec,
- * size and option change), keeps one session across re-renders, decides when an update
- * keeps it or starts over, and wires the playhead-aware tooltips.
+ * The chart mount's side of playback: one session per run, carried across re-renders and
+ * updates under the RFC 4.4 rules, a controller whose identity survives a restart, and the
+ * playhead-aware tooltips and layout readers.
  */
 import {
   type ChartLayout,
   type ChartSpec,
-  type CompileOptions,
   isLayerSpec,
   type LayerSpec,
+  type TooltipContent,
 } from '@opendata-ai/openchart-core';
-import {
-  type ChartPlayback,
-  compileChartPlayback,
-  hasTimeEncoding,
-} from '@opendata-ai/openchart-engine';
+import { type ChartPlayback, hasTimeEncoding } from '@opendata-ai/openchart-engine';
 import type { ChartCompiler } from '../chart-sizing';
 import type { HoverEmphasis } from '../interactions/hover-emphasis';
 import type { TooltipManager } from '../tooltip';
 import { type ChartPlaybackMount, mountChartPlayback } from './chart-session';
-import { type PlaybackTooltips, wirePlaybackTooltips } from './chart-tooltips';
+import {
+  type PlaybackTooltips,
+  playbackTooltipDescriptors,
+  wirePlaybackTooltips,
+} from './chart-tooltips';
+import { carriedPlayhead, resetPlayhead, samePlaybackShape } from './chart-update';
+import { type ControllerRelay, createControllerRelay } from './controller-relay';
 import { PLAYBACK_CONTROLS_HEIGHT } from './controls';
+import { layoutAtPlayhead } from './frame-layout';
+import { createPlaybackCompiler } from './playback-compiler';
 import type { PlaybackController } from './types';
 
 type MountSpec = ChartSpec | LayerSpec;
-
-/** Advisory text for `renderer: 'canvas'` on a time spec, in the engine's refusal wording. */
-export const CANVAS_PLAYBACK_WARNING =
-  'Chart warning: renderer "canvas" is not supported on playback charts (encoding.time); rendering marks as SVG instead.';
 
 /** Whether a mounted spec plays over time. */
 export function isPlaybackSpec(spec: MountSpec): spec is ChartSpec {
@@ -38,41 +38,6 @@ export function isPlaybackSpec(spec: MountSpec): spec is ChartSpec {
 export function playbackStripHeight(spec: MountSpec): number {
   if (!isPlaybackSpec(spec)) return 0;
   return spec.playback?.controls === false ? 0 : PLAYBACK_CONTROLS_HEIGHT;
-}
-
-function markType(spec: ChartSpec): string {
-  return typeof spec.mark === 'string' ? spec.mark : spec.mark.type;
-}
-
-function channelField(channel: unknown): string | undefined {
-  if (typeof channel !== 'object' || channel === null) return undefined;
-  const { field } = channel as { field?: unknown };
-  return typeof field === 'string' ? field : undefined;
-}
-
-/**
- * Whether an update can keep the running playback: the same mark type, time field and type,
- * and identity field. Anything else starts over.
- */
-export function samePlaybackShape(previous: ChartSpec, next: ChartSpec): boolean {
-  const before = previous.encoding as Record<string, unknown>;
-  const after = next.encoding as Record<string, unknown>;
-  const timeType = (encoding: Record<string, unknown>) =>
-    (encoding.time as { type?: unknown } | undefined)?.type;
-  return (
-    markType(previous) === markType(next) &&
-    channelField(before.time) === channelField(after.time) &&
-    timeType(before) === timeType(after) &&
-    channelField(before.key) === channelField(after.key)
-  );
-}
-
-function sameOptions(a: CompileOptions, b: CompileOptions): boolean {
-  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const key of keys) {
-    if (a[key as keyof CompileOptions] !== b[key as keyof CompileOptions]) return false;
-  }
-  return true;
 }
 
 /** What `render()` hands the host after building the SVG. */
@@ -86,14 +51,24 @@ export interface PlaybackRenderArgs {
 
 /** One chart mount's playback, null-safe for specs without time. */
 export interface ChartPlaybackHost {
-  /** The current controller, or null when the rendered spec has no time channel. */
+  /**
+   * The controller, or null when the rendered spec has no time channel. The same object
+   * across re-renders and updates until time is removed.
+   */
   readonly controller: PlaybackController | null;
   /** The compiler for `spec` (its playback's base layout), or undefined without time. */
   compilerFor(spec: MountSpec): ChartCompiler | undefined;
   /** Bind playback to a freshly rendered SVG, or tear it down when the layout has none. */
   render(args: PlaybackRenderArgs): void;
+  /** The base layout with marks at the playhead, or null without playback. */
+  frameLayout(): ChartLayout | null;
   /** Wire tooltips that read the playhead onto the rendered SVG. Returns the cleanup. */
   wireTooltips(svg: SVGElement, tooltips: TooltipManager, emphasis?: HoverEmphasis): () => void;
+  /** `base` with lookups read at the playhead, for keyboard navigation over `svg`. */
+  tooltipDescriptors(
+    svg: SVGElement,
+    base: Map<string, TooltipContent>,
+  ): Map<string, TooltipContent>;
   /** Pause playback, e.g. when an edit gesture starts. */
   pause(): void;
   destroy(): void;
@@ -108,27 +83,15 @@ export function createChartPlaybackHost(options: {
   editing: boolean;
 }): ChartPlaybackHost {
   const { container, editing } = options;
-  const playbackForBase = new WeakMap<ChartLayout, ChartPlayback>();
-  let cache: { spec: ChartSpec; options: CompileOptions; playback: ChartPlayback } | undefined;
+  const compiler = createPlaybackCompiler();
   let mounted: ChartPlaybackMount | null = null;
+  let relay: ControllerRelay | null = null;
   let current: { spec: ChartSpec; playback: ChartPlayback } | null = null;
   let tooltips: PlaybackTooltips | null = null;
   let tooltipPeriod: number | undefined;
-  let warnedCanvas = false;
 
-  function compilePlayback(spec: ChartSpec, compileOptions: CompileOptions): ChartLayout {
-    if (compileOptions.renderer === 'canvas' && !warnedCanvas) {
-      warnedCanvas = true;
-      console.warn(CANVAS_PLAYBACK_WARNING);
-    }
-    if (cache && cache.spec === spec && sameOptions(cache.options, compileOptions)) {
-      return cache.playback.base;
-    }
-    const playback = compileChartPlayback(spec, { ...compileOptions, renderer: 'svg' });
-    playbackForBase.set(playback.base, playback);
-    cache = { spec, options: compileOptions, playback };
-    return playback.base;
-  }
+  const playhead = () => mounted?.controller.getState().t ?? 0;
+  const currentPlayback = () => current?.playback ?? null;
 
   // Tooltips show the nearest period's values, so they change only when that period does.
   function refreshTooltips(t: number) {
@@ -141,51 +104,71 @@ export function createChartPlaybackHost(options: {
   function teardown() {
     mounted?.destroy();
     mounted = null;
+    relay?.release();
+    relay = null;
     current = null;
+  }
+
+  /** Start a run from scratch, keeping the controller (and its speed) when one exists. */
+  function restart(args: PlaybackRenderArgs, spec: ChartSpec, playback: ChartPlayback) {
+    const speed = relay?.controller.getState().speed;
+    mounted?.destroy();
+    current = { spec, playback };
+    mounted = mountChartPlayback({
+      container,
+      svg: args.svg,
+      playback,
+      darkMode: args.darkMode,
+      animate: spec.animation !== false && !editing,
+      initialState: relay ? resetPlayhead(playback) : undefined,
+      onFrame: refreshTooltips,
+    });
+    if (speed !== undefined && speed !== 1) mounted.controller.setSpeed(speed);
+    if (relay) relay.follow(mounted.controller);
+    else relay = createControllerRelay(mounted.controller);
   }
 
   return {
     get controller() {
-      return mounted?.controller ?? null;
+      return relay?.controller ?? null;
     },
     compilerFor(spec) {
-      return isPlaybackSpec(spec) ? compilePlayback : undefined;
+      return isPlaybackSpec(spec) ? compiler.compile : undefined;
     },
-    render({ svg, layout, spec, darkMode }) {
-      const playback = playbackForBase.get(layout);
+    render(args) {
+      const { spec } = args;
+      const playback = compiler.playbackFor(args.layout);
       if (!playback || !isPlaybackSpec(spec)) {
         teardown();
         return;
       }
-      if (mounted && current && samePlaybackShape(current.spec, spec)) {
-        current = { spec, playback };
-        mounted.rebind({ svg, playback, darkMode });
+      if (!mounted || !current || !samePlaybackShape(current.spec, spec)) {
+        restart(args, spec, playback);
         return;
       }
-      teardown();
+      const t = carriedPlayhead(current.playback, playback, playhead());
       current = { spec, playback };
-      mounted = mountChartPlayback({
-        container,
-        svg,
-        playback,
-        darkMode,
-        animate: spec.animation !== false && !editing,
-        onFrame: refreshTooltips,
-      });
+      mounted.rebind({ svg: args.svg, playback, darkMode: args.darkMode, t });
+    },
+    frameLayout() {
+      return current && mounted ? layoutAtPlayhead(current.playback, playhead()) : null;
     },
     wireTooltips(svg, tooltipManager, emphasis) {
       const wired = wirePlaybackTooltips({
         svg,
         tooltips: tooltipManager,
         emphasis,
-        playback: () => current?.playback ?? null,
-        playhead: () => mounted?.controller.getState().t ?? 0,
+        playback: currentPlayback,
+        playhead,
       });
       tooltips = wired;
       return () => {
         wired.dispose();
         if (tooltips === wired) tooltips = null;
       };
+    },
+    tooltipDescriptors(svg, base) {
+      return playbackTooltipDescriptors(base, { svg, playback: currentPlayback, playhead });
     },
     pause() {
       mounted?.controller.pause();
@@ -194,7 +177,7 @@ export function createChartPlaybackHost(options: {
       tooltips?.dispose();
       tooltips = null;
       teardown();
-      cache = undefined;
+      compiler.clear();
     },
   };
 }

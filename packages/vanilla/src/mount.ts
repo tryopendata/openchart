@@ -426,7 +426,9 @@ export function createChart<TData extends DataRow = DataRow>(
           wireKeyboardNav(
             svgElement,
             container,
-            currentLayout.tooltipDescriptors,
+            playing
+              ? playback.tooltipDescriptors(svgElement, currentLayout.tooltipDescriptors)
+              : currentLayout.tooltipDescriptors,
             tooltipManager,
             currentLayout,
             { crosshair: crosshairController, onFocus: options?.onMarkFocus },
@@ -700,8 +702,10 @@ export function createChart<TData extends DataRow = DataRow>(
    * applies (unchanged shape, first render, etc. — the render already swapped
    * instantly). Used by headless frame capture (GIF export of a spec-swap
    * stepper) to sample the update tween deterministically. No rAF runs.
+   * A playback chart pauses first and gets null: it has no update tween.
    */
   function beginManualUpdate(newSpec: ChartSpec | LayerSpec): TransitionHandle | null {
+    playback.pause();
     return doUpdate(newSpec, undefined, true);
   }
 
@@ -868,10 +872,13 @@ export function createChart<TData extends DataRow = DataRow>(
   const doExport = createChartExporter(() => ({
     svgElement,
     canvasLayer,
-    // A file carries the figure a reader sees, not the editor's empty note reserve.
-    currentLayout: reservesNoteBand(currentSpec)
-      ? compile(currentSpec, measureText, true, false)
-      : currentLayout,
+    // A file carries the figure a reader sees, not the editor's empty note reserve. A
+    // playback chart exports the frame on screen.
+    currentLayout:
+      playback.frameLayout() ??
+      (reservesNoteBand(currentSpec)
+        ? compile(currentSpec, measureText, true, false)
+        : currentLayout),
     currentSpec,
   }));
 
@@ -961,6 +968,7 @@ export function createChart<TData extends DataRow = DataRow>(
     beginManualUpdate,
     resize,
     sampleLayout: () =>
+      playback.frameLayout() ??
       sampleLayout(
         currentLayout,
         transitionHandle?.running ? transitionHandle.snapshot() : undefined,
@@ -968,7 +976,7 @@ export function createChart<TData extends DataRow = DataRow>(
     export: doExport,
     destroy,
     get layout() {
-      return currentLayout;
+      return playback.frameLayout() ?? currentLayout;
     },
     get playback() {
       return playback.controller;

@@ -36,6 +36,8 @@ export interface ChartPlaybackView {
   svg: SVGElement;
   playback: ChartPlayback;
   darkMode: boolean;
+  /** Playhead to move to once rebound; omit to keep the clamped playhead. */
+  t?: number;
 }
 
 /** A chart's running playback. */
@@ -45,8 +47,9 @@ export interface ChartPlaybackMount {
   /** Draw the frame at `t` without moving the playhead. */
   draw(t: number): void;
   /**
-   * Move playback onto a re-rendered SVG and its recompiled playback, keeping the clamped
-   * playhead, the play state and every listener. Redraws the current frame.
+   * Move playback onto a re-rendered SVG and its recompiled playback, keeping the play
+   * state and every listener. The playhead moves to `view.t` when given, else stays clamped.
+   * Redraws the current frame.
    */
   rebind(view: ChartPlaybackView): void;
   /** Stop the clock and remove the controls strip and live region. Safe to repeat. */
@@ -201,6 +204,7 @@ export function mountChartPlayback(options: ChartPlaybackMountOptions): ChartPla
       attachControls();
       draw(session.getClockState().t);
       session.syncPeriod();
+      if (view.t !== undefined && view.t !== session.getClockState().t) session.seek(view.t);
       startWhenPlayable();
     },
     destroy() {
