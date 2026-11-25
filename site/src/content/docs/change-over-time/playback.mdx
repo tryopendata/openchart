@@ -31,7 +31,7 @@ This chart sets `autoplay: false`, so it opens on the final period and waits for
 | `labels` | None | Point charts only. Keys whose name stays beside their point for the whole run. |
 | `trails` | `false` | Point charts only. Draw each named key's path so far; `true` draws one for every key. |
 
-The demo's data has 32 periods, one every other year, so the default duration is 22.4 seconds. With `step: 250` the same run takes 7.75 seconds, since there are 31 intervals between 32 periods. With `period.position: "auto"` the label is centered behind the marks on point and bar charts, goes in the upper right on a population pyramid, and takes the corner that covers the least geography on a map.
+The demo's data has 32 periods, one every other year, so the default duration is 22.4 seconds. With `step: 250` the same run takes 7.75 seconds, since there are 31 intervals between 32 periods. With `period.position: "auto"` the label is centered behind the marks on a point chart, goes in the upper right on a bar chart or population pyramid, shrinking until no bar reaches it, and takes the corner that covers the least geography on a map.
 
 `gaps: "interpolate"` fills a gap along a straight line between the periods on either side, or along a geometric curve on a log axis. Gaps only fill between two periods where the key has values. Before its first value and after its last, a key is absent: it fades in over the second half of the interval before it appears and fades out over the first half of the interval after it leaves.
 

@@ -3285,7 +3285,7 @@ export interface PlaybackConfig {
     | {
         /** Overrides the time channel's format. */
         format?: string;
-        /** Where the label sits. Defaults to `auto`: centered for scatter, lower left for maps, upper right for bars. */
+        /** Where the label sits. Defaults to `auto`: centered for point charts, upper right for bars, and the corner that covers the least geography on maps. */
         position?: PlaybackPeriodPosition;
       };
   /** Point marks only: keys whose name is drawn next to the mark for the whole run. */
