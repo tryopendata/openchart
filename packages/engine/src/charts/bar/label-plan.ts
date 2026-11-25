@@ -5,6 +5,7 @@ import type { NormalizedChartSpec } from '../../compiler/types';
 import { finiteNumber } from '../../data/finite-number';
 import { resolveFieldFormatter } from '../../format/field-format';
 import { resolveRendererKey } from '../post-process';
+import { mirrorHalfLabelBand } from './mirror';
 
 export type BarLabelPlacement = 'adaptive' | 'inside' | 'outside' | 'column' | 'suppress';
 export interface BarLabelPlan {
@@ -31,21 +32,25 @@ export interface BarLabelPlanOptions {
 
 export function planBarLabels(
   spec: NormalizedChartSpec,
-  _theme: ResolvedTheme,
+  theme: ResolvedTheme,
   options: BarLabelPlanOptions,
 ): BarLabelPlan {
-  const requested = spec.labels.placement ?? 'adaptive';
+  const rendererKey = resolveRendererKey(spec.markType, spec.encoding, spec.markDef);
+  // Mirrored bars only place values outside, past the outer end of either half, and always
+  // need the band above the plot for the two half labels.
+  const mirrored = rendererKey === 'bar-mirror';
+  const requested = mirrored ? 'outside' : (spec.labels.placement ?? 'adaptive');
   const empty: BarLabelPlan = {
     placement: requested,
     reserveLeft: 0,
     reserveRight: 0,
-    reserveTop: 0,
+    reserveTop: mirrored ? mirrorHalfLabelBand(theme) : 0,
     reserveBottom: 0,
     columnWidth: 0,
   };
   if (requested === 'adaptive' || requested === 'inside' || spec.labels.density === 'none')
     return empty;
-  const horizontal = resolveRendererKey(spec.markType, spec.encoding, spec.markDef) === 'bar';
+  const horizontal = rendererKey === 'bar' || mirrored;
   const channel = horizontal ? spec.encoding.x : spec.encoding.y;
   if (!channel || !('field' in channel)) return empty;
   const field = channel.field;
@@ -97,12 +102,16 @@ export function planBarLabels(
     columnWidth: maxWidth,
   };
   if (requested === 'column' && fits(column)) return column;
+  // Every mirrored bar reads outward, so both outer ends need room for the widest label.
+  const sideReserve = mirrored
+    ? { left: maxWidth + 6, right: maxWidth + 6 }
+    : { left: negative ? negativeWidth + 6 : 0, right: positive ? positiveWidth + 6 : 0 };
   const outside = {
     ...empty,
     placement: 'outside' as const,
-    reserveLeft: horizontal ? (negative ? negativeWidth + 6 : 0) : maxWidth / 2,
-    reserveRight: horizontal ? (positive ? positiveWidth + 6 : 0) : maxWidth / 2,
-    reserveTop: !horizontal && positive ? maxHeight + 8 : 0,
+    reserveLeft: horizontal ? sideReserve.left : maxWidth / 2,
+    reserveRight: horizontal ? sideReserve.right : maxWidth / 2,
+    reserveTop: empty.reserveTop + (!horizontal && positive ? maxHeight + 8 : 0),
     reserveBottom: !horizontal && negative ? maxHeight + 8 : 0,
     ...(requested === 'column' ? { fallback: 'column-to-outside' as const } : {}),
   };
