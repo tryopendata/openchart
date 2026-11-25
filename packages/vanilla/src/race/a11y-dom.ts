@@ -1,6 +1,17 @@
+/**
+ * Race accessibility DOM: the figure's name and description, the hidden period
+ * table and the leaders announcement. The live region and its announce policy
+ * come from the shared playback announcer.
+ */
 import type { A11yMetadata, RaceFrame } from '@opendata-ai/openchart-core';
-import { type RaceModel, raceA11y, raceA11yLeaders } from '@opendata-ai/openchart-engine';
+import {
+  type RaceModel,
+  raceA11y,
+  raceA11yLeaders,
+  raceFrameAt,
+} from '@opendata-ai/openchart-engine';
 import { applySrOnlyStyles } from '../dom-helpers';
+import { createPlaybackAnnouncer } from '../playback/announcer';
 import { pageIdScope } from '../svg-ids';
 import type { RaceShell } from './shell';
 
@@ -27,6 +38,19 @@ function sameMetadata(a: A11yMetadata, b: A11yMetadata): boolean {
         row.every((cell, column) => cell === rows[index][column]),
     )
   );
+}
+
+/** Name up to three current leaders, prefixed with the period unless the reader is scrubbing. */
+function describeLeaders(model: RaceModel, shell: RaceShell, t: number): string {
+  // Fades can leave an exact leader out of the visual frame's items.
+  const leaders = raceA11yLeaders(model, t);
+  const message = leaders.length
+    ? `${leaders.join(', ')} ${leaders.length === 1 ? 'leads' : 'lead'}`
+    : 'No ranked entries';
+  const active = shell.root.ownerDocument.activeElement;
+  const scrubberFocused =
+    active?.matches('input[type="range"]') && shell.controlsSlot.contains(active);
+  return scrubberFocused ? message : `${raceFrameAt(model, t).period.label}: ${message}`;
 }
 
 function appendPeriodTable(wrapper: HTMLElement, name: string, metadata: A11yMetadata): void {
@@ -74,13 +98,12 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
   wrapper.append(description);
   appendPeriodTable(wrapper, name, metadata);
 
-  const live = doc.createElement('div');
-  live.setAttribute('aria-live', 'polite');
-  live.setAttribute('aria-atomic', 'true');
-  wrapper.append(live);
-
   let currentModel = model;
   let currentShell = shell;
+  const announcer = createPlaybackAnnouncer({
+    host: wrapper,
+    describe: (t) => describeLeaders(currentModel, currentShell, t),
+  });
   let destroyed = false;
   let detachDescription: (() => void) | undefined;
   function attach(nextShell: RaceShell, nextModel: RaceModel): boolean {
@@ -114,20 +137,14 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
     attach,
     announce(frame) {
       if (!detachDescription) return;
-      // Fades can leave an exact leader out of the visual frame's items.
-      const leaders = raceA11yLeaders(currentModel, frame.t);
-      const message = leaders.length
-        ? `${leaders.join(', ')} ${leaders.length === 1 ? 'leads' : 'lead'}`
-        : 'No ranked entries';
-      const active = currentShell.root.ownerDocument.activeElement;
-      const scrubberFocused =
-        active?.matches('input[type="range"]') && currentShell.controlsSlot.contains(active);
-      live.textContent = scrubberFocused ? message : `${frame.period.label}: ${message}`;
+      // The mount announces only while paused, so the frame stands for a paused playhead.
+      announcer.notify('seek', { t: frame.t, playing: false, speed: 1, ended: false });
     },
     destroy() {
       destroyed = true;
       detachDescription?.();
       detachDescription = undefined;
+      announcer.destroy();
       wrapper.remove();
     },
   };
