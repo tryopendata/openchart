@@ -130,7 +130,7 @@ export function createMapPeriodOverlay(
   );
   const last = periodTexts.length - 1;
   return (t) => {
-    const period = Number.isFinite(t) ? Math.round(Math.min(Math.max(t, 0), last)) : last;
+    const period = Number.isFinite(t) ? Math.floor(Math.min(Math.max(t, 0), last)) : last;
     return [periodLabelMark(periodTexts[period], placement, theme)];
   };
 }

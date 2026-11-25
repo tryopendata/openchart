@@ -5,7 +5,8 @@
  * identity and period, matching time types across layers, and the `playback` block.
  */
 import { jsonPointer } from '@opendata-ai/openchart-core';
-import { type PlaybackTimeType, readPeriod } from '../../playback/periods';
+import { firstDuplicateCell } from '../../playback/duplicate-cells';
+import type { PlaybackTimeType } from '../../playback/periods';
 import type { ValidationError } from '../types';
 import { validatePlaybackBlock } from './playback';
 
@@ -14,13 +15,6 @@ type Record_ = Record<string, unknown>;
 const TIME_TYPES = ['temporal', 'ordinal', 'quantitative'];
 /** Playback options that only point charts draw. */
 const POINT_ONLY_OPTIONS = ['labels', 'trails'];
-
-/** Rows sharing one identity and one period, as the playback matrix reads periods. */
-interface KeyPeriodCell {
-  identity: string;
-  period: string | number;
-  count: number;
-}
 
 function isRecord(value: unknown): value is Record_ {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -64,28 +58,6 @@ function checkTimeChannel(channel: unknown, path: string, errors: ValidationErro
   );
 }
 
-/** Rows per identity and period. Rows whose period doesn't read are left to the matrix. */
-function countRowsPerCell(
-  rows: unknown[],
-  identityField: string,
-  timeField: string,
-  timeType: PlaybackTimeType,
-): KeyPeriodCell[] {
-  const cells = new Map<string, KeyPeriodCell>();
-  for (const row of rows) {
-    if (!isRecord(row) || row[identityField] == null) continue;
-    const period = readPeriod(row[timeField], timeType);
-    if (!period) continue;
-    const identity = String(row[identityField]);
-    // The matrix keys periods by value, so the year 2020 and the string '2020' differ.
-    const cell = `${identity}\u0000${typeof period.value}\u0000${String(period.value)}`;
-    const seen = cells.get(cell);
-    if (seen) seen.count += 1;
-    else cells.set(cell, { identity, period: period.value, count: 1 });
-  }
-  return [...cells.values()];
-}
-
 /** Error for the first identity and period pair more than one row carries. */
 function checkUniqueRows(
   rows: unknown,
@@ -97,9 +69,9 @@ function checkUniqueRows(
   const timeField = fieldOf(time);
   const timeType = timeTypeOf(time);
   if (!Array.isArray(rows) || !timeField || !timeType) return;
-  const collision = countRowsPerCell(rows, identityField, timeField, timeType).find(
-    ({ count }) => count > 1,
-  );
+  const identityOf = (row: Record_) =>
+    row[identityField] == null ? undefined : String(row[identityField]);
+  const collision = firstDuplicateCell(rows, identityOf, { field: timeField, type: timeType });
   if (!collision) return;
   errors.push(
     invalid(

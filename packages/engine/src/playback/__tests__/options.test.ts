@@ -27,6 +27,10 @@ describe('resolvePlayback', () => {
     expect(resolvePlayback({ step: 500 }, 5).durationMs).toBe(2000);
   });
 
+  it('never derives a negative duration from step when there are no periods', () => {
+    expect(resolvePlayback({ step: 500 }, 0).durationMs).toBe(0);
+  });
+
   it('keeps authored timing, controls and period fields', () => {
     expect(
       resolvePlayback(

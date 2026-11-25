@@ -150,7 +150,7 @@ export function compileGeoMapPlayback(spec: unknown, options: CompileOptions): G
     paletteColors: () => geoPaletteColors(scales, run.periods.length, pointsAt),
     describe: (t) => {
       if (run.periods.length === 0) return 'No periods to play.';
-      const period = plan.primary.sampler.nearestPeriod(t);
+      const period = plan.primary.sampler.reachedPeriod(t);
       return describeExtremes(run.periodLabels[period], geoNamedValues(context, period));
     },
   };
@@ -224,7 +224,7 @@ export function compileTileMapPlayback(spec: unknown, options: CompileOptions): 
       tiles ? tileTooltipAt(plan, tiles, run.periodLabels, stateCode, t) : undefined,
     describe: (t) => {
       if (run.periods.length === 0) return 'No periods to play.';
-      const period = plan.series.sampler.nearestPeriod(t);
+      const period = plan.series.sampler.reachedPeriod(t);
       const named = tiles ? tileNamedValues(plan, tiles, period) : [];
       return describeExtremes(run.periodLabels[period], named);
     },

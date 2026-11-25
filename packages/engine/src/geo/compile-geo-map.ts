@@ -52,6 +52,7 @@ import {
 import { computeSizeLegendContent, sizeLegendTitleStyle } from '../legend/size';
 import { compileGeoMapAtPlayhead, hasMapTimeEncoding } from '../playback/map-playback';
 import type { GeoMapFrozenScales, GeoMapPlaybackScope } from '../playback/map-types';
+import { playbackWithoutTimeWarning } from '../playback/time-spec';
 import { buildGeoColorKey, geoColorKeyReserve } from './color-key';
 import { joinDataToFeatures } from './join';
 import { compilePreparedGeoLabels, hasGeoLabels, prepareGeoLabels } from './labels';
@@ -247,6 +248,8 @@ function validateGeoFeatures(geo: NormalizedGeoMapSpec['geo']): Topology {
  */
 export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLayout {
   if (hasMapTimeEncoding(spec)) return compileGeoMapAtPlayhead(spec, options);
+  const ignored = playbackWithoutTimeWarning(spec, 'encoding.time or points.time');
+  if (ignored) emitSpecWarnings([ignored], options.onWarn);
   return compileGeoMapFrame(spec, options);
 }
 

@@ -14,13 +14,14 @@ import type {
   ResolvedTheme,
 } from '@opendata-ai/openchart-core';
 import { type ScaleBand, type ScaleLinear, scaleLinear } from 'd3-scale';
-import { dedupeKeys, serializeKeyValue } from '../../compiler/keys';
+import { dedupeKeys } from '../../compiler/keys';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import { finiteNumber } from '../../data/finite-number';
 import { formatTickLabel, targetTickCount } from '../../layout/axes/ticks';
 import type { D3ContinuousScale, ResolvedScale, ResolvedScales } from '../../layout/scales';
 import { formatLabelValue } from '../_shared/format-label-value';
 import { BAR_CORNER_RADIUS, getColor, valueEndCorners } from '../utils';
+import { barIdentityKey } from './identity-key';
 import type { BarLabelPlan } from './label-plan';
 import {
   attachValueLabels,
@@ -258,10 +259,7 @@ function buildMirrorRects(
 /** Bar identity keys, `${series}|${category}`, matching ordinary bars so updates tween. */
 function stampMirrorKeys(marks: RectMark[], categoryField: string, colorField: string): void {
   const keys = dedupeKeys(
-    marks.map(
-      (mark) =>
-        `${String(mark.data[colorField] ?? '')}|${serializeKeyValue(mark.data[categoryField])}`,
-    ),
+    marks.map((mark) => barIdentityKey(mark.data, categoryField, colorField)),
   );
   marks.forEach((mark, index) => {
     mark.key = keys[index];

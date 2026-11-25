@@ -1,4 +1,6 @@
+import type { ChartSpec } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
+import { compileChart } from '../../../compile';
 import { validateSpec } from '../../validate';
 
 const data = [
@@ -68,6 +70,34 @@ describe('validateMirror through validateSpec', () => {
       encoding: { ...pyramid.encoding, x: { ...pyramid.encoding.x, stack } },
     };
     expect(errorsOf(spec).map((error) => error.path)).toContain('/encoding/x/stack');
+  });
+
+  it('counts sides after transforms: a filter that removes a third value passes', () => {
+    const withTotal = [...data, { age: '0-4', sex: 'Total', pop: 9 }];
+    const spec = {
+      ...pyramid,
+      data: withTotal,
+      transform: [{ filter: { field: 'sex', oneOf: ['Male', 'Female'] } }],
+    };
+    expect(errorsOf(spec)).toEqual([]);
+    const warnings: string[] = [];
+    compileChart(spec as ChartSpec, { width: 600, height: 400, onWarn: (m) => warnings.push(m) });
+    expect(warnings.filter((m) => /mirror/.test(m))).toEqual([]);
+  });
+
+  it('warns when the transformed data does not have exactly two sides', () => {
+    const withTotal = [...data, { age: '0-4', sex: 'Total', pop: 9 }];
+    const spec = {
+      ...pyramid,
+      data: withTotal,
+      transform: [{ filter: { field: 'pop', gte: 0 } }],
+    };
+    expect(errorsOf(spec)).toEqual([]);
+    const warnings: string[] = [];
+    compileChart(spec as ChartSpec, { width: 600, height: 400, onWarn: (m) => warnings.push(m) });
+    expect(warnings.filter((m) => /mirror/.test(m))).toEqual([
+      'mark.mirror needs a color field with exactly two values; after transforms "sex" has 3 (Male, Female, Total). Filter the rows to two groups.',
+    ]);
   });
 
   it('adds nothing for an ordinary stacked bar chart', () => {

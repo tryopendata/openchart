@@ -1,23 +1,32 @@
 /** Validation of mirrored bars (`mark: { type: 'bar', mirror: true }`). */
+import { mirrorSideValues, quoteSideValues } from '../../charts/bar/mirror-sides';
 import type { ValidationError } from '../types';
 
 type Channel = Record<string, unknown> | undefined;
 
 /**
  * Append errors for a mirrored bar spec: no color field, a color field without exactly two
- * distinct values, vertical bars (a quantitative y), and any authored `stack` on the value
+ * distinct values in untransformed data, vertical bars (a quantitative y), and any authored `stack` on the value
  * channel (checked on the authored value, `null` and `false` included). Called only for
  * specs with `mark.mirror: true`.
  */
 export function validateMirror(spec: Record<string, unknown>, errors: ValidationError[]): void {
   const encoding = (spec.encoding ?? {}) as Record<string, Channel>;
-  checkColor(encoding.color, spec.data, errors);
+  checkColor(encoding.color, spec.data, spec.transform, errors);
   checkOrientation(encoding, errors);
   checkStack(encoding.x, errors);
 }
 
-/** The color channel must name a field with exactly two distinct values in the data. */
-function checkColor(color: Channel, data: unknown, errors: ValidationError[]): void {
+/**
+ * The color channel must name a field with exactly two distinct values in the data. The count
+ * is skipped when the spec has transforms, which run after validation.
+ */
+function checkColor(
+  color: Channel,
+  data: unknown,
+  transform: unknown,
+  errors: ValidationError[],
+): void {
   const field = typeof color?.field === 'string' ? color.field : undefined;
   if (!field) {
     errors.push({
@@ -29,20 +38,15 @@ function checkColor(color: Channel, data: unknown, errors: ValidationError[]): v
     });
     return;
   }
-  if (!Array.isArray(data)) return;
-  const values = new Set<string>();
-  for (const row of data) {
-    if (!row || typeof row !== 'object') continue;
-    // A row with no color value picks no side, so it doesn't count as a group.
-    const value = (row as Record<string, unknown>)[field];
-    if (value !== undefined && value !== null) values.add(String(value));
-  }
-  if (values.size === 2) return;
-  const shown = [...values].slice(0, 5).join(', ');
+  // Transforms decide the sides (a filter drops a 'Total', a calculate derives the field), so
+  // the compile warns on the transformed rows instead.
+  if (!Array.isArray(data) || transform !== undefined) return;
+  const values = mirrorSideValues(data, field);
+  if (values.length === 2) return;
   errors.push({
     code: 'INVALID_VALUE',
     path: '/encoding/color',
-    message: `mark.mirror needs a color field with exactly two values; "${field}" has ${values.size} (${shown}).`,
+    message: `mark.mirror needs a color field with exactly two values; "${field}" has ${values.length} (${quoteSideValues(values)}).`,
     suggestion: 'Filter the data to two groups, or drop mirror for more than two.',
   });
 }

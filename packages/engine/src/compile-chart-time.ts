@@ -6,18 +6,15 @@ import type { ChartLayout, ChartSpec, CompileOptions, Mark } from '@opendata-ai/
 import type { NormalizedChartSpec } from './compiler/types';
 import { compilePaintedChartPlayback } from './playback/chart-playback';
 import type { FrameMark } from './playback/chart-types';
+import { fadeMark } from './playback/presence';
 import { isTrailMark, trailColorsByKey, trailMarks } from './playback/trail-marks';
 import { computeTooltipDescriptors } from './tooltips/compute';
 
-/** A frame mark as a static mark: absent keys dropped, fading ones at their faded opacity. */
-function staticMark({ mark, presence }: FrameMark): Mark {
-  if (presence >= 1 || mark.type !== 'point') return mark;
-  return { ...mark, fillOpacity: (mark.fillOpacity ?? 1) * presence };
-}
-
-/** Frame marks still visible, as static marks. */
+/** Frame marks still visible, as static marks, fading ones at their faded opacity. */
 function staticMarks(frame: FrameMark[]): Mark[] {
-  return frame.filter(({ presence }) => presence > 0).map(staticMark);
+  return frame
+    .filter(({ presence }) => presence > 0)
+    .map(({ mark, presence }) => fadeMark(mark, presence));
 }
 
 /** Tooltips for the data marks only; trail marks are decorative and get none. */
