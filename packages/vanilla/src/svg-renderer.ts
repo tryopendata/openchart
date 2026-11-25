@@ -14,6 +14,7 @@ import { createRenderContext, type RenderContext } from './render-context';
 import type {
   ChartLayout,
   FacetPanelLayout,
+  Mark,
   ResolvedFillPattern,
 } from '@opendata-ai/openchart-core';
 import { roleVars } from '@opendata-ai/openchart-core';
@@ -36,6 +37,18 @@ import { resolvedSurface } from './theme-tokens';
 // Re-export registerMarkRenderer so external consumers can still register
 // custom mark renderers via the vanilla package entry point.
 export { registerMarkRenderer } from './renderers/marks';
+
+/**
+ * Top edge of the text marks the engine placed above the plot (the mirrored-bar half
+ * labels), so the mark clip keeps them. Infinity when there are none.
+ */
+function textMarksTop(marks: readonly Mark[]): number {
+  let top = Number.POSITIVE_INFINITY;
+  for (const mark of marks) {
+    if (mark.type === 'textMark') top = Math.min(top, mark.y - mark.fontSize);
+  }
+  return top;
+}
 
 /**
  * Render a compiled ChartLayout into an SVG element and append it to a container.
@@ -166,12 +179,14 @@ export function renderChartSVG(
     0,
   );
   const clipPad = Math.max(maxPointR, 2);
+  const clipTop = Math.min(layout.area.y - clipPad, textMarksTop(layout.marks));
+  const clipBottom = layout.area.y + layout.area.height + clipPad;
   const clipRect = createSVGElement('rect', ctx.factory);
   setAttrs(clipRect, {
     x: 0,
-    y: layout.area.y - clipPad,
+    y: clipTop,
     width,
-    height: layout.area.height + clipPad * 2,
+    height: clipBottom - clipTop,
   });
   clipPath.appendChild(clipRect);
   defs.appendChild(clipPath);
