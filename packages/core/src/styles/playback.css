@@ -1,4 +1,143 @@
 /*
  * Playback controls (play button, scrubber, readout) shared by races, charts and maps.
- * Each selector lists both the .oc-race-* and .oc-playback-* prefixes.
+ * Each selector lists both the .oc-race-* and .oc-playback-* prefixes. The controls set
+ * the scrubber's progress as --<prefix>-progress; the race shell sets
+ * --oc-race-progress-color on its controls slot.
  */
+@layer oc.components {
+  .oc-race-controls,
+  .oc-playback-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 44px;
+    color: var(--oc-text);
+    font-family: var(--oc-font-family);
+  }
+
+  .oc-race-play,
+  .oc-playback-play {
+    display: grid;
+    place-items: center;
+    flex: none;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    /* Pull the button left so the 16px icon, not the hit area, lines up with the chart inset. */
+    margin-inline-start: -8px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .oc-race-play:hover,
+  .oc-playback-play:hover {
+    background: var(--oc-hover-bg);
+  }
+
+  .oc-race-play:focus-visible,
+  .oc-race-scrub:focus-visible,
+  .oc-playback-play:focus-visible,
+  .oc-playback-scrub:focus-visible {
+    outline: 2px solid var(--oc-focus);
+    outline-offset: 2px;
+  }
+
+  .oc-race-scrub,
+  .oc-playback-scrub {
+    --oc-playback-track-direction: to right;
+    --oc-playback-track-fill: linear-gradient(
+      var(--oc-playback-track-direction),
+      var(--oc-race-progress-color, var(--oc-playback-progress-color, var(--oc-text)))
+        var(--oc-race-progress, var(--oc-playback-progress, 0%)),
+      var(--oc-border) var(--oc-race-progress, var(--oc-playback-progress, 0%))
+    );
+    /* Grow outward and keep the native thumb's travel and center fixed. */
+    --oc-playback-thumb-grow: 0px;
+    --oc-playback-thumb-ring:
+      0 0 0 var(--oc-playback-thumb-grow) var(--oc-text),
+      0 0 0 calc(2px + var(--oc-playback-thumb-grow)) var(--oc-bg);
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  .oc-race-scrub:dir(rtl),
+  .oc-playback-scrub:dir(rtl) {
+    --oc-playback-track-direction: to left;
+  }
+
+  .oc-race-scrub:hover,
+  .oc-race-scrub:active,
+  .oc-playback-scrub:hover,
+  .oc-playback-scrub:active {
+    --oc-playback-thumb-grow: 1px;
+  }
+
+  .oc-race-scrub::-webkit-slider-runnable-track,
+  .oc-playback-scrub::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--oc-playback-track-fill);
+  }
+
+  .oc-race-scrub::-moz-range-track,
+  .oc-playback-scrub::-moz-range-track {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--oc-playback-track-fill);
+  }
+
+  .oc-race-scrub::-webkit-slider-thumb,
+  .oc-playback-scrub::-webkit-slider-thumb {
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--oc-text);
+    box-shadow: var(--oc-playback-thumb-ring);
+  }
+
+  .oc-race-scrub::-moz-range-thumb,
+  .oc-playback-scrub::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--oc-text);
+    box-shadow: var(--oc-playback-thumb-ring);
+  }
+
+  @media (forced-colors: active) {
+    .oc-race-scrub,
+    .oc-playback-scrub {
+      appearance: auto;
+    }
+  }
+
+  .oc-race-readout,
+  .oc-playback-readout {
+    flex: 0 0 auto;
+    max-width: 40%;
+    overflow: hidden;
+    color: var(--oc-text-muted);
+    font-size: var(--oc-source-size);
+    text-align: end;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-variant-numeric: normal;
+  }
+}

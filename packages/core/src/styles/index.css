@@ -30,5 +30,6 @@
 @import "./keyframes.css";
 @import "./animation.css";
 @import "./reduced-motion.css";
+@import "./playback.css";
 @import "./race.css";
 @import "./race-table.css";

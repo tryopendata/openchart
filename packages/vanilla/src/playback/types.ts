@@ -1,3 +1,8 @@
+/**
+ * Public playback types shared by races, charts and maps: the controller surface a
+ * mount exposes and the state and period it reports.
+ */
+
 /** A period as reported to readers of a playback chart. */
 export interface PlaybackPeriod {
   index: number;

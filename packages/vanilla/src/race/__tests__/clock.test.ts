@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createRaceClock, type RaceClockOptions, type RaceClockState } from '../clock';
+import {
+  createPlaybackClock as createRaceClock,
+  type PlaybackClockOptions as RaceClockOptions,
+  type PlaybackClockState as RaceClockState,
+} from '../../playback/clock';
 
 function setup(overrides: Partial<Omit<RaceClockOptions, 'scheduler'>> = {}) {
   const pending = new Map<number, (now: number) => void>();
