@@ -23,23 +23,28 @@ function seriesByKey(base: ChartLayout, field: string): Map<string, string> {
   return series;
 }
 
-/**
- * Hide every `[data-key]` element (marks and anything else drawn per key) whose key belongs
- * to a hidden series, and show the rest. Only `style.display` is touched; the frame writer
- * never writes it, so hiding holds through playback.
- */
-export function applySeriesHiding(
-  svg: SVGElement,
+/** The base keys whose series is hidden. Empty when the spec has no color field. */
+export function hiddenSeriesKeys(
   base: ChartLayout,
   spec: ChartSpec,
   hiddenSeries: readonly string[],
-): void {
+): Set<string> {
   const field = colorField(spec);
-  if (!field) return;
+  const keys = new Set<string>();
+  if (!field || hiddenSeries.length === 0) return keys;
   const hidden = new Set(hiddenSeries);
-  const series = seriesByKey(base, field);
-  for (const element of svg.querySelectorAll<SVGElement>('[data-key]')) {
-    const value = series.get(element.getAttribute('data-key') as string);
-    element.style.display = value !== undefined && hidden.has(value) ? 'none' : '';
+  for (const [key, value] of seriesByKey(base, field)) if (hidden.has(value)) keys.add(key);
+  return keys;
+}
+
+/**
+ * Hide every element drawn for a key in `hiddenKeys` (its `[data-key]` marks and its
+ * `[data-trail-key]` trail) and show the rest. Only `style.display` is touched; the frame
+ * and trail writers never write it, so hiding holds through playback.
+ */
+export function applySeriesHiding(svg: SVGElement, hiddenKeys: ReadonlySet<string>): void {
+  for (const element of svg.querySelectorAll<SVGElement>('[data-key], [data-trail-key]')) {
+    const key = element.getAttribute('data-key') ?? element.getAttribute('data-trail-key');
+    element.style.display = key !== null && hiddenKeys.has(key) ? 'none' : '';
   }
 }

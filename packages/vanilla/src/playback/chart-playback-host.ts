@@ -25,7 +25,7 @@ import { type ControllerRelay, createControllerRelay } from './controller-relay'
 import { PLAYBACK_CONTROLS_HEIGHT } from './controls';
 import { layoutAtPlayhead } from './frame-layout';
 import { createPlaybackCompiler } from './playback-compiler';
-import { applySeriesHiding } from './series-hiding';
+import { applySeriesHiding, hiddenSeriesKeys } from './series-hiding';
 import type { PlaybackController } from './types';
 
 type MountSpec = ChartSpec | LayerSpec;
@@ -61,8 +61,14 @@ export interface ChartPlaybackHost {
   compilerFor(spec: MountSpec): ChartCompiler | undefined;
   /** Bind playback to a freshly rendered SVG, or tear it down when the layout has none. */
   render(args: PlaybackRenderArgs): void;
-  /** The base layout with marks at the playhead, or null without playback. */
-  frameLayout(): ChartLayout | null;
+  /**
+   * The rendered layout with the marks drawn at the playhead (absent and hidden keys
+   * dropped), or null without playback. `compiled`, another compile of the same spec (the
+   * export's note-band variant), replaces the rendered layout when given.
+   */
+  frameLayout(compiled?: ChartLayout): ChartLayout | null;
+  /** Forget compiled playbacks so the next render recompiles, e.g. once webfonts load. */
+  invalidate(): void;
   /** Wire tooltips that read the playhead onto the rendered SVG. Returns the cleanup. */
   wireTooltips(svg: SVGElement, tooltips: TooltipManager, emphasis?: HoverEmphasis): () => void;
   /** `base` with lookups read at the playhead, for keyboard navigation over `svg`. */
@@ -88,7 +94,12 @@ export function createChartPlaybackHost(options: {
   let mounted: ChartPlaybackMount | null = null;
   let relay: ControllerRelay | null = null;
   // The rendered spec and layout (base, or base with legend state) and their playback.
-  let current: { spec: ChartSpec; layout: ChartLayout; playback: ChartPlayback } | null = null;
+  let current: {
+    spec: ChartSpec;
+    layout: ChartLayout;
+    playback: ChartPlayback;
+    hiddenKeys: Set<string>;
+  } | null = null;
   let tooltips: PlaybackTooltips | null = null;
   let tooltipPeriod: number | undefined;
 
@@ -112,10 +123,15 @@ export function createChartPlaybackHost(options: {
   }
 
   /** Start a run from scratch, keeping the controller (and its speed) when one exists. */
-  function restart(args: PlaybackRenderArgs, spec: ChartSpec, playback: ChartPlayback) {
+  function hiddenKeysFor(layout: ChartLayout, spec: ChartSpec, playback: ChartPlayback) {
+    return hiddenSeriesKeys(playback.base, spec, compiler.hiddenSeriesFor(layout));
+  }
+
+  function restart(args: PlaybackRenderArgs, next: NonNullable<typeof current>) {
+    const { spec, playback } = next;
     const speed = relay?.controller.getState().speed;
     mounted?.destroy();
-    current = { spec, layout: args.layout, playback };
+    current = next;
     mounted = mountChartPlayback({
       container,
       svg: args.svg,
@@ -144,18 +160,28 @@ export function createChartPlaybackHost(options: {
         teardown();
         return;
       }
+      const hiddenKeys = hiddenKeysFor(args.layout, spec, playback);
+      const next = { spec, layout: args.layout, playback, hiddenKeys };
       if (!mounted || !current || !samePlaybackShape(current.spec, spec)) {
-        restart(args, spec, playback);
+        restart(args, next);
       } else {
         const t = carriedPlayhead(current.playback, playback, playhead());
-        current = { spec, layout: args.layout, playback };
+        current = next;
         mounted.rebind({ svg: args.svg, playback, darkMode: args.darkMode, t });
       }
-      applySeriesHiding(args.svg, playback.base, spec, compiler.hiddenSeriesFor(args.layout));
+      applySeriesHiding(args.svg, hiddenKeys);
     },
-    frameLayout() {
+    frameLayout(compiled) {
       if (!current || !mounted) return null;
-      return layoutAtPlayhead(current.playback, playhead(), current.layout);
+      const other = compiled && compiler.playbackFor(compiled);
+      if (!compiled || !other) {
+        return layoutAtPlayhead(current.playback, playhead(), current.layout, current.hiddenKeys);
+      }
+      const hiddenKeys = hiddenKeysFor(compiled, current.spec, other);
+      return layoutAtPlayhead(other, playhead(), compiled, hiddenKeys);
+    },
+    invalidate() {
+      compiler.clear();
     },
     wireTooltips(svg, tooltipManager, emphasis) {
       const wired = wirePlaybackTooltips({

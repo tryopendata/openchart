@@ -27,8 +27,21 @@ export interface PlaybackCompiler {
   playbackFor(layout: ChartLayout): ChartPlayback | undefined;
   /** The series hidden in a rendered layout: authored plus runtime toggles. */
   hiddenSeriesFor(layout: ChartLayout): readonly string[];
-  /** Drop the cached playback. */
+  /** Drop every cached playback, e.g. once webfonts load and text metrics change. */
   clear(): void;
+}
+
+/**
+ * Playbacks kept for the current spec. The auto-height loop compiles up to three heights
+ * per render and an edit-mode export one more note-band variant; keeping them all means a
+ * re-render at the same size compiles nothing.
+ */
+const MAX_CACHED_PLAYBACKS = 6;
+
+interface CachedPlayback {
+  spec: ChartSpec;
+  options: CompileOptions;
+  playback: ChartPlayback;
 }
 
 function sameOptions(a: CompileOptions, b: CompileOptions): boolean {
@@ -64,7 +77,8 @@ export function withHiddenSeries(base: ChartLayout, hiddenSeries: readonly strin
 export function createPlaybackCompiler(): PlaybackCompiler {
   const playbackForLayout = new WeakMap<ChartLayout, ChartPlayback>();
   const hiddenForLayout = new WeakMap<ChartLayout, readonly string[]>();
-  let cache: { spec: ChartSpec; options: CompileOptions; playback: ChartPlayback } | undefined;
+  // Newest first, all for one authored spec.
+  let cache: CachedPlayback[] = [];
   let warnedCanvas = false;
 
   /** @throws What `compileChartPlayback` throws for an invalid spec. */
@@ -73,12 +87,12 @@ export function createPlaybackCompiler(): PlaybackCompiler {
       warnedCanvas = true;
       console.warn(CANVAS_PLAYBACK_WARNING);
     }
-    if (cache && cache.spec === spec && sameOptions(cache.options, options)) {
-      return cache.playback;
-    }
+    const hit = cache.find((entry) => entry.spec === spec && sameOptions(entry.options, options));
+    if (hit) return hit.playback;
     const playback = compileChartPlayback(spec, { ...options, renderer: 'svg' });
     playbackForLayout.set(playback.base, playback);
-    cache = { spec, options, playback };
+    const sameSpec = cache.filter((entry) => entry.spec === spec);
+    cache = [{ spec, options, playback }, ...sameSpec].slice(0, MAX_CACHED_PLAYBACKS);
     return playback;
   }
 
@@ -98,7 +112,7 @@ export function createPlaybackCompiler(): PlaybackCompiler {
     playbackFor: (layout) => playbackForLayout.get(layout),
     hiddenSeriesFor: (layout) => hiddenForLayout.get(layout) ?? [],
     clear() {
-      cache = undefined;
+      cache = [];
     },
   };
 }

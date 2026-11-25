@@ -19,6 +19,16 @@ export type {
   PlaybackSessionTiming,
 } from './types';
 
+/** A session that its mount can also reposition without it counting as a reader's seek. */
+export interface MovablePlaybackSession extends PlaybackSession {
+  /**
+   * Move the playhead for a data change: draws and reports a period change, but announces
+   * nothing and leaves a pending visibility autoplay waiting.
+   * @throws {RangeError} If t is not finite.
+   */
+  moveTo(t: number): void;
+}
+
 const DEFAULT_CLASS_PREFIX = 'oc-playback';
 
 /**
@@ -27,7 +37,7 @@ const DEFAULT_CLASS_PREFIX = 'oc-playback';
  * unless `deferStart` is set.
  * @throws {RangeError} If `initialState` has a non-finite position or an invalid speed.
  */
-export function createPlaybackSession(options: PlaybackSessionOptions): PlaybackSession {
+export function createPlaybackSession(options: PlaybackSessionOptions): MovablePlaybackSession {
   const { container, periodAt, initialState } = options;
   const subject = options.subject ?? DEFAULT_PLAYBACK_SUBJECT;
   const reducedMotion = options.reducedMotion ?? prefersReducedMotion;
@@ -161,6 +171,14 @@ export function createPlaybackSession(options: PlaybackSessionOptions): Playback
       periodLabels = nextLabels;
       if (timing.autoplay !== 'visible') cancelAutoplay();
       playhead.retime(timing, stepPlayback);
+    },
+    moveTo(t) {
+      if (destroyed) return;
+      const previousIndex = playhead.periodIndex;
+      playhead.seekQuietly(t);
+      if (playhead.periodIndex !== previousIndex) {
+        periods.emit(playhead.periodIndex, playhead.periodIndex);
+      }
     },
     syncPeriod() {
       if (!destroyed) playhead.syncPeriod();

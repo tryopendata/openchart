@@ -3,11 +3,13 @@
  * playhead, manual updates, and how updates carry or reset the run.
  */
 import type { ChartSpec, DataRow, PointMark } from '@opendata-ai/openchart-core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createContainer, createMouseEvent } from '../__test-fixtures__/dom';
+import { createFakeObserver, stubPageLayout } from '../__test-fixtures__/visibility';
 import { createChart } from '../mount';
 import { createFakePlayback } from '../playback/__tests__/fake-playback';
 import { carriedPlayhead } from '../playback/chart-update';
+import { setObserverFactory } from '../visibility';
 
 const COUNTRIES = ['Avalon', 'Borea', 'Cydonia'];
 
@@ -117,6 +119,31 @@ describe('reading a playback chart', () => {
     const exported = new DOMParser().parseFromString(String(chart.export('svg')), 'image/svg+xml');
     expect(circlePositions(exported)).toEqual(circlePositions(container));
   });
+
+  const exportedKeys = (chart: ReturnType<typeof createChart>) =>
+    Object.keys(
+      circlePositions(
+        new DOMParser().parseFromString(String(chart.export('svg')), 'image/svg+xml'),
+      ),
+    ).sort();
+
+  it('leaves keys not yet present out of the exported frame and layout', () => {
+    const lateCydonia = rows().filter((row) => !(row.country === 'Cydonia' && row.year === 2000));
+    const { chart, controller } = mount(timeSpec({ animation: false, data: lateCydonia }));
+    controller.seek(0);
+    expect(exportedKeys(chart)).toEqual(['Avalon', 'Borea']);
+    expect(chart.layout.marks.map((mark) => mark.key).sort()).toEqual(['Avalon', 'Borea']);
+    controller.seek(2);
+    expect(exportedKeys(chart)).toEqual(['Avalon', 'Borea', 'Cydonia']);
+  });
+
+  it('leaves a hidden series out of the exported frame', () => {
+    const { container, chart } = mount(timeSpec({ animation: false }));
+    container
+      .querySelector('[data-legend-label="South"]')
+      ?.dispatchEvent(createMouseEvent('click', 10, 10));
+    expect(exportedKeys(chart)).toEqual(['Avalon', 'Borea']);
+  });
 });
 
 describe('toggling a series on a playback chart', () => {
@@ -191,7 +218,26 @@ describe('updating a playback chart', () => {
     expect(chart.playback).toBe(controller);
     expect(controller.getState().t).toBe(0);
     controller.seek(2);
-    expect(periods).toEqual(['2001', '2002']);
+    // The reset back to the first period is reported too.
+    expect(periods).toEqual(['2001', '2000', '2002']);
+  });
+
+  it('tells listeners the period an incompatible update opens on', () => {
+    const years = [2000, 2001, 2002, 2003];
+    const { chart, controller } = mount(timeSpec({ data: rows(years) }));
+    const periods: string[] = [];
+    controller.on('period', (period) => periods.push(period.label));
+    controller.seek(2);
+    chart.update(regionKeyedSpec({ data: rows(years), animation: false }));
+    expect(periods).toEqual(['2002', '2003']);
+  });
+
+  it('moves the playhead for a data change without announcing it', () => {
+    const { container, chart, controller } = mount(timeSpec({ animation: false }));
+    chart.update(timeSpec({ animation: false, data: rows([1999, 2000, 2001, 2002]) }));
+    expect(controller.getState().period.label).toContain('2002');
+    const liveRegions = [...container.querySelectorAll('[aria-live]')];
+    expect(liveRegions.map((region) => region.textContent)).toEqual(liveRegions.map(() => ''));
   });
 
   it('opens an incompatible update on the final period when autoplay is off', () => {
@@ -210,6 +256,28 @@ describe('updating a playback chart', () => {
     chart.update(timeSpec());
     expect(chart.playback).not.toBeNull();
     expect(chart.playback).not.toBe(controller);
+  });
+});
+
+describe('autoplay waiting to be seen', () => {
+  let fake: ReturnType<typeof createFakeObserver>;
+  let layout: ReturnType<typeof stubPageLayout>;
+  beforeEach(() => {
+    fake = createFakeObserver();
+    setObserverFactory(fake.factory);
+    layout = stubPageLayout();
+  });
+  afterEach(() => {
+    setObserverFactory(null);
+    layout.mockRestore();
+  });
+
+  it('still starts when seen after an update moved the playhead', () => {
+    const { container, chart, controller } = mount(timeSpec());
+    chart.update(timeSpec({ data: rows([1999, 2000, 2001, 2002]) }));
+    expect(controller.getState()).toMatchObject({ t: 1, playing: false });
+    fake.fire(container, 0.5, 200);
+    expect(controller.getState().playing).toBe(true);
   });
 });
 

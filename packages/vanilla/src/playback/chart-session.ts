@@ -1,10 +1,11 @@
 /**
  * Playback for a mounted chart: the shared session (clock, controls, announcer, autoplay)
- * driving the frame writer over the SVG the chart mount rendered. The session outlives
+ * driving the frame and trail writers over the SVG the chart mount rendered. The session outlives
  * re-renders: `rebind()` moves it onto a freshly rendered SVG and a recompiled playback.
  */
 import type { ChartPlayback } from '@opendata-ai/openchart-engine';
-import { type ChartFrameWriter, createChartFrameWriter } from './chart-frames';
+import { createChartFrameWriter } from './chart-frames';
+import { createChartTrailWriter } from './chart-trails';
 import type { PlaybackClockState, PlaybackFrameScheduler } from './clock';
 import { PLAYBACK_CONTROLS_HEIGHT } from './controls';
 import { createPlaybackSession, type PlaybackSessionTiming } from './session';
@@ -73,6 +74,22 @@ function sessionTiming(playback: ChartPlayback): PlaybackSessionTiming {
   };
 }
 
+/** The frame writer and, when the playback has trails, the trail writer for one SVG. */
+function bindFrameWriters(svg: SVGElement, playback: ChartPlayback) {
+  const frames = createChartFrameWriter(svg, playback);
+  const trails = createChartTrailWriter(svg, playback);
+  return {
+    draw(t: number) {
+      trails?.draw(t);
+      frames.draw(t);
+    },
+    destroy() {
+      trails?.destroy();
+      frames.destroy();
+    },
+  };
+}
+
 function isPlayable(playback: ChartPlayback): boolean {
   return playback.periods.length >= MIN_PLAYABLE_PERIODS;
 }
@@ -103,7 +120,7 @@ export function mountChartPlayback(options: ChartPlaybackMountOptions): ChartPla
   const { container } = options;
   let playback = options.playback;
   let svg = options.svg;
-  let writer: ChartFrameWriter = createChartFrameWriter(svg, playback);
+  let writer = bindFrameWriters(svg, playback);
   let slot: HTMLElement | null = null;
   // Labels the mounted controls show; undefined until the first attach.
   let mountedLabels: string[] | null | undefined;
@@ -198,13 +215,14 @@ export function mountChartPlayback(options: ChartPlaybackMountOptions): ChartPla
       writer.destroy();
       playback = view.playback;
       svg = view.svg;
-      writer = createChartFrameWriter(svg, playback);
+      writer = bindFrameWriters(svg, playback);
       session.retime(sessionTiming(playback), playback.periodLabels);
       placeStrip(view.darkMode);
       attachControls();
       draw(session.getClockState().t);
       session.syncPeriod();
-      if (view.t !== undefined && view.t !== session.getClockState().t) session.seek(view.t);
+      // A data change moves the playhead quietly: no announcement, and autoplay still waits.
+      if (view.t !== undefined && view.t !== session.getClockState().t) session.moveTo(view.t);
       startWhenPlayable();
     },
     destroy() {

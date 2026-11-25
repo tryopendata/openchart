@@ -869,18 +869,19 @@ export function createChart<TData extends DataRow = DataRow>(
     render();
   }
 
-  const doExport = createChartExporter(() => ({
-    svgElement,
-    canvasLayer,
+  const doExport = createChartExporter(() => {
     // A file carries the figure a reader sees, not the editor's empty note reserve. A
     // playback chart exports the frame on screen.
-    currentLayout:
-      playback.frameLayout() ??
-      (reservesNoteBand(currentSpec)
-        ? compile(currentSpec, measureText, true, false)
-        : currentLayout),
-    currentSpec,
-  }));
+    const settled = reservesNoteBand(currentSpec)
+      ? compile(currentSpec, measureText, true, false)
+      : currentLayout;
+    return {
+      svgElement,
+      canvasLayer,
+      currentLayout: playback.frameLayout(settled) ?? settled,
+      currentSpec,
+    };
+  });
 
   function destroy(): void {
     edits.flush();
@@ -949,6 +950,7 @@ export function createChart<TData extends DataRow = DataRow>(
         // render() marks ready only after the new metrics actually compile,
         // including deferred resize work during an entrance animation.
         fontsReloadPending = true;
+        playback.invalidate();
         resize();
       },
     );
