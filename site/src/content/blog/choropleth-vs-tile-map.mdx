@@ -2,6 +2,7 @@
 title: Choropleth vs tile map for US state data
 description: A geographic map gives Alaska and Texas far more room than Rhode Island and DC. A tile map gives each state one square. The same unemployment data, both ways.
 published: 2026-11-18
+updated: 2026-11-25
 author: OpenChart
 tags: [maps, chart-choice]
 related: [maps/choropleth, maps/tile-map, maps/geographic-labels, style/color]
@@ -106,5 +107,7 @@ Neither map is ideal when the reader's main job is ranking states from highest t
 The Code panel under the tile map holds its full JSON spec. Setting `"type": "tilemap"` selects the built-in 51-cell US grid, so the spec requires no TopoJSON geography file and no projection. Passing `data` as an object maps each two-letter postal code straight to its numeric value, and `"palette": "blue"` derives the sequential color ramp and legend from those values.
 
 Setting `"valueFormat": ".1f"` formats each tile label, legend tick, and tooltip to one decimal place, while `chrome` sets the title and subtitle. For tabular arrays of row objects, `encoding.state` and `encoding.value` bind row fields to the same grid and leave omitted states as empty outlined cells. The geographic choropleth above uses `"type": "map"` instead, pairing a TopoJSON states file and the `"albersUsa"` projection with two-digit FIPS state codes.
+
+Both maps can also play through time. With one row per state per period and an `encoding.time` channel, each state recolors period by period against a legend fixed for the whole run. [How to make an animated choropleth map](/blog/how-to-make-an-animated-choropleth-map/) builds both versions from the weekly unemployment claims of 2020.
 
 For categorical colors and row-based data bindings, see the [tile map documentation](/docs/maps/tile-map/).
