@@ -1,4 +1,4 @@
-import type { ChartSpec, DataRow } from '@opendata-ai/openchart-core';
+import type { ChartSpec, DataRow, LineMark, Mark } from '@opendata-ai/openchart-core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createContainer, createMouseEvent } from '../../__test-fixtures__/dom';
 import { createChart } from '../../mount';
@@ -42,6 +42,21 @@ function mount(playback: ChartSpec['playback']) {
   const controller = chart.playback;
   if (!controller) throw new Error('expected a playback controller');
   return { container, controller };
+}
+
+function mountChart(playback: ChartSpec['playback']) {
+  const container = createContainer(640, 480);
+  const chart = createChart(container, spec(playback), { autoResize: false });
+  cleanup.push(() => chart.destroy());
+  const controller = chart.playback;
+  if (!controller) throw new Error('expected a playback controller');
+  return { chart, controller };
+}
+
+function trailLine(marks: readonly Mark[]): LineMark | undefined {
+  return marks.find(
+    (mark): mark is LineMark => mark.type === 'line' && mark.key === 'oc-playback-trail|Avalon',
+  );
 }
 
 /** Vertex count of each drawn trail line, by key. */
@@ -88,5 +103,26 @@ describe('playback trails', () => {
       ?.dispatchEvent(createMouseEvent('click', 10, 10));
     const trail = container.querySelector<SVGElement>('[data-trail-key="Avalon"]');
     expect(trail?.style.display).toBe('none');
+  });
+});
+
+describe('playback trails in the layout', () => {
+  it('carries the trail as a line mark under the bubbles, growing with t', () => {
+    const { controller, chart } = mountChart({ trails: ['Avalon'] });
+    controller.seek(1);
+    const early = trailLine(chart.layout.marks);
+    controller.seek(3);
+    const marks = chart.layout.marks;
+    const late = trailLine(marks);
+    expect(late?.points.length).toBeGreaterThan(early?.points.length ?? 0);
+    expect(marks.indexOf(late as Mark)).toBeLessThan(
+      marks.findIndex((mark) => mark.key === 'Avalon'),
+    );
+  });
+
+  it('draws the trail in the SVG export', async () => {
+    const { chart } = mountChart({ trails: ['Avalon'] });
+    const svg = await chart.export('svg');
+    expect(svg).toContain('oc-playback-trail|Avalon');
   });
 });
