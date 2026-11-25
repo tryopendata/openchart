@@ -5911,7 +5911,7 @@
                 },
                 "position": {
                   "$ref": "#/definitions/PlaybackPeriodPosition",
-                  "description": "Where the label sits. Defaults to `auto`: centered for scatter, lower left for maps, upper right for bars."
+                  "description": "Where the label sits. Defaults to `auto`: centered for point charts, upper right for bars, and the corner that covers the least geography on maps."
                 }
               },
               "additionalProperties": false
