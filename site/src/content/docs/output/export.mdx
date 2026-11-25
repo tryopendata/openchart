@@ -42,6 +42,18 @@ The demos name each file after the demo, such as `output-export-range.svg`. In R
 
 `chart.export("svg-with-fonts")` embeds the fonts, so the file renders the same on a machine without them. `chart.export("gif")` turns the entrance into an animated GIF for newsletters and other pages that block video and embedded charts; it needs the optional `gifenc` package. The [Export API reference](/docs/api/export/) covers both, with their options. To make SVGs on a server or at build time, with no browser, use `renderStaticSVG` from [static rendering](/docs/get-started/static-rendering/).
 
+## Playback charts
+
+A chart with `encoding.time` exports the frame on screen. Pause a [bubble playback](/docs/correlation/bubble-playback/) on 1990 and `chart.export("svg")` or `"png"` gives the 1990 bubbles on the same axes as every other frame. The player below the chart is not part of the file. `chart.export("csv")` returns every row of the spec's data, one per key and period, whichever period is showing.
+
+Static rendering draws the final period. Pass `t`, a period index counted from zero, to draw another one:
+
+```ts title="static-frame.ts"
+import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";
+
+const first = renderStaticSVG(spec, { t: 0 });
+```
+
 ## Fields that matter
 
 | Call | What it returns |

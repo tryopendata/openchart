@@ -1,0 +1,113 @@
+---
+title: Playback
+description: Time a chart that plays through periods, choose when it starts, and drive it from code with play, pause, seek and period events.
+section: change-over-time
+order: 4.6
+sidebarLabel: Playback controls
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A chart with `encoding.time` plays through the values of that field one period at a time, and the top-level `playback` block sets how long the run takes, when it starts and what the reader can control. The race reads the same timing fields, so a `playback` block you write for a [bubble playback](/docs/correlation/bubble-playback/) works on a [race](/docs/change-over-time/race/) too.
+
+<Demo id="change-over-time/playback-on-demand" />
+
+This chart sets `autoplay: false`, so it opens on the final period and waits for Play. `step: 250` gives each period a quarter of a second, `loop: true` restarts the run after the 3-second `holdEnd`, and `period.position` moves the large year label to the upper right.
+
+## The playback block
+
+| Field | Default | What it does |
+| --- | --- | --- |
+| `duration` | 700 ms per period, at least 8 s and at most 90 s | Length of the run at normal speed, from the first period to the last. The final hold comes after it. |
+| `step` | Not set | Milliseconds per period. The run lasts `step` times one less than the number of periods. Use `duration` or `step`, not both. |
+| `holdEnd` | `1500` | Milliseconds to stay on the final period before the run ends or loops. |
+| `loop` | `false` | Restart from the first period after the hold. |
+| `autoplay` | `"visible"` | `"visible"` starts when a quarter of the chart is in view, `true` starts at mount and `false` waits for the reader. |
+| `controls` | `true` | Show the play button, scrubber and period readout below the chart. |
+| `gaps` | `"interpolate"` | What a key does in a period it skips between two it has: `"interpolate"` fills the value in, `"hold"` repeats the previous value and `"drop"` leaves the key out of that period. |
+| `period` | On, `position: "auto"` | The large faint label showing the current period. `format` overrides the time channel's format, `position` takes `"auto"`, `"center"`, `"top-right"` or `"bottom-left"`, and `false` hides it. |
+| `labels` | None | Point charts only. Keys whose name stays beside their point for the whole run. |
+| `trails` | `false` | Point charts only. Draw each named key's path so far; `true` draws one for every key. |
+
+The demo's data has 32 periods, one every other year, so the default duration is 22.4 seconds. With `step: 250` the same run takes 7.75 seconds, since there are 31 intervals between 32 periods. On a point chart `period.position: "auto"` centers the label behind the bubbles, and on a bar chart it goes in the upper right.
+
+`gaps: "interpolate"` fills a gap along a straight line between the periods on either side, or along a geometric curve on a log axis. Gaps only fill between two periods where the key has values. Before its first value and after its last, a key is absent: it fades in over the second half of the interval before it appears and fades out over the first half of the interval after it leaves.
+
+## When playback starts
+
+With `autoplay: "visible"`, a chart far down the page waits until the reader scrolls to it. `autoplay: false` opens on the final period, the same frame a static render shows.
+
+`animation: false` on a time spec has the same effect as `autoplay: false`: the chart opens on the final period and the controls still work. The entrance animation never plays on a time spec, because the playback is the motion.
+
+Keep `controls: true` whenever the chart plays by itself. With `controls: false` and autoplay on, readers can't pause the motion, which fails WCAG 2.2.2, so the engine warns. Turn the controls off only when your page drives the chart through `chart.playback`.
+
+## Controls and keyboard
+
+The strip below the chart holds a play and pause button, a scrubber and a readout of the current period. It takes 44px, and a chart mounted at a fixed height draws itself in what is left.
+
+With focus on the strip, Space plays or pauses. Right and Up step forward one period, and Left and Down step back one. Dragging the scrubber moves through the periods continuously. When playback pauses, seeks or steps, a screen reader hears the period and how many points it shows.
+
+## Reduced motion
+
+When the reader's system asks for reduced motion, playback never starts by itself and the chart opens on the final period. Play still works, but it steps from one period to the next without moving the marks between them, and the scrubber lands on whole periods.
+
+## Controlling playback from code
+
+`createChart` returns an instance whose `playback` property is the controller. It is `null` while the spec has no `encoding.time`. The same controller survives `update()` and re-renders, so listeners you add stay attached.
+
+```ts title="playback.ts"
+import { createChart } from "@opendata-ai/openchart-vanilla";
+
+const chart = createChart(container, spec);
+const playback = chart.playback;
+
+playback?.play();
+playback?.pause();
+playback?.seek(15); // the 16th period, 1990 in the demo's data
+playback?.setSpeed(2); // twice the authored speed
+playback?.getState(); // { t, playing, speed, ended, period: { index, value, label } }
+```
+
+`seek(t)` takes a period index counted from zero. A fraction lands between two periods, and values outside the run clamp to the first or last period. `setSpeed` multiplies the authored speed and must be a positive number. `play()` after the run has ended starts again from the first period.
+
+The framework wrappers hand you the same instance:
+
+| Framework | Controller |
+| --- | --- |
+| React | `ref.current?.instance?.playback`, with a `ref` on `<Chart>` |
+| Vue | `chartRef.value?.instance?.playback`, with a template ref on `<Chart>` |
+| Svelte | `chart.getInstance()?.playback`, with `bind:this={chart}` on `<Chart>` |
+
+An update that removes `time` turns `playback` back to `null`, so read it from the instance each time instead of keeping your own reference. React and Vue expose `instance` as a getter, which always returns the live chart.
+
+## Period events
+
+`playback.on("period", callback)` calls `callback` with `{ index, value, label }` for every period the playhead crosses, in order, and once for the period a seek lands on. It returns a function that removes the listener. Use it to sync a caption or a table with the chart:
+
+```ts title="caption.ts"
+const stop = chart.playback?.on("period", ({ label }) => {
+  caption.textContent = `Showing ${label}`;
+});
+```
+
+An error thrown in one listener is reported to the page and doesn't stop the others.
+
+## What the engine warns about
+
+Compiling a time spec sends these warnings to `onWarn`, or to the console when you pass none:
+
+- Fewer than two periods with values. The chart renders as an ordinary static chart and plays nothing.
+- Temporal periods spaced unevenly, such as 1960, 1970, 1980, 1985. Every period gets the same playback time.
+- Less than 50 ms per period.
+- More than 1,000 marks in one period.
+- `playback` on a chart with no `encoding.time`, where the block is ignored.
+
+Errors stop the compile instead: `duration` and `step` together, a point chart without `encoding.key`, two rows with the same key and period, and `encoding.time` on a line, area or other unsupported mark.
+
+## Related
+
+- [Bubble playback](/docs/correlation/bubble-playback/) walks through the Gapminder chart.
+- [Race](/docs/change-over-time/race/) ranks the top entries in each period.
+- [Motion](/docs/behavior/motion/) covers entrance and update animations, which time specs don't use.
+- [Encoding channels](/docs/the-spec/encoding/#time) covers the `time` channel and how each mark keeps its identity.
+- [ChartSpec reference](/docs/spec/chart-spec/) lists every top-level field.

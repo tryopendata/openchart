@@ -29,6 +29,30 @@ The data and mark are unchanged; only the two channels trade places. With the ca
 
 `size` scales each point by a field, which turns a scatter into a bubble chart. By default radii run from 3 px for the smallest value to 30 px for the largest, which keeps small countries visible but makes area only roughly track the value. This demo overrides that with `scale: { domain: [0, 1500], range: [0, 22] }`: with both ends at zero, a country twice as populous gets a circle twice the area. `trendline: false` on the mark turns off the regression line scatter charts draw by default.
 
+## Time
+
+`time` turns a chart into a playback. Each distinct value of its field is one period, and the chart plays through them in order with play, pause and a scrubber. Temporal and quantitative fields sort by value. Ordinal fields play in the order their values first appear in the data. Set `sort` to a list of values to choose the order, or to `"descending"` to reverse it. `format` sets how each period reads in the large period label and the player.
+
+```json title="time.json"
+"encoding": {
+  "x": { "field": "gdp", "type": "quantitative", "scale": { "type": "log" } },
+  "y": { "field": "life", "type": "quantitative" },
+  "key": { "field": "country", "type": "nominal" },
+  "time": { "field": "year", "type": "temporal" }
+}
+```
+
+`time` works on point, circle and bar marks. It is an error on any other mark, with `facet`, inside a layer and with `youDrawIt`. The [bubble playback](/docs/correlation/bubble-playback/) page walks through a full example, and the [playback](/docs/change-over-time/playback/) page covers the timing options.
+
+Playback matches each mark in one period to the same mark in the next by its identity:
+
+| Mark | Identity | Required |
+| --- | --- | --- |
+| `point`, `circle` | The `key` field. | Yes. Without it the spec fails validation. |
+| `bar` | The category field together with the `color` field, the same pair that identifies a bar without `time`. | No. Every category and color pair is already one bar. |
+
+Each identity can have one row per period. Two rows with the same identity and period fail validation with a message naming both values; aggregate them first.
+
 ## Fields that matter
 
 | Field | What it does |
@@ -39,6 +63,8 @@ The data and mark are unchanged; only the two channels trade places. With the ca
 | `theta` | The slice value on pie and donut charts. |
 | `sort` | Category order. `"x"` on a bar chart's `y` and `"-y"` on a column chart's `x` put the largest value first. |
 | `tooltip` | Extra fields shown on hover, independent of the other channels. |
+| `time` | The period field a chart plays through. Point, circle and bar marks only. |
+| `key` | The field that identifies a point across periods. Required on point and circle charts with `time`. |
 
 ## Related
 

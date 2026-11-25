@@ -41,9 +41,7 @@ The default `race.rescale: "frame"` fits the bar scale to each frame. Set `"fixe
 
 ## Playback and controls
 
-With `race.autoplay: "visible"` (the default), playback starts when at least a quarter of the race is in view. Set `false` to wait for the reader or `true` to start at mount. With reduced motion, a race opens paused on the final frame. Readers can scrub back and press Play to advance one whole period at a time.
-
-The player includes play and pause, a scrubber and a period readout. With focus on the player, press Space to play or pause. Right and Up step forward one period, and Left and Down step back one.
+A race plays with the same clock, controls and keyboard as every other playback chart, so the [playback page](/docs/change-over-time/playback/) covers when it starts, the player, the keyboard and reduced motion. The timing fields (`duration`, `step`, `holdEnd`, `loop`, `autoplay`, `controls`, `gaps` and `period`) go in either the `race` block or a top-level `playback` block, with the same defaults. Setting one field in both blocks is an error.
 
 ## Runtime API
 
@@ -65,14 +63,15 @@ Install the optional `gifenc` package to export GIFs. `await player.export("gif"
 | `encoding.key` | The field that identifies the same entry across periods. Supply one row per key and period. |
 | `encoding.value` | The numeric field to rank and draw. Set `format` here for the value labels. |
 | `race.top` | Number of ranked slots. Defaults to 10. |
-| `race.duration`, `race.step` | Set total playback time or time per period, in milliseconds. Supply one of the two. |
+| `race.swap` | Milliseconds a bar takes to move to its new rank. Defaults to 400. |
 | `race.rescale` | For bars and inline table bars, `"frame"` fits each frame, `"fixed"` uses one scale, and `{ min }` sets a floor on the frame maximum. |
-| `race.loop`, `race.holdEnd` | Repeat after the last frame and set how long to hold it, in milliseconds. |
-| `race.autoplay`, `race.controls` | Choose when playback starts and whether to show the player controls. |
+| `race.summary` | `"sum"` shows the total of the top entries. Defaults to `false`. |
+| `playback` | Timing and controls, shared with other playback charts. See [Playback](/docs/change-over-time/playback/) for each field and its default. |
 
 ## Related
 
 - [Slope and bump](/docs/change-over-time/slope-bump/) for comparing ranks at a glance.
 - [Line](/docs/change-over-time/line/) for comparing values across periods.
+- [Playback](/docs/change-over-time/playback/) for timing, controls and the keyboard.
 - [Motion](/docs/behavior/motion/) for chart entrances and data updates.
 - [Export](/docs/output/export/) for other export formats.

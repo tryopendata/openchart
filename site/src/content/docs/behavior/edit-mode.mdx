@@ -66,6 +66,12 @@ Select the title, the subtitle or a text annotation and press Enter, or double-c
 
 A run of nudges becomes one transaction 500 milliseconds after the last arrow key is released, or sooner if the reader selects something else or focus leaves the chart. Because the arrow keys nudge, edit mode turns off the arrow-key navigation readers use to step through data points; [select mode](/docs/behavior/interaction/) keeps it.
 
+## Editing a playback chart
+
+A chart with `encoding.time` mounted in edit mode never plays by itself. It opens on the final period with the player below it, so an author can press Play or scrub to check another period while editing. Starting a drag pauses the playback.
+
+Edits to the title, annotations and legend work as on any chart. When your `onEdit` handler applies one with `update`, the chart keeps its current period and recomputes its axes and colors over every period, so they stay fixed while it plays. See [Playback](/docs/change-over-time/playback/) for the player and its controls.
+
 ## Fields that matter
 
 | Field | What it does |

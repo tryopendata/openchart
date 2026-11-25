@@ -52,6 +52,12 @@ An update skips the transition and swaps to the new layout when:
 - either layout has more marks than `animation.update.maxMarks` (500 for SVG marks);
 - the entrance is still playing.
 
+## Playback charts
+
+A chart with `encoding.time` moves by playing through its periods, and it skips the entrance and update animations on this page. The bubbles of a [bubble playback](/docs/correlation/bubble-playback/) move at a steady pace from one period to the next, and the reader can pause, scrub and replay them, where an entrance plays once and is gone. The `playback` block times the run, as the [playback page](/docs/change-over-time/playback/) describes.
+
+`animation: false` on a time spec turns off autoplay: the chart opens on the final period, and the reader can still press Play. `update` on a time spec never tweens. It keeps the playhead on the same period when the mark type, the time field and the key field are unchanged, and starts the run over otherwise.
+
 ## Fields that matter
 
 | Field | What it does |
