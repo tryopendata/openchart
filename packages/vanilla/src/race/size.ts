@@ -1,4 +1,10 @@
-export const RACE_CONTROLS_HEIGHT = 44;
+/**
+ * Race sizing: the host's available content box, less the playback control strip.
+ */
+import { PLAYBACK_CONTROLS_HEIGHT } from '../playback/controls';
+
+/** Height reserved below the race for its control strip. */
+export const RACE_CONTROLS_HEIGHT = PLAYBACK_CONTROLS_HEIGHT;
 
 /** Measure the host's available content box without the mounted race in flow. */
 export function measureRaceSize(

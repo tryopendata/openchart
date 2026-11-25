@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { createRaceClock, type RaceClockOptions, type RaceClockState } from '../clock';
+import {
+  createPlaybackClock as createRaceClock,
+  type PlaybackClockOptions as RaceClockOptions,
+  type PlaybackClockState as RaceClockState,
+} from '../../playback/clock';
 
 function setup(overrides: Partial<Omit<RaceClockOptions, 'scheduler'>> = {}) {
   const pending = new Map<number, (now: number) => void>();
@@ -207,6 +211,21 @@ describe('race clock', () => {
     expect(clock.getState()).toEqual(before);
     expect(ticks).toEqual([]);
     expect(states).toEqual([]);
+  });
+
+  it('names the subject in its range errors', () => {
+    const race = setup({ subject: 'Race' }).clock;
+    expect(() => race.seek(NaN)).toThrow(new RangeError('Race seek position must be finite'));
+    expect(() => race.setSpeed(0)).toThrow(
+      new RangeError('Race playback speed must be finite and greater than zero'),
+    );
+    const playback = setup().clock;
+    expect(() => playback.seek(NaN)).toThrow(
+      new RangeError('Playback seek position must be finite'),
+    );
+    expect(() => playback.setSpeed(0)).toThrow(
+      new RangeError('Playback speed must be finite and greater than zero'),
+    );
   });
 
   it('cancels a pending frame on destroy and ignores later commands', () => {

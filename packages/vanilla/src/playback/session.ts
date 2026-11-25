@@ -1,68 +1,178 @@
-import type { PlaybackClockState, PlaybackFrameScheduler } from './clock';
-import type { PlaybackController, PlaybackPeriod } from './types';
+/**
+ * Playback session: one playback run's controller. It ties the clock and period events
+ * (session-clock), the controls and live region (session-view), visibility autoplay and
+ * reduced-motion stepping together. The caller renders views and draws the playhead.
+ */
+import { prefersReducedMotion } from '../motion/tween';
+import { whenSeen } from '../visibility';
+import type { PlaybackAnnounceCause } from './announcer';
+import { assertValidSpeed, DEFAULT_PLAYBACK_SUBJECT } from './clock';
+import { createPeriodDispatcher, type PeriodListener } from './period-events';
+import { createSessionClock } from './session-clock';
+import { createSessionView } from './session-view';
+import type { PlaybackSession, PlaybackSessionOptions } from './types';
 
-/** Resolved timing the session plays. */
-export interface PlaybackSessionTiming {
-  periodCount: number;
-  durationMs: number;
-  holdEndMs: number;
-  loop: boolean;
-  autoplay: 'visible' | boolean;
-  controls: boolean;
-}
+export type {
+  PlaybackSession,
+  PlaybackSessionHosts,
+  PlaybackSessionOptions,
+  PlaybackSessionTiming,
+} from './types';
 
-export interface PlaybackSessionOptions {
-  /** Element watched for visibility autoplay. */
-  container: HTMLElement;
-  timing: PlaybackSessionTiming;
-  /** Readout and scrubber labels, one per period. */
-  periodLabels: string[];
-  /** The period reported by getState() and `period` events. */
-  periodAt(index: number): PlaybackPeriod;
-  /** Draw the playhead. Called on every tick and seek. */
-  draw(t: number): void;
-  /** Announcement text for the playhead. Omit to announce nothing. */
-  describe?(t: number): string;
-  /** Control class prefix. Defaults to `oc-playback`; the race passes `oc-race`. */
-  classPrefix?: string;
-  /** False (the spec's `animation: false`) opens on the final period without autoplay. */
-  animate?: boolean;
-  /** Restore playback from getState(). */
-  initialState?: PlaybackClockState;
-  /** Defaults to animation frames. */
-  scheduler?: PlaybackFrameScheduler;
-  /** Defaults to the prefers-reduced-motion media query. True forces stepped playback, no autoplay, and opens on the final period. */
-  reducedMotion?: () => boolean;
-  /** Defaults to `whenSeen`. Calls `cb` once the element is seen; returns a cancel function. */
-  whenSeen?: (element: Element, cb: () => void) => () => void;
-}
-
-/** Where the session mounts its controls strip and live region on each render. */
-export interface PlaybackSessionHosts {
-  /** Controls slot; null or omitted when the view shows no controls. */
-  controls?: HTMLElement | null;
-  /** Host for the live region. */
-  announcer?: HTMLElement;
-}
-
-export interface PlaybackSession extends PlaybackController {
-  /** Mount (or move) the controls and live region into a freshly rendered view. */
-  attach(hosts: PlaybackSessionHosts): void;
-  /** The controls strip currently mounted, if any. */
-  readonly controlsElement: HTMLElement | null;
-  /** Rebuild the clock for new timing or labels, keeping the clamped playhead and resuming if playing. */
-  retime(timing: PlaybackSessionTiming, periodLabels: string[]): void;
-  /** Raw clock state. */
-  getClockState(): PlaybackClockState;
-  /** Stop the clock, cancel visibility autoplay, remove controls and the live region. Safe to repeat. */
-  destroy(): void;
-}
+const DEFAULT_CLASS_PREFIX = 'oc-playback';
 
 /**
  * Own a playback run: clock, controls, announcer, visibility autoplay and reduced-motion
- * stepping, the wiring the race mount does inline today. The caller draws.
+ * stepping. The caller draws. Opens on the final period when motion is off, then starts
+ * unless `deferStart` is set.
+ * @throws {RangeError} If `initialState` has a non-finite position or an invalid speed.
  */
 export function createPlaybackSession(options: PlaybackSessionOptions): PlaybackSession {
-  void options;
-  throw new Error('not implemented');
+  const { container, periodAt, initialState } = options;
+  const subject = options.subject ?? DEFAULT_PLAYBACK_SUBJECT;
+  const reducedMotion = options.reducedMotion ?? prefersReducedMotion;
+  const watchSeen = options.whenSeen ?? whenSeen;
+  const periods = createPeriodDispatcher(periodAt);
+  const view = createSessionView({
+    classPrefix: options.classPrefix ?? DEFAULT_CLASS_PREFIX,
+    describe: options.describe,
+    actions: {
+      onToggle: toggle,
+      onSeek: (t) => seekTo(reducedMotion() ? Math.round(t) : t, false),
+      onStep: step,
+    },
+    onSeekCommit: () => announce('seek'),
+  });
+  let timing = options.timing;
+  let periodLabels = options.periodLabels;
+  let destroyed = false;
+  let started = false;
+  let stepPlayback = reducedMotion();
+  let cancelVisibility: (() => void) | undefined;
+  const playhead = createSessionClock({
+    timing,
+    initialState,
+    scheduler: options.scheduler,
+    subject,
+    draw: options.draw,
+    onStateChange: view.update,
+    periods,
+  });
+
+  function cancelAutoplay() {
+    cancelVisibility?.();
+    cancelVisibility = undefined;
+  }
+
+  function announce(cause: PlaybackAnnounceCause) {
+    if (destroyed) return;
+    const state = playhead.clock.getState();
+    view.announce(cause, state);
+    if (!state.playing) options.onAnnounce?.(state.t);
+  }
+
+  function play() {
+    cancelAutoplay();
+    if (!playhead.clock.getState().playing) stepPlayback = reducedMotion();
+    playhead.clock.play(stepPlayback);
+  }
+
+  function pause() {
+    cancelAutoplay();
+    playhead.clock.pause();
+    announce('pause');
+  }
+
+  function toggle() {
+    if (playhead.clock.getState().playing) pause();
+    else play();
+  }
+
+  function seekTo(t: number, announceSeek: boolean) {
+    // Stepped playback draws whole periods, so a fractional seek would draw and then snap back.
+    const stepped = stepPlayback && playhead.clock.getState().playing && Number.isFinite(t);
+    playhead.seekQuietly(stepped ? Math.floor(t) : t);
+    cancelAutoplay();
+    if (destroyed) return;
+    if (announceSeek) announce('seek');
+    periods.emit(playhead.periodIndex, playhead.periodIndex);
+  }
+
+  function step(delta: 1 | -1) {
+    cancelAutoplay();
+    playhead.clock.stepPeriod(delta);
+    announce('step');
+  }
+
+  function start() {
+    if (started || destroyed) return;
+    started = true;
+    if (initialState?.playing) {
+      playhead.clock.play(stepPlayback);
+      return;
+    }
+    if (options.animate === false || stepPlayback) return;
+    const pausedAtStart = initialState && !initialState.ended && initialState.t === 0;
+    if (timing.autoplay === 'visible' && (!initialState || pausedAtStart)) {
+      cancelVisibility = watchSeen(container, play);
+    } else if (!initialState && timing.autoplay === true) play();
+  }
+
+  if ((options.animate === false || stepPlayback) && !initialState) {
+    playhead.clock.seek(timing.periodCount - 1);
+  }
+  if (!options.deferStart) start();
+
+  return {
+    start,
+    play,
+    pause,
+    seek: (t) => seekTo(t, true),
+    setSpeed(speed) {
+      if (destroyed) assertValidSpeed(speed, subject);
+      playhead.clock.setSpeed(speed);
+    },
+    getState() {
+      const { t, playing, speed, ended } = playhead.clock.getState();
+      return { t, playing, speed, ended, period: periodAt(Math.floor(t)) };
+    },
+    on(event, cb) {
+      if (event !== 'period') {
+        throw new TypeError(`Unknown playback event "${event}". Supported: "period".`);
+      }
+      const listener: PeriodListener = (period) => cb(period);
+      if (!destroyed) periods.listeners.add(listener);
+      return () => {
+        periods.listeners.delete(listener);
+      };
+    },
+    attach({ controls, announcer }) {
+      if (destroyed) return;
+      const state = playhead.clock.getState();
+      view.mountControls(timing.controls ? controls : null, periodLabels, state);
+      view.mountAnnouncer(announcer);
+    },
+    get controlsElement() {
+      return view.controlsElement;
+    },
+    retime(nextTiming, nextLabels) {
+      if (destroyed) return;
+      timing = nextTiming;
+      periodLabels = nextLabels;
+      if (timing.autoplay !== 'visible') cancelAutoplay();
+      playhead.retime(timing, stepPlayback);
+    },
+    syncPeriod() {
+      if (!destroyed) playhead.syncPeriod();
+    },
+    getClockState: () => playhead.clock.getState(),
+    destroy() {
+      if (destroyed) return;
+      destroyed = true;
+      periods.listeners.clear();
+      cancelAutoplay();
+      playhead.clock.destroy();
+      view.destroy();
+    },
+  };
 }

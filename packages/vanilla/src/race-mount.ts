@@ -19,17 +19,16 @@ import {
 } from '@opendata-ai/openchart-engine';
 import type { GIFExportOptions } from './export-gif';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
-import { prefersReducedMotion } from './motion/tween';
+import type { PlaybackClockState } from './playback/clock';
+import { createPlaybackSession, type PlaybackSessionTiming } from './playback/session';
 import { createRaceA11y } from './race/a11y-dom';
-import { createRaceClock, type RaceClock, type RaceClockState } from './race/clock';
-import { createRaceControls, type RaceControlsOptions } from './race/controls';
+import { RACE_CLASS_PREFIX } from './race/controls';
 import { exportRaceGIF } from './race/export';
 import { RACE_RENDERERS } from './race/renderers';
 import { createRaceShell, type RaceMarkHost } from './race/shell';
 import { measureRaceSize, RACE_CONTROLS_HEIGHT } from './race/size';
 import { resolveDarkMode } from './resolve-dark-mode';
 import { pageIdScope } from './svg-ids';
-import { whenSeen } from './visibility';
 
 export interface RaceMountOptions {
   /** Mount-level theme overrides. */
@@ -44,7 +43,7 @@ export interface RaceMountOptions {
    * Restore playback from getState(). A paused first frame still starts when visible
    * if the spec uses visibility autoplay.
    */
-  initialState?: RaceClockState;
+  initialState?: PlaybackClockState;
   /** Receives warnings from preparing the initial or updated spec. */
   onWarn?: CompileOptions['onWarn'];
 }
@@ -76,7 +75,7 @@ export interface RaceInstance {
   /** Export the full bar or line race as a GIF. Rejects for table marks and on destruction. */
   export(format: 'gif', options?: Pick<GIFExportOptions, 'fps'>): Promise<Blob>;
   /** Read the playhead, speed, playback and completion status, and period, including after destroy(). */
-  getState(): Pick<RaceClockState, 't' | 'playing' | 'speed' | 'ended'> & {
+  getState(): Pick<PlaybackClockState, 't' | 'playing' | 'speed' | 'ended'> & {
     period: RaceFrame['period'];
   };
   /** Listen for period crossings and seek destinations. Returns an unsubscribe function. */
@@ -97,7 +96,9 @@ type RendererFor<Mark extends RaceMarkType> = (
 ) => { draw(geometry: RaceGeometries[Mark]): void; destroy(): void };
 
 const renderers: { [Mark in RaceMarkType]?: RendererFor<Mark> } = RACE_RENDERERS;
-type ControlHandlers = Omit<RaceControlsOptions, 'periodLabels'> & { onSeekCommit(): void };
+
+/** Lead word of playback RangeErrors, e.g. "Race seek position must be finite". */
+const RACE_SUBJECT = 'Race';
 
 function rendererFor<Mark extends RaceMarkType>(mark: Mark): RendererFor<Mark> {
   const factory = renderers[mark];
@@ -122,7 +123,6 @@ function mountView<Mark extends RaceMarkType>(
   layout: LayoutFor<Mark> & RaceLayout,
   darkMode: boolean,
   idScope: string,
-  { onSeekCommit, ...handlers }: ControlHandlers,
 ) {
   const factory = rendererFor<Mark>(layout.mark);
   const shell = createRaceShell(container, layout, idScope);
@@ -142,18 +142,11 @@ function mountView<Mark extends RaceMarkType>(
     };
   }
   const renderer = bindRenderer(shell.markHost);
-  const controls = layout.playback.controls
-    ? createRaceControls({ periodLabels: layout.periods, ...handlers })
-    : undefined;
-  if (controls) {
-    controls.element.addEventListener('change', onSeekCommit);
-    shell.controlsSlot.style.height = `${RACE_CONTROLS_HEIGHT}px`;
-    shell.controlsSlot.append(controls.element);
-  }
+  if (layout.playback.controls) shell.controlsSlot.style.height = `${RACE_CONTROLS_HEIGHT}px`;
   return {
     shell,
     layout,
-    controls,
+    controlsSlot: layout.playback.controls ? shell.controlsSlot : null,
     draw: renderer.draw,
     mountExportRenderer(svg: SVGSVGElement) {
       const host = svg.querySelector<RaceMarkHost<Mark>>('g.oc-race-mark');
@@ -162,12 +155,14 @@ function mountView<Mark extends RaceMarkType>(
       return bindRenderer(host);
     },
     destroy() {
-      controls?.element.removeEventListener('change', onSeekCommit);
-      controls?.destroy();
       renderer.destroy();
       shell.destroy();
     },
   };
+}
+
+function sessionTiming(model: RaceModel): PlaybackSessionTiming {
+  return { periodCount: model.timeline.periodCount, ...model.playback };
 }
 
 function playbackTimingChanged(a: RaceModel, b: RaceModel): boolean {
@@ -193,36 +188,12 @@ export function createRace(
   let model = prepareRace(spec, { onWarn: warn });
   const idScope = pageIdScope.next('race');
   const exportLifetime = new AbortController();
-  type PeriodListener = (period: RaceFrame['period']) => void;
-  const periodListeners = new Set<PeriodListener>();
-  const pendingPeriods: Array<{ period: RaceFrame['period']; listeners: PeriodListener[] }> = [];
-  let nextPendingPeriod = 0;
   let destroyed = false;
-  let cancelVisibility: (() => void) | undefined;
   let resizeFrame: number | undefined;
   let view: ReturnType<typeof mountView> | undefined;
   let a11y: ReturnType<typeof createRaceA11y> | undefined;
-  let periodIndex = 0;
-  let seeking = false;
-  let stepPlayback = prefersReducedMotion();
   let appearance = { theme, darkMode };
   let font = resolveFont(model);
-  let clock = makeClock(model, initialState);
-  const controlHandlers: ControlHandlers = {
-    onToggle() {
-      if (clock.getState().playing) pause();
-      else play();
-    },
-    onSeek(t) {
-      seek(prefersReducedMotion() ? Math.round(t) : t, false);
-    },
-    onSeekCommit: announce,
-    onStep(delta) {
-      cancelAutoplay();
-      clock.stepPeriod(delta);
-      announce();
-    },
-  };
 
   function resolveFont(
     candidate: RaceModel,
@@ -263,35 +234,33 @@ export function createRace(
     return { layout, darkMode };
   }
 
-  function makeClock(candidate: RaceModel, previous?: RaceClockState): RaceClock {
-    const { durationMs, holdEndMs, loop } = candidate.playback;
-    const { periodCount } = candidate.timeline;
-    return createRaceClock({
-      periodCount,
-      initialState: previous,
-      durationMs,
-      holdEndMs,
-      loop,
-      onTick(t) {
-        view?.draw(t);
-      },
-      onStateChange(state) {
-        if (!view) return;
-        view.controls?.update(state);
-        const previousIndex = periodIndex;
-        periodIndex = Math.floor(state.t);
-        if (!seeking && periodIndex !== previousIndex) {
-          const first =
-            state.playing && periodIndex > previousIndex ? previousIndex + 1 : periodIndex;
-          emitPeriods(first, periodIndex);
-        }
-      },
-    });
+  function periodAt(index: number): RaceFrame['period'] {
+    return { index, value: model.matrix.periods[index].value, label: model.periodLabels[index] };
   }
+
+  function announce(t: number) {
+    if (!model.spec.a11y?.hidden) a11y?.announce(raceFrameAt(model, t));
+  }
+
+  const initialLayout = compileLayout(model);
+  // Playback starts only after the first render, so a render that throws leaves no clock running.
+  const session = createPlaybackSession({
+    container,
+    timing: sessionTiming(model),
+    periodLabels: model.periodLabels,
+    periodAt,
+    draw: (t) => view?.draw(t),
+    onAnnounce: announce,
+    classPrefix: RACE_CLASS_PREFIX,
+    subject: RACE_SUBJECT,
+    animate: spec.animation !== false,
+    initialState,
+    deferStart: true,
+  });
 
   function focusedControl() {
     const active = container.ownerDocument.activeElement;
-    if (view?.controls?.element.contains(active)) {
+    if (session.controlsElement?.contains(active)) {
       return active?.localName === 'button' ? 'button' : 'input';
     }
     return undefined;
@@ -304,20 +273,20 @@ export function createRace(
   ) {
     const previousView = view;
     const fragment = container.ownerDocument.createDocumentFragment();
-    view = mountView(fragment, model, layout, darkMode, idScope, controlHandlers);
+    view = mountView(fragment, model, layout, darkMode, idScope);
     if (!a11y?.attach(view.shell, model)) {
       a11y?.destroy();
       a11y = createRaceA11y(view.shell, model);
     }
-    const state = clock.getState();
-    view.draw(state.t);
-    view.controls?.update(state);
+    session.attach({ controls: view.controlsSlot });
+    view.draw(session.getClockState().t);
     const oldRoot = previousView?.shell.root;
     const nextSibling = anchor ?? (oldRoot?.parentNode === container ? oldRoot.nextSibling : null);
     previousView?.destroy();
     container.insertBefore(fragment, nextSibling);
-    if (focus)
-      view.controls?.element.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
+    if (focus) {
+      session.controlsElement?.querySelector<HTMLElement>(focus)?.focus({ preventScroll: true });
+    }
   }
 
   function resize() {
@@ -340,85 +309,13 @@ export function createRace(
     if (fontChanged) scheduleFontResize(font);
   }
 
-  function cancelAutoplay() {
-    cancelVisibility?.();
-    cancelVisibility = undefined;
-  }
-
-  function periodAt(index: number): RaceFrame['period'] {
-    return { index, value: model.matrix.periods[index].value, label: model.periodLabels[index] };
-  }
-
-  function emitPeriods(first: number, last: number) {
-    if (!periodListeners.size) return;
-    const dispatching = pendingPeriods.length > 0;
-    // Finish delivering the current event before replacing any undelivered crossings.
-    pendingPeriods.length = nextPendingPeriod;
-    const listeners = [...periodListeners];
-    for (let index = first; index <= last; index++) {
-      pendingPeriods.push({ period: periodAt(index), listeners });
-    }
-    if (dispatching) return;
-    try {
-      while (nextPendingPeriod < pendingPeriods.length) {
-        const { period, listeners } = pendingPeriods[nextPendingPeriod++];
-        for (const listener of listeners) {
-          if (!periodListeners.has(listener)) continue;
-          try {
-            listener({ ...period });
-          } catch (error) {
-            if (typeof reportError === 'function') reportError(error);
-            else
-              queueMicrotask(() => {
-                throw error;
-              });
-          }
-        }
-      }
-    } finally {
-      pendingPeriods.length = 0;
-      nextPendingPeriod = 0;
-    }
-  }
-
-  function announce() {
-    if (destroyed || model.spec.a11y?.hidden) return;
-    const { t, playing } = clock.getState();
-    if (!playing) a11y?.announce(raceFrameAt(model, t));
-  }
-
-  function play() {
-    cancelAutoplay();
-    if (!clock.getState().playing) stepPlayback = prefersReducedMotion();
-    clock.play(stepPlayback);
-  }
-
-  function pause() {
-    cancelAutoplay();
-    clock.pause();
-    announce();
-  }
-
-  function seek(t: number, announceOnSeek = true) {
-    seeking = true;
-    try {
-      // Stepped playback draws whole periods, so a fractional seek would draw and then snap back.
-      const stepped = stepPlayback && clock.getState().playing && Number.isFinite(t);
-      clock.seek(stepped ? Math.floor(t) : t);
-    } finally {
-      seeking = false;
-    }
-    cancelAutoplay();
-    if (destroyed) return;
-    if (announceOnSeek) announce();
-    emitPeriods(periodIndex, periodIndex);
-  }
-
-  function setSpeed(speed: number) {
-    if (destroyed && (!Number.isFinite(speed) || speed <= 0)) {
-      throw new RangeError('Race playback speed must be finite and greater than zero');
-    }
-    clock.setSpeed(speed);
+  /** Remove the view before new timing rebuilds the clock, and return where it stood. */
+  function detachViewForRetime(): ChildNode | null | undefined {
+    const root = view?.shell.root;
+    const anchor = root?.parentNode === container ? root.nextSibling : undefined;
+    view?.destroy();
+    view = undefined;
+    return anchor;
   }
 
   function update(nextSpec: RaceSpec) {
@@ -428,49 +325,19 @@ export function createRace(
     const nextFont = resolveFont(next, font);
     const nextLayout = compileLayout(next, nextFont);
     const fontChanged = nextFont !== font;
-    const timingChanged = playbackTimingChanged(model, next);
     const focus = focusedControl();
+    const anchor = playbackTimingChanged(model, next) ? detachViewForRetime() : undefined;
     model = next;
     font = nextFont;
-    if (model.playback.autoplay !== 'visible') cancelAutoplay();
-    let anchor: ChildNode | null | undefined;
-    let resumePlayback = false;
-    if (timingChanged) {
-      const root = view?.shell.root;
-      if (root?.parentNode === container) anchor = root.nextSibling;
-      view?.destroy();
-      view = undefined;
-      const previous = clock.getState();
-      resumePlayback = previous.playing;
-      clock.destroy();
-      clock = makeClock(model, previous);
-    }
+    session.retime(sessionTiming(model), model.periodLabels);
     render(nextLayout, focus, anchor);
-    if (resumePlayback) clock.play(stepPlayback);
+    session.syncPeriod();
     if (fontChanged) scheduleFontResize(font);
-    const nextIndex = Math.floor(clock.getState().t);
-    if (periodIndex !== nextIndex) {
-      periodIndex = nextIndex;
-      emitPeriods(nextIndex, nextIndex);
-    }
   }
 
-  const staticStart = !initialState && (spec.animation === false || stepPlayback);
-  if (staticStart) clock.seek(model.timeline.periodCount - 1);
-  periodIndex = Math.floor(clock.getState().t);
-  render(compileLayout(model));
+  render(initialLayout);
   scheduleFontResize(font);
-  const pausedAtStart = initialState && !initialState.ended && initialState.t === 0;
-  if (initialState?.playing) clock.play(stepPlayback);
-  else if (
-    !stepPlayback &&
-    model.playback.autoplay === 'visible' &&
-    (!initialState || pausedAtStart)
-  ) {
-    cancelVisibility = whenSeen(container, play);
-  } else if (!initialState && !staticStart && model.playback.autoplay === true) {
-    play();
-  }
+  session.start();
 
   let observer: ResizeObserver | undefined;
   if (autoResize && typeof ResizeObserver === 'function') {
@@ -489,10 +356,10 @@ export function createRace(
   }
 
   return {
-    play,
-    pause,
-    seek,
-    setSpeed,
+    play: session.play,
+    pause: session.pause,
+    seek: session.seek,
+    setSpeed: session.setSpeed,
     update,
     setTheme,
     resize,
@@ -507,28 +374,19 @@ export function createRace(
         options,
       );
     },
-    getState() {
-      const { t, playing, speed, ended } = clock.getState();
-      return { t, playing, speed, ended, period: periodAt(Math.floor(t)) };
-    },
+    getState: session.getState,
     on(event, cb) {
       if (event !== 'period')
         throw new TypeError(`Unknown race event "${event}". Supported: "period".`);
-      const listener: PeriodListener = (period) => cb(period);
-      if (!destroyed) periodListeners.add(listener);
-      return () => {
-        periodListeners.delete(listener);
-      };
+      return session.on(event, cb);
     },
     destroy() {
       if (destroyed) return;
       destroyed = true;
       exportLifetime.abort(new Error('Race was destroyed during GIF export'));
-      periodListeners.clear();
-      cancelAutoplay();
       observer?.disconnect();
       if (resizeFrame !== undefined) cancelAnimationFrame(resizeFrame);
-      clock.destroy();
+      session.destroy();
       a11y?.destroy();
       a11y = undefined;
       view?.destroy();
