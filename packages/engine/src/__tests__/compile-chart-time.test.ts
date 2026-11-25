@@ -60,9 +60,8 @@ describe('compileChart on a time spec', () => {
     expect(warnings.some((message) => /period/i.test(message))).toBe(true);
   });
 
-  it('renders empty data without throwing', () => {
-    const layout = compileChart(bubbleSpec([]), compileOptions);
-    expect(points(layout.marks)).toEqual([]);
+  it('rejects empty data like every other chart', () => {
+    expect(() => compileChart(bubbleSpec([]), compileOptions)).toThrow(/non-empty array/);
   });
 
   it('leaves a spec without time on the ordinary compile path', () => {
