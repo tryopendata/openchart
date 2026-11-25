@@ -47,6 +47,13 @@ function mergePlaybackTiming(spec: RaceSpec): RaceConfig | undefined {
   return merged;
 }
 
+/** Names the block that supplied `step` when it was the top-level `playback` block. */
+function stepBlock(spec: RaceSpec): 'playback' | undefined {
+  return spec.race?.step === undefined && spec.playback?.step !== undefined
+    ? 'playback'
+    : undefined;
+}
+
 /**
  * Fill defaults on a validated race spec, reading timing from `playback` where `race` leaves
  * it out. Leave an omitted `duration` undefined for phase 2 to resolve from the period count.
@@ -91,6 +98,7 @@ export function normalizeRaceSpec(spec: RaceSpec, warnings: string[]): Normalize
       top: race?.top ?? 10,
       duration: race?.duration,
       step: race?.step,
+      stepBlock: stepBlock(spec),
       swap: race?.swap ?? 400,
       rescale: race?.rescale ?? 'frame',
       gaps: race?.gaps ?? 'interpolate',

@@ -29,7 +29,7 @@ export interface ObservationTable {
   firstSkipped?: string;
   /** Per channel: values present but not finite. */
   nonFiniteCounts: number[];
-  /** Per channel: values <= 0 that a log channel treated as absent. */
+  /** Per channel: values <= 0 on kept rows that a log channel treated as absent. */
   nonPositiveCounts: number[];
 }
 
@@ -41,15 +41,21 @@ function readChannelValues(
   return channels.map((channel, index) => {
     const raw = row[channel.field];
     const value = finiteNumber(raw);
-    if (value === undefined) {
-      if (raw != null) table.nonFiniteCounts[index]++;
-      return NaN;
-    }
-    if (channel.log && value <= 0) {
-      table.nonPositiveCounts[index]++;
-      return NaN;
-    }
-    return value;
+    if (value === undefined && raw != null) table.nonFiniteCounts[index]++;
+    return value ?? NaN;
+  });
+}
+
+/** Mark values <= 0 on log channels absent, in place, and count them. */
+function dropNonPositiveLogValues(
+  values: number[],
+  channels: PlaybackChannel[],
+  table: ObservationTable,
+): void {
+  channels.forEach((channel, index) => {
+    if (!channel.log || !(values[index] <= 0)) return;
+    values[index] = NaN;
+    table.nonPositiveCounts[index]++;
   });
 }
 
@@ -111,6 +117,7 @@ export function collectObservations(
       periodsByValue.set(period.value, period);
       table.periods.push(period);
     }
+    dropNonPositiveLogValues(values, channels, table);
     recordObservation(table, String(rawKey), period, row, values);
   }
   return table;

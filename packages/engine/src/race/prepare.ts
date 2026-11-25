@@ -31,8 +31,8 @@ function createRaceWarn(warnings: string[], onWarn?: RaceWarningSink): WarnSink 
 }
 
 function resolveDurationMs(race: ResolvedRaceOptions, periodCount: number): number {
-  return resolvePlayback({ duration: race.duration, step: race.step }, periodCount, 'race')
-    .durationMs;
+  const timing = { duration: race.duration, step: race.step };
+  return resolvePlayback(timing, periodCount, race.stepBlock ?? 'race').durationMs;
 }
 
 function authoredWatermark(spec: unknown, normalized: boolean): boolean | undefined {

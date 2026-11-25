@@ -124,11 +124,33 @@ function checkRaceFields(race: Record<string, unknown>, errors: ValidationError[
   errors.push(...fieldErrors.sort((a, b) => rank(a) - rank(b)));
 }
 
+/** Duration in one block and step in the other, reported at the playback field. */
+function checkTimingAcrossBlocks(
+  race: Record<string, unknown>,
+  playback: Record<string, unknown>,
+  errors: ValidationError[],
+): void {
+  for (const [raceField, playbackField] of [
+    ['duration', 'step'],
+    ['step', 'duration'],
+  ]) {
+    if (race[raceField] === undefined || playback[playbackField] === undefined) continue;
+    errors.push({
+      code: 'INVALID_VALUE',
+      path: jsonPointer('playback', playbackField),
+      message: `Spec error: duration and step are mutually exclusive across race and playback (race.${raceField}, playback.${playbackField})`,
+      suggestion:
+        'Keep duration for the whole race or step for each period, in one block. Remove the other option.',
+    });
+  }
+}
+
 function checkPlaybackAgainstRace(
   race: unknown,
   playback: Record<string, unknown>,
   errors: ValidationError[],
 ): void {
+  if (isRecord(race)) checkTimingAcrossBlocks(race, playback, errors);
   for (const field of Object.keys(playback)) {
     if (CHART_ONLY_PLAYBACK_OPTIONS.includes(field)) {
       errors.push({
