@@ -77,7 +77,8 @@ export const bubblePlaybackAfrica = defineDemo({
     },
     chrome: {
       title: africaTitle,
-      subtitle: "The 17 African countries in the data, every other year from 1960 to 2022. Circle size = population.",
+      subtitle:
+        "The 17 African countries in the data, every other year from 1960 to 2022. Circle size = population.",
     },
   },
   caption:

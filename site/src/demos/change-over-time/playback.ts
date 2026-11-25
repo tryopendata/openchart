@@ -39,7 +39,15 @@ export const playbackOnDemand = defineDemo({
 });
 
 /** Shortest-lived on top, which leaves the upper right corner clear for the period label. */
-const barCountries = ["Japan", "South Korea", "United States", "China", "Brazil", "India", "Nigeria"];
+const barCountries = [
+  "Japan",
+  "South Korea",
+  "United States",
+  "China",
+  "Brazil",
+  "India",
+  "Nigeria",
+];
 const barTitle = "South Korea passed the United States in 2004";
 
 const lifeExpectancyBars: ChartSpec = {
