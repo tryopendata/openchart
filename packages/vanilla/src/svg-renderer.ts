@@ -21,6 +21,7 @@ import { roleVars } from '@opendata-ai/openchart-core';
 import { clampStaggerDelay } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { buildGradientDefs } from './gradient-utils';
+import { MIRROR_HALF_KEY_PREFIX } from './mirror-half-key';
 import { buildPatternDefs } from './pattern-utils';
 import { renderAnnotations } from './renderers/annotations';
 import { renderAxes } from './renderers/axes';
@@ -39,13 +40,15 @@ import { resolvedSurface } from './theme-tokens';
 export { registerMarkRenderer } from './renderers/marks';
 
 /**
- * Top edge of the text marks the engine placed above the plot (the mirrored-bar half
- * labels), so the mark clip keeps them. Infinity when there are none.
+ * Top edge of the mirrored-bar half labels the engine placed above the plot, so the mark
+ * clip keeps them. Infinity when there are none.
  */
-function textMarksTop(marks: readonly Mark[]): number {
+function mirrorHalfLabelsTop(marks: readonly Mark[]): number {
   let top = Number.POSITIVE_INFINITY;
   for (const mark of marks) {
-    if (mark.type === 'textMark') top = Math.min(top, mark.y - mark.fontSize);
+    if (mark.type === 'textMark' && mark.key?.startsWith(MIRROR_HALF_KEY_PREFIX)) {
+      top = Math.min(top, mark.y - mark.fontSize);
+    }
   }
   return top;
 }
@@ -179,7 +182,7 @@ export function renderChartSVG(
     0,
   );
   const clipPad = Math.max(maxPointR, 2);
-  const clipTop = Math.min(layout.area.y - clipPad, textMarksTop(layout.marks));
+  const clipTop = Math.min(layout.area.y - clipPad, mirrorHalfLabelsTop(layout.marks));
   const clipBottom = layout.area.y + layout.area.height + clipPad;
   const clipRect = createSVGElement('rect', ctx.factory);
   setAttrs(clipRect, {
