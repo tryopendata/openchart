@@ -22,11 +22,7 @@ import type {
   LayerSpec,
 } from '@opendata-ai/openchart-core';
 import { isLayerSpec } from '@opendata-ai/openchart-core';
-import {
-  compileChartPlayback,
-  hasTimeEncoding,
-  resolveLayerTheme,
-} from '@opendata-ai/openchart-engine';
+import { resolveLayerTheme } from '@opendata-ai/openchart-engine';
 import { cancelAnimations, computeAnimationDuration } from './animation';
 import { createEditSession } from './chart-editing';
 import { createChartExporter } from './chart-export';
@@ -56,7 +52,11 @@ import {
   resolveInteractionMode,
   type UpdateOptions,
 } from './mount-types';
-import { type ChartPlaybackMount, mountChartPlayback } from './playback/chart-session';
+import {
+  createChartPlaybackHost,
+  isPlaybackSpec,
+  playbackStripHeight,
+} from './playback/chart-playback-host';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import type { EntranceHandle } from './scatter-canvas/entrance';
@@ -142,8 +142,8 @@ export function createChart<TData extends DataRow = DataRow>(
   // and resizes need no canvas-specific handling beyond destroying it here.
   let canvasLayer: ScatterCanvasLayer | null = null;
   let canvasEntrance: EntranceHandle | null = null;
-  // Playback for a spec with encoding.time; null otherwise.
-  let chartPlayback: ChartPlaybackMount | null = null;
+  // Playback for a spec with encoding.time; its controller is null otherwise.
+  const playback = createChartPlaybackHost({ container, editing });
   let warnedCanvasEditMode = false;
   let srTableWrapper: HTMLElement | null = null;
   let destroyed = false;
@@ -170,7 +170,7 @@ export function createChart<TData extends DataRow = DataRow>(
   // entrance animation makes resize() defer to pendingResize.
   let fontsReloadPending = false;
 
-  const sizer = createChartSizer(container);
+  const sizer = createChartSizer(container, { reservedHeight: playbackStripHeight });
   const visibility = createSeriesVisibility();
 
   // Series search state. The control persists across renders (so focus and
@@ -243,14 +243,18 @@ export function createChart<TData extends DataRow = DataRow>(
     runtime = true,
     stableNoteBand = reservesNoteBand(candidate),
   ): ChartLayout {
-    return sizer.compile(runtime ? visibility.apply(candidate) : candidate, {
-      theme: options?.theme,
-      darkMode: resolveDarkMode(options?.darkMode),
-      renderer: options?.renderer,
-      watermark: options?.watermark,
-      measureText: measure,
-      stableNoteBand,
-    });
+    return sizer.compile(
+      runtime ? visibility.apply(candidate) : candidate,
+      {
+        theme: options?.theme,
+        darkMode: resolveDarkMode(options?.darkMode),
+        renderer: options?.renderer,
+        watermark: options?.watermark,
+        measureText: measure,
+        stableNoteBand,
+      },
+      playback.compilerFor(candidate),
+    );
   }
 
   function toggleSeriesVisibility(series: string): boolean {
@@ -320,8 +324,12 @@ export function createChart<TData extends DataRow = DataRow>(
     // Recorded for the ResizeObserver's self-induced-resize guard.
     sizer.rendered(currentLayout);
     const hasMarks = layoutHasMarks(currentLayout);
-    // Edit mode is an authoring surface that re-mounts often: no entrance.
-    const shouldAnimate = entrance.claim(hasMarks, !!currentLayout.animation?.enter && !editing);
+    // Edit mode is an authoring surface that re-mounts often: no entrance. A playback
+    // chart's motion is the playback itself.
+    const shouldAnimate = entrance.claim(
+      hasMarks,
+      !!currentLayout.animation?.enter && !editing && !isPlaybackSpec(currentSpec),
+    );
     const crosshair = !!currentLayout.crosshair;
 
     // Canvas mark mode: the canvas is created BEFORE the SVG so DOM order puts
@@ -363,24 +371,12 @@ export function createChart<TData extends DataRow = DataRow>(
       reconcileSVG(retainedSVG, svgElement);
       svgElement = retainedSVG;
     }
-    if (svgElement && hasTimeEncoding(currentSpec)) {
-      const mounted = mountChartPlayback({
-        container,
+    if (svgElement) {
+      playback.render({
         svg: svgElement,
-        playback: compileChartPlayback(currentSpec as ChartSpec, {
-          width: currentLayout.dimensions.width,
-          height: currentLayout.dimensions.height,
-          theme: options?.theme,
-          darkMode: resolveDarkMode(options?.darkMode),
-          watermark: options?.watermark,
-          measureText,
-        }),
+        layout: currentLayout,
+        spec: currentSpec,
         darkMode: currentLayout.theme.isDark,
-      });
-      chartPlayback = mounted;
-      track(() => {
-        mounted.destroy();
-        chartPlayback = null;
       });
     }
     tooltipManager = createTooltipManager(container);
@@ -408,20 +404,21 @@ export function createChart<TData extends DataRow = DataRow>(
     const wireNavigation = () => {
       if (!svgElement || !tooltipManager || readerOwnsNavigation || destroyed) return;
       const cleanups: Array<() => void> = [];
+      // Playback tooltips read the playhead; the voronoi index would hold base positions.
+      const playing = isPlaybackSpec(currentSpec);
       cleanups.push(
-        wireTooltipEvents(
-          svgElement,
-          currentLayout.tooltipDescriptors,
-          tooltipManager,
-          hoverEmphasis,
-        ),
+        playing
+          ? playback.wireTooltips(svgElement, tooltipManager, hoverEmphasis)
+          : wireTooltipEvents(
+              svgElement,
+              currentLayout.tooltipDescriptors,
+              tooltipManager,
+              hoverEmphasis,
+            ),
       );
-      const crosshairController = wireVoronoiTooltipEvents(
-        svgElement,
-        currentLayout,
-        tooltipManager,
-        hoverEmphasis,
-      );
+      const crosshairController = playing
+        ? null
+        : wireVoronoiTooltipEvents(svgElement, currentLayout, tooltipManager, hoverEmphasis);
       if (crosshairController) cleanups.push(() => crosshairController.cleanup());
       const keyboardEditing = !wantsSeriesSearch(currentSpec) && editing;
       if (!currentLayout.a11y.hidden && !keyboardEditing)
@@ -429,7 +426,9 @@ export function createChart<TData extends DataRow = DataRow>(
           wireKeyboardNav(
             svgElement,
             container,
-            currentLayout.tooltipDescriptors,
+            playing
+              ? playback.tooltipDescriptors(svgElement, currentLayout.tooltipDescriptors)
+              : currentLayout.tooltipDescriptors,
             tooltipManager,
             currentLayout,
             { crosshair: crosshairController, onFocus: options?.onMarkFocus },
@@ -510,7 +509,10 @@ export function createChart<TData extends DataRow = DataRow>(
 
     // Shared setDragging callback for all drag handlers
     const setDragging = (dragging: boolean) => {
-      if (dragging) gestureWidth = sizer.dimensions(currentSpec).width;
+      if (dragging) {
+        gestureWidth = sizer.dimensions(currentSpec).width;
+        playback.pause();
+      }
       isDragging = dragging;
       if (!dragging && pendingRender) {
         pendingRender = false;
@@ -700,8 +702,10 @@ export function createChart<TData extends DataRow = DataRow>(
    * applies (unchanged shape, first render, etc. — the render already swapped
    * instantly). Used by headless frame capture (GIF export of a spec-swap
    * stepper) to sample the update tween deterministically. No rAF runs.
+   * A playback chart pauses first and gets null: it has no update tween.
    */
   function beginManualUpdate(newSpec: ChartSpec | LayerSpec): TransitionHandle | null {
+    playback.pause();
     return doUpdate(newSpec, undefined, true);
   }
 
@@ -771,6 +775,7 @@ export function createChart<TData extends DataRow = DataRow>(
     if (
       !layoutOnly &&
       svgElement &&
+      !isPlaybackSpec(newSpec) &&
       canTransition({
         prevLayout,
         nextLayout: currentLayout,
@@ -864,15 +869,19 @@ export function createChart<TData extends DataRow = DataRow>(
     render();
   }
 
-  const doExport = createChartExporter(() => ({
-    svgElement,
-    canvasLayer,
-    // A file carries the figure a reader sees, not the editor's empty note reserve.
-    currentLayout: reservesNoteBand(currentSpec)
+  const doExport = createChartExporter(() => {
+    // A file carries the figure a reader sees, not the editor's empty note reserve. A
+    // playback chart exports the frame on screen.
+    const settled = reservesNoteBand(currentSpec)
       ? compile(currentSpec, measureText, true, false)
-      : currentLayout,
-    currentSpec,
-  }));
+      : currentLayout;
+    return {
+      svgElement,
+      canvasLayer,
+      currentLayout: playback.frameLayout(settled) ?? settled,
+      currentSpec,
+    };
+  });
 
   function destroy(): void {
     edits.flush();
@@ -897,6 +906,7 @@ export function createChart<TData extends DataRow = DataRow>(
     canvasEntrance?.cancel();
     canvasEntrance = null;
     disposeRender();
+    playback.destroy();
     edits.destroy();
     if (seriesSearch) {
       seriesSearch.destroy();
@@ -940,6 +950,7 @@ export function createChart<TData extends DataRow = DataRow>(
         // render() marks ready only after the new metrics actually compile,
         // including deferred resize work during an entrance animation.
         fontsReloadPending = true;
+        playback.invalidate();
         resize();
       },
     );
@@ -959,6 +970,7 @@ export function createChart<TData extends DataRow = DataRow>(
     beginManualUpdate,
     resize,
     sampleLayout: () =>
+      playback.frameLayout() ??
       sampleLayout(
         currentLayout,
         transitionHandle?.running ? transitionHandle.snapshot() : undefined,
@@ -966,10 +978,10 @@ export function createChart<TData extends DataRow = DataRow>(
     export: doExport,
     destroy,
     get layout() {
-      return currentLayout;
+      return playback.frameLayout() ?? currentLayout;
     },
     get playback() {
-      return chartPlayback?.controller ?? null;
+      return playback.controller;
     },
     getSelectedElement(): ElementRef | null {
       return edits.selected;

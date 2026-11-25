@@ -31,8 +31,16 @@ type MountSpec = ChartSpec | LayerSpec;
 export interface ChartSizer {
   /** Container size to compile against. Latches auto-height on first real measure. */
   dimensions(candidate: MountSpec): { width: number; height: number };
-  /** Compile at the container size, growing auto-height figures by their chrome. */
-  compile(candidate: MountSpec, options: Omit<CompileOptions, 'width' | 'height'>): ChartLayout;
+  /**
+   * Compile at the container size, growing auto-height figures by their chrome.
+   * `compileSpec` replaces `compileChart` for ChartSpecs (the playback mount compiles
+   * time specs through it); LayerSpecs always use `compileLayer`.
+   */
+  compile(
+    candidate: MountSpec,
+    options: Omit<CompileOptions, 'width' | 'height'>,
+    compileSpec?: ChartCompiler,
+  ): ChartLayout;
   /** Record the rendered size for the self-induced-resize guard. */
   rendered(layout: ChartLayout): void;
   /**
@@ -43,20 +51,31 @@ export interface ChartSizer {
   shouldResize(width: number, height: number): boolean;
 }
 
+/** Compiles one ChartSpec at a size; `compileChart` by default. */
+export type ChartCompiler = (spec: ChartSpec, options: CompileOptions) => ChartLayout;
+
 export interface ChartSizerOptions {
   /**
    * Height below the SVG that the mount fills itself (the 44px playback controls strip).
    * Explicit-height hosts compile at `height - reservedHeight`, and the own-height echo check
-   * compares the host against `svgHeight + reservedHeight`. Defaults to 0.
+   * compares the host against `svgHeight + reservedHeight`. Defaults to 0. A function is
+   * read on every measure, for mounts whose spec decides whether the strip exists.
    */
-  reservedHeight?: number;
+  reservedHeight?: number | ((candidate: MountSpec) => number);
 }
 
+/**
+ * Create the sizer one chart mount measures and compiles through. It owns the auto-height
+ * latch and the self-induced-resize guard, both of which count `reservedHeight` as part of
+ * the mount's own output.
+ */
 export function createChartSizer(
   container: HTMLElement,
   sizerOptions: ChartSizerOptions = {},
 ): ChartSizer {
-  void sizerOptions;
+  const { reservedHeight = 0 } = sizerOptions;
+  const reservedFor = (candidate: MountSpec) =>
+    typeof reservedHeight === 'function' ? reservedHeight(candidate) : reservedHeight;
   // Auto-height sizing state. `isAutoHeight` latches whether the host
   // constrains the container's height:
   //   null  = unknown — every measurement so far was an all-zero rect
@@ -70,6 +89,16 @@ export function createChartSizer(
   let lastRenderedWidth: number | null = null;
   let lastRenderedSvgHeight: number | null = null;
   let lastHostHeight = FALLBACK_HEIGHT;
+  // Strip height reserved at the last measure; the mount's output is SVG plus this.
+  let lastReserved = 0;
+
+  /** Whether `height` is the mount's own output (the last SVG plus its strip). */
+  function isOwnHeight(height: number): boolean {
+    return (
+      lastRenderedSvgHeight !== null &&
+      Math.abs(height - (lastRenderedSvgHeight + lastReserved)) < 0.5
+    );
+  }
 
   function dimensions(candidate: MountSpec): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
@@ -96,8 +125,8 @@ export function createChartSizer(
     }
     // A min-height host can start with a nonzero box and then grow with its
     // SVG. Do not feed that output height back into chromeLayout: 'grow'.
-    const ownHeight =
-      lastRenderedSvgHeight !== null && Math.abs(rect.height - lastRenderedSvgHeight) < 0.5;
+    lastReserved = reservedFor(candidate);
+    const ownHeight = isOwnHeight(rect.height);
     if (!ownHeight && rect.height > 0) lastHostHeight = rect.height;
     // While our SVG holds the host open, its min-height is still the host's
     // constraint, and it can change underneath us (a breakpoint's min-height).
@@ -105,16 +134,18 @@ export function createChartSizer(
       const minHeight = Number.parseFloat(getComputedStyle(container).minHeight);
       if (minHeight > 0) lastHostHeight = minHeight;
     }
+    const hostHeight = ownHeight ? lastHostHeight : rect.height;
 
     return {
       width: Math.max(rect.width || 600, 100),
       // Latched-auto mounts always compile against the fixed budget: after
       // the first render the container's measured height is just our own
       // SVG, so reading it back would re-pin whatever we rendered last.
+      // An explicit host holds the chart and the reserved strip, so the chart gets the rest.
       height:
         isAutoHeight === true
           ? FALLBACK_HEIGHT
-          : Math.max(ownHeight ? lastHostHeight : rect.height || FALLBACK_HEIGHT, 100),
+          : Math.max(hostHeight ? hostHeight - lastReserved : FALLBACK_HEIGHT, 100),
     };
   }
 
@@ -123,15 +154,17 @@ export function createChartSizer(
     height: number,
     candidate: MountSpec,
     options: Omit<CompileOptions, 'width' | 'height'>,
+    compileSpec: ChartCompiler,
   ): ChartLayout {
     const compileOpts: CompileOptions = { width, height, ...options };
     if (isLayerSpec(candidate)) return compileLayer(candidate, compileOpts);
-    return compileChart(candidate, compileOpts);
+    return compileSpec(candidate, compileOpts);
   }
 
   function compile(
     candidate: MountSpec,
     options: Omit<CompileOptions, 'width' | 'height'>,
+    compileSpec: ChartCompiler = compileChart,
   ): ChartLayout {
     const { width, height } = dimensions(candidate);
 
@@ -140,7 +173,7 @@ export function createChartSizer(
     const growsWithChrome =
       isAutoHeight === true && !isLayerSpec(candidate) && candidate.display !== 'sparkline';
     if (!growsWithChrome) {
-      return compileAt(width, height, candidate, options);
+      return compileAt(width, height, candidate, options, compileSpec);
     }
 
     // Bounded convergence loop, max 3 compiles. Chrome height depends on
@@ -150,13 +183,13 @@ export function createChartSizer(
     // un-strip chrome, changing the overheads once more. (Height classes are
     // not the issue — they only strip below 200/350px, and growing from 400
     // moves away from those thresholds.) Pass 3 is accepted unconditionally.
-    let layout = compileAt(width, height, candidate, options);
+    let layout = compileAt(width, height, candidate, options, compileSpec);
     const overheads = verticalOverheads(layout, width);
     if (overheads > 0) {
-      layout = compileAt(width, height + overheads, candidate, options);
+      layout = compileAt(width, height + overheads, candidate, options, compileSpec);
       const overheads2 = verticalOverheads(layout, width);
       if (overheads2 !== overheads) {
-        layout = compileAt(width, height + overheads2, candidate, options);
+        layout = compileAt(width, height + overheads2, candidate, options, compileSpec);
       }
     }
     return layout;
@@ -169,8 +202,7 @@ export function createChartSizer(
 
   function shouldResize(width: number, height: number): boolean {
     const widthChanged = lastRenderedWidth === null || Math.abs(width - lastRenderedWidth) >= 0.5;
-    const selfInducedHeight =
-      lastRenderedSvgHeight !== null && Math.abs(height - lastRenderedSvgHeight) < 0.5;
+    const selfInducedHeight = isOwnHeight(height);
     if (!widthChanged && selfInducedHeight) return false;
     // Self-induced-resize guard, scoped to latched-auto mounts: growing
     // the SVG grows the container, which re-fires the observer. A fire
