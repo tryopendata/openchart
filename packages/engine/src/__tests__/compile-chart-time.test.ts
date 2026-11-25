@@ -87,6 +87,17 @@ describe('compileChart on a time spec', () => {
     expect(staying?.fillOpacity).toBeUndefined();
   });
 
+  it('fades the name label of a point that leaves, as the live frames do', () => {
+    const spec = bubbleSpec(rows, { playback: { labels: ['Dorne'] } });
+    const playback = compileChartPlayback(spec, compileOptions);
+    const presence = playback.marksAt(1.25).find(({ key }) => key === 'Dorne')?.presence ?? 1;
+    expect(presence).toBeLessThan(1);
+    const layout = compileChart(spec, { ...compileOptions, playbackT: 1.25 });
+    const label = layout.marks.find((mark) => mark.key === 'oc-playback-label|Dorne');
+    expect(label?.type).toBe('textMark');
+    expect(label && 'opacity' in label ? label.opacity : 1).toBeCloseTo(presence, 6);
+  });
+
   it('rejects trails on a point chart with a categorical y instead of crashing', () => {
     const spec = bubbleSpec(rows, { playback: { trails: true } });
     const encoding = { ...spec.encoding, y: { field: 'region', type: 'nominal' } };

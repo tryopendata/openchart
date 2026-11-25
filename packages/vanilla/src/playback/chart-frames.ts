@@ -13,9 +13,6 @@ export interface ChartFrameWriter {
 /** Geometry attributes each mark type has per frame. */
 function geometryOf(mark: Mark): Record<string, number> | null {
   if (mark.type === 'point') return { cx: mark.cx, cy: mark.cy, r: mark.r };
-  if (mark.type === 'rect') {
-    return { x: mark.x, y: mark.y, width: mark.width, height: mark.height };
-  }
   if (mark.type === 'textMark') return { x: mark.x, y: mark.y };
   return null;
 }
@@ -40,7 +37,7 @@ function writeText(element: Element, mark: Mark): void {
 
 /**
  * Bind to the `[data-key]` elements of `svg` and write each frame's marks and overlays by
- * key: geometry (cx, cy, r for points; x, y, width, height for rects; x, y for text), text
+ * key: geometry (cx, cy, r for points; x, y for text; bar geometry is `chart-bar-frames.ts`), text
  * content and anchor for text marks when they change, and `presence` as the `opacity`
  * attribute. Fill opacity stays as the renderer set it. Keys with no element are ignored, and elements
  * without `data-key` are never touched; matching never uses array position or

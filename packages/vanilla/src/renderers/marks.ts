@@ -414,6 +414,9 @@ function renderTextMark(
   if (mark.fontFamily) {
     text.setAttribute('font-family', mark.fontFamily);
   }
+  if (mark.opacity != null) {
+    text.setAttribute('opacity', String(mark.opacity));
+  }
   if (mark.angle) {
     text.setAttribute('transform', `rotate(${mark.angle}, ${mark.x}, ${mark.y})`);
   }

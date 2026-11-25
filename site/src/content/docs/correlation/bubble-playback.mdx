@@ -47,7 +47,7 @@ A bubble chart without `time` draws a trend line by default. A time spec draws n
 
 ## Name a few countries
 
-`playback.labels` lists keys whose name stays beside their bubble for the whole run. The labels are never hidden to avoid collisions, so they never flicker on and off between frames. Name the handful of countries the title is about rather than every one.
+`playback.labels` lists keys whose name stays beside their bubble for the whole run. A label is never hidden, so it never flickers on and off between frames. When it would cover another label, it moves to the other side of its bubble, or above or below it. Name the handful of countries the title is about rather than every one.
 
 The large faint year behind the bubbles is the period label. It uses the time channel's format; set `playback.period.format` to change it, or `playback.period: false` to hide it.
 

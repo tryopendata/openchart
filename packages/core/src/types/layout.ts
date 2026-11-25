@@ -593,6 +593,8 @@ export interface TextMarkLayout extends MarkMetadata {
   dominantBaseline?: 'auto' | 'hanging' | 'central' | 'text-after-edge';
   /** Rotation angle in degrees. */
   angle?: number;
+  /** Opacity (0..1), as a playback fade in static output. Omit for fully opaque. */
+  opacity?: number;
   /** Original data row. */
   data: Record<string, unknown>;
   /** Resolved label. */

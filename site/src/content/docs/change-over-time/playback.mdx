@@ -28,7 +28,7 @@ This chart sets `autoplay: false`, so it opens on the final period and waits for
 | `controls` | `true` | Show the play button, scrubber and period readout below the chart. |
 | `gaps` | `"interpolate"` | What a key does in a period it skips between two it has: `"interpolate"` fills the value in, `"hold"` repeats the previous value and `"drop"` leaves the key out of that period. |
 | `period` | On, `position: "auto"` | The large faint label showing the current period. `format` overrides the time channel's format, `position` takes `"auto"`, `"center"`, `"top-right"` or `"bottom-left"`, and `false` hides it. |
-| `labels` | None | Point charts only. Keys whose name stays beside their point for the whole run. |
+| `labels` | None | Point charts only. Keys whose name stays beside their point for the whole run, switching sides when it would cover another label. |
 | `trails` | `false` | Point charts only. Draw each named key's path so far; `true` draws one for every key. |
 
 The demo's data has 32 periods, one every other year, so the default duration is 22.4 seconds. With `step: 250` the same run takes 7.75 seconds, since there are 31 intervals between 32 periods. With `period.position: "auto"` the label is centered behind the marks on a point chart, goes in the upper right on a bar chart or population pyramid, shrinking until no bar reaches it, and takes the corner that covers the least geography on a map.
