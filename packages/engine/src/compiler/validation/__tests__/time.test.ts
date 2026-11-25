@@ -194,7 +194,8 @@ describe('validateTimeEncoding through validateSpec', () => {
 
   it('treats fewer than two periods as valid (the compile warns instead)', () => {
     expect(errorsOf({ ...scatter, data: rows.filter((row) => row.year === 1995) })).toEqual([]);
-    expect(errorsOf({ ...scatter, data: [] })).toEqual([]);
+    // Empty data stays EMPTY_DATA, as for every chart.
+    expect(errorsOf({ ...scatter, data: [] }).map((error) => error.code)).toEqual(['EMPTY_DATA']);
   });
 
   it('adds nothing for a spec without time', () => {
