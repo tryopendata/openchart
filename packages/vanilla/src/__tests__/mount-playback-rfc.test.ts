@@ -227,13 +227,15 @@ describe('updating a playback chart', () => {
     expect(periods).toEqual(['2001', '2000', '2002']);
   });
 
-  it('tells listeners the period an incompatible update opens on', () => {
+  it('tells listeners the period an incompatible update opens on, once the update returns', async () => {
     const years = [2000, 2001, 2002, 2003];
     const { chart, controller } = mount(timeSpec({ data: rows(years) }));
     const periods: string[] = [];
     controller.on('period', (period) => periods.push(period.label));
     controller.seek(2);
     chart.update(regionKeyedSpec({ data: rows(years), animation: false }));
+    expect(periods).toEqual(['2002']);
+    await Promise.resolve();
     expect(periods).toEqual(['2002', '2003']);
   });
 

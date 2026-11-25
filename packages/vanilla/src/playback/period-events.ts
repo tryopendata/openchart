@@ -15,7 +15,7 @@ export interface PeriodDispatcher {
 }
 
 /** Surface a listener error to the page without interrupting delivery. */
-function reportListenerError(error: unknown): void {
+export function reportListenerError(error: unknown): void {
   if (typeof reportError === 'function') {
     reportError(error);
     return;
