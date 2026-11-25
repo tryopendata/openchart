@@ -269,6 +269,21 @@ const STYLE_ALLOWLIST: Record<string, { reason: string; style: string[]; geometr
     style: ['endpointLabels', 'marks.0.label', 'marks.1.label', 'marks.2.label'],
     geometry: ['area', 'axes', 'marks', 'labels', 'endpointLabels'],
   },
+  '../gallery/features-data-encoding.stories.tsx.rowFacetSpec': {
+    reason:
+      'Facet panels share one color scale: v8 rebuilt it per panel, so the all-Red 2024-25 panel drew its bars in the first (blue) range color.',
+    style: [
+      'marks.4.fill',
+      'marks.5.fill',
+      'marks.6.fill',
+      'marks.7.fill',
+      'marks.facet[2024-25].0.fill',
+      'marks.facet[2024-25].1.fill',
+      'marks.facet[2024-25].2.fill',
+      'marks.facet[2024-25].3.fill',
+    ],
+    geometry: [],
+  },
   '../gallery/dashboards.layouts.tsx.funnelSankeySpec': sankeyOnFlow(9, [1, 2, 3, 4, 5, 6]),
   '../gallery/sankey-tilemaps.stories.tsx.userJourneySpec': sankeyOnFlow(9, [1, 2, 3, 4, 5, 6]),
   '../gallery/sankey-tilemaps.stories.tsx.budgetSpec': sankeyOnFlow(10, []),

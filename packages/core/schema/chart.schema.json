@@ -658,7 +658,7 @@
                               "$ref": "#/definitions/TrendlineConfig"
                             }
                           ],
-                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
+                          "description": "Overlay a least-squares regression line on scatter (point) marks. Defaults to true. Set `mark: { type: 'point', trendline: false }` to suppress it when the chart already carries its own reference line (e.g. a manual x=y diagonal in a separate layer), which would otherwise produce two competing diagonals. In a faceted chart each panel gets its own fit.\n\nPass an object to control stacking order: the line renders `below` the points by default, but a dense scatter (thousands of overlapping dots) fully occludes a line drawn underneath, so `{ layer: 'above' }` lifts the reference line over the cloud."
                         },
                         "type": {
                           "type": "string",
@@ -2418,7 +2418,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6056,7 +6056,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6179,7 +6179,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6302,7 +6302,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6429,7 +6429,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6575,7 +6575,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6702,7 +6702,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6829,7 +6829,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -6952,7 +6952,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7071,7 +7071,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7190,7 +7190,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7312,7 +7312,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7434,7 +7434,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7557,7 +7557,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7680,7 +7680,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7788,7 +7788,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -7908,7 +7908,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8030,7 +8030,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
@@ -8152,7 +8152,7 @@
         },
         "facet": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",
-          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
+          "description": "Facet channel: partitions data into a grid of small-multiple panels. Each unique value of the facet field produces one panel. Panels share x, y, color and size scales by default; use `resolve: { scale: { y: 'independent' } }` for per-panel axes."
         },
         "row": {
           "$ref": "#/definitions/FacetChannel%3CDataRow%3E",

@@ -309,7 +309,7 @@ interface MarkOptions {
    * Defaults to true. Set `mark: { type: 'point', trendline: false }` to
    * suppress it when the chart already carries its own reference line (e.g. a
    * manual x=y diagonal in a separate layer), which would otherwise produce
-   * two competing diagonals.
+   * two competing diagonals. In a faceted chart each panel gets its own fit.
    *
    * Pass an object to control stacking order: the line renders `below` the
    * points by default, but a dense scatter (thousands of overlapping dots)
@@ -903,8 +903,8 @@ export interface Encoding<TData extends DataRow = DataRow> {
   /**
    * Facet channel: partitions data into a grid of small-multiple panels.
    * Each unique value of the facet field produces one panel. Panels share
-   * scales by default; use `resolve: { scale: { y: 'independent' } }` for
-   * per-panel axes.
+   * x, y, color and size scales by default; use
+   * `resolve: { scale: { y: 'independent' } }` for per-panel axes.
    */
   facet?: FacetChannel<TData>;
   /**

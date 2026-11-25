@@ -9,6 +9,7 @@ import type {
   ChartLayout,
   CompileOptions,
   Encoding,
+  EncodingChannel,
   FacetChannel,
   FacetPanelLayout,
   Mark,
@@ -54,6 +55,7 @@ import { computeChartScales } from './chart-scales';
 import { applyFillPatterns } from './fill-patterns';
 import { type HeightContext, isCompactContainer } from './height-context';
 import type { FacetDirection } from './render-spec';
+import { buildSizeScale, sizeScaleDefaultsFor } from './size-scale';
 import { emitSpecWarnings } from './spec-sugar';
 
 export function compileFaceted(
@@ -252,6 +254,27 @@ export function compileFaceted(
   const sharedYDomain =
     yResolve === 'shared' && fullScales.y ? fullScales.y.scale.domain() : undefined;
 
+  // Size and color are shared unless resolved independent, as in Vega-Lite:
+  // the same radius or color must mean the same value in every panel, and the
+  // figure's one legend describes them all. Color shares the themed full-data
+  // scale itself, which covers ordinal, sequential and binned scales alike;
+  // size injects the full-data domain, which every size consumer honors.
+  const sharedColorScale =
+    (resolveConfig?.scale?.color ?? 'shared') === 'shared'
+      ? computeChartScales({ ...panelSpec, data: renderSpec.data }, chartArea, theme, chartSpec)
+          .scales.color
+      : undefined;
+  const sizeDefaults = sizeScaleDefaultsFor(chartSpec.markType);
+  const sizeChannel = panelEncoding.size as EncodingChannel | undefined;
+  const sharedSizeDomain =
+    (resolveConfig?.scale?.size ?? 'shared') === 'shared' &&
+    sizeDefaults &&
+    sizeChannel &&
+    'field' in sizeChannel &&
+    !sizeChannel.scale?.domain
+      ? buildSizeScale(sizeChannel, renderSpec.data, sizeDefaults)?.domain
+      : undefined;
+
   const isRadial = isAxislessMark(chartSpec.markType);
   const rendererKey = resolveRendererKey(
     renderSpec.markType,
@@ -288,6 +311,12 @@ export function compileFaceted(
         y: { ...yCh, scale: { ...((yCh.scale as object) ?? {}), domain: sharedYDomain } },
       };
     }
+    if (sharedSizeDomain && sizeChannel) {
+      panelEnc = {
+        ...panelEnc,
+        size: { ...sizeChannel, scale: { ...(sizeChannel.scale ?? {}), domain: sharedSizeDomain } },
+      };
+    }
     const panelSpecWithDomains = {
       ...panelSpecLocal,
       encoding: panelEnc as unknown as typeof panelSpec.encoding,
@@ -300,6 +329,7 @@ export function compileFaceted(
       theme,
       chartSpec,
     );
+    if (sharedColorScale) panelScales.color = sharedColorScale;
 
     // Dev-mode contrast diagnostics: panels share one palette resolution, so
     // checking the first panel covers the figure without repeating warnings.
@@ -319,11 +349,9 @@ export function compileFaceted(
           axisTitleHeader: grid.axisTitleHeader,
           encoding: panelSpecWithDomains.encoding as Encoding,
           markType: chartSpec.markType,
-          // Outside-label cells use figure coordinates throughout, including
-          // the tick-label clamp. Keep the legacy path unchanged in 8.x.
-          totalWidth: gridPanel.referenceContainer
-            ? gridPanel.area.x + gridPanel.area.width
-            : gridPanel.area.width,
+          // Tick positions are figure coordinates, so the label clamp's right
+          // edge is the panel's right edge in figure coordinates too.
+          totalWidth: gridPanel.area.x + gridPanel.area.width,
         });
 
     offsetValueLabelAxes(panelAxes, grid.valueLabelPlan);
