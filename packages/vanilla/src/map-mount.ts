@@ -69,6 +69,8 @@ import { captureMapSnapshot, runMapFillTransition } from './map-transition';
 import { createMapZoomController, type MapZoomController } from './map-zoom';
 import { createMeasureText, resolveFontFamily, scheduleFontReload } from './measure-text';
 import { prefersReducedMotion } from './motion/tween';
+import { geoMapPlaybackAdapter } from './playback/map-adapters';
+import { createMapPlaybackHost } from './playback/map-playback-host';
 import type { PlaybackController } from './playback/types';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -286,6 +288,8 @@ export function createGeoMap(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // A time spec's motion is the playback itself: no entrance, no update tween.
+  const playback = createMapPlaybackHost(container, geoMapPlaybackAdapter);
 
   // Camera state
   let currentCamera: Camera = { cx: 0, cy: 0, k: 1 };
@@ -430,7 +434,7 @@ export function createGeoMap(
 
   let isAutoHeight: boolean | null = null;
 
-  function getContainerDimensions(): { width: number; height: number } {
+  function getContainerDimensions(candidate = currentSpec): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
     const width = Math.max(rect.width || 600, 100);
 
@@ -441,7 +445,8 @@ export function createGeoMap(
     // Explicit host height is a hard budget: return it as-is so the
     // compiler keeps the SVG inside its box.
     if (isAutoHeight === false && rect.height > 0) {
-      return { width, height: Math.max(rect.height, 100) };
+      // The playback controls strip sits below the SVG, inside the host's box.
+      return { width, height: Math.max(rect.height - playback.stripHeight(candidate), 100) };
     }
 
     // Auto-height host: pick our own budget.
@@ -449,7 +454,7 @@ export function createGeoMap(
   }
 
   function compile(candidate = currentSpec, measure = measureText): GeoMapLayout {
-    const { width, height } = getContainerDimensions();
+    const { width, height } = getContainerDimensions(candidate);
     const darkMode = resolveDarkMode(options?.darkMode);
 
     const compileOpts: CompileOptions = {
@@ -466,7 +471,9 @@ export function createGeoMap(
       chromeLayout: isAutoHeight === true ? 'grow' : 'subtract',
     };
 
-    return compileGeoMap(candidate, compileOpts);
+    return playback.isPlaybackSpec(candidate)
+      ? playback.compile(candidate, compileOpts)
+      : compileGeoMap(candidate, compileOpts);
   }
 
   // ---------------------------------------------------------------------------
@@ -489,7 +496,7 @@ export function createGeoMap(
       const featureId = el.getAttribute('data-feature-id');
       if (!featureId) continue;
 
-      const content = layout.tooltipDescriptors.get(featureId);
+      const tooltipContent = () => layout.tooltipDescriptors.get(featureId);
       const viewId = el.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id');
       const scoped = currentLayout.views?.find((view) => view.viewId === viewId);
       const feature = scoped
@@ -505,6 +512,7 @@ export function createGeoMap(
         // Reparenting a focused SVG node drops native keyboard focus.
         if (document.activeElement !== el) raiseFeature(el, svg);
         el.classList.add('oc-map-feature--hover');
+        const content = tooltipContent();
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
           const x = mouseEvent.clientX - svgRect.left;
@@ -523,6 +531,7 @@ export function createGeoMap(
       };
 
       const handleMouseMove = (e: Event) => {
+        const content = tooltipContent();
         if (content && tooltipManager && options?.tooltip !== false) {
           const mouseEvent = e as MouseEvent;
           const svgRect = svg.getBoundingClientRect();
@@ -602,7 +611,7 @@ export function createGeoMap(
       const pointKey = el.getAttribute('data-point-key');
       if (!pointKey) continue;
 
-      const content = layout.tooltipDescriptors.get(`point:${pointKey}`);
+      const tooltipContent = () => layout.tooltipDescriptors.get(`point:${pointKey}`);
       const viewId = el.closest('[data-geo-view-id]')?.getAttribute('data-geo-view-id');
       const scoped = currentLayout.views?.find((view) => view.viewId === viewId);
       const pointMark = scoped
@@ -616,6 +625,7 @@ export function createGeoMap(
         const mouseEvent = e as MouseEvent;
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('cursor', 'pointer');
         (el as SVGElement & ElementCSSInlineStyle).style.setProperty('filter', 'brightness(1.15)');
+        const content = tooltipContent();
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
           const x = mouseEvent.clientX - svgRect.left;
@@ -633,6 +643,7 @@ export function createGeoMap(
       };
 
       const handlePointMouseMove = (e: Event) => {
+        const content = tooltipContent();
         if (content && tooltipManager && options?.tooltip !== false) {
           const mouseEvent = e as MouseEvent;
           const svgRect = svg.getBoundingClientRect();
@@ -916,7 +927,7 @@ export function createGeoMap(
     }
     const animate = entrance.claim(
       layoutHasContent(currentLayout),
-      !!currentLayout.animation?.enter,
+      !!currentLayout.animation?.enter && !playback.isPlaybackSpec(currentSpec),
     );
 
     // Render new SVG before removing old to avoid a paint gap
@@ -939,6 +950,12 @@ export function createGeoMap(
       container.appendChild(newSvg);
     }
     svgElement = newSvg;
+    playback.render({
+      svg: newSvg,
+      layout: currentLayout,
+      spec: currentSpec,
+      darkMode: resolveDarkMode(options?.darkMode),
+    });
     const labelDesc = newSvg.querySelector('desc[data-geo-label-inventory]');
     if (labelDesc) {
       newSvg.removeAttribute('aria-describedby');
@@ -1029,7 +1046,11 @@ export function createGeoMap(
 
     // Capture paint + point geometry optimistically; gate the tween on the
     // *new* layout's animation config after compile
-    const canAnimate = !entrance.playing && !entrance.waiting && !prefersReducedMotion();
+    const canAnimate =
+      !entrance.playing &&
+      !entrance.waiting &&
+      !prefersReducedMotion() &&
+      !playback.isPlaybackSpec(newSpec);
     const prevPaint = canAnimate ? captureMapSnapshot(svgElement) : null;
 
     // Remember previous focus to detect changes. The signature includes the
@@ -1128,6 +1149,13 @@ export function createGeoMap(
     options_?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
+    const playbackGIF =
+      format === 'gif' &&
+      playback.exportGIF(svgElement, {
+        theme: currentLayout.theme,
+        ...(options_ as GIFExportOptions | undefined),
+      });
+    if (playbackGIF) return playbackGIF;
 
     // Export settled geometry, independent of transient hover and animation.
     // Only the GIF keeps the entrance stamps its frame sampler reads; it drops
@@ -1138,6 +1166,8 @@ export function createGeoMap(
       animate,
     });
     if (animate) cancelAnimations(terminalSvg);
+    // A time map exports the frame on screen.
+    playback.drawFrame(terminalSvg);
     if (currentLayout.views) {
       const overlays = new Map<string, GeoLabelOverlay>();
       const inventory: NonNullable<GeoMapLayout['labels']>['initialOverlay']['inventory'] = [];
@@ -1225,6 +1255,7 @@ export function createGeoMap(
 
     // Cancel the running entrance
     entrance.destroy();
+    playback.destroy();
     if (fillTransitionHandle) {
       fillTransitionHandle.cancel();
       fillTransitionHandle = null;
@@ -1343,7 +1374,7 @@ export function createGeoMap(
       return currentLayout;
     },
     get playback(): PlaybackController | null {
-      return null;
+      return playback.controller;
     },
     zoomTo(featureId: string | number | Array<string | number>, opts?: GeoMapCameraOptions): void {
       const ids = Array.isArray(featureId) ? featureId : [featureId];

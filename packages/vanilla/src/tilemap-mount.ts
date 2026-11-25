@@ -41,6 +41,8 @@ import {
   numAttr,
   runElementTweens,
 } from './motion/element-tween';
+import { tileMapPlaybackAdapter } from './playback/map-adapters';
+import { createMapPlaybackHost } from './playback/map-playback-host';
 import type { PlaybackController } from './playback/types';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
@@ -224,6 +226,8 @@ export function createTileMap(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // A time spec's motion is the playback itself: no entrance, no update tween.
+  const playback = createMapPlaybackHost(container, tileMapPlaybackAdapter);
   // In-flight data-update tween; every render() and destroy() snaps it.
   let updateTween: ElementTweenHandle | null = null;
 
@@ -263,7 +267,7 @@ export function createTileMap(
   // Helpers
   // ---------------------------------------------------------------------------
 
-  function getContainerDimensions(): { width: number; height: number } {
+  function getContainerDimensions(candidate = currentSpec): { width: number; height: number } {
     const rect = container.getBoundingClientRect();
     const width = Math.max(rect.width || 600, 100);
 
@@ -276,7 +280,8 @@ export function createTileMap(
     // height keeps the SVG inside its box instead of overflowing onto whatever
     // sits below it.
     if (isAutoHeight === false && rect.height > 0) {
-      return { width, height: Math.max(rect.height, 100) };
+      // The playback controls strip sits below the SVG, inside the host's box.
+      return { width, height: Math.max(rect.height - playback.stripHeight(candidate), 100) };
     }
 
     // Auto-height host: pick our own budget. The compiler derives its own tight
@@ -298,7 +303,7 @@ export function createTileMap(
   }
 
   function compile(candidate = currentSpec, measure = measureText): TileMapLayout {
-    const { width, height } = getContainerDimensions();
+    const { width, height } = getContainerDimensions(candidate);
     const darkMode = resolveDarkMode(options?.darkMode);
 
     const compileOpts: CompileOptions = {
@@ -310,7 +315,9 @@ export function createTileMap(
       measureText: measure,
     };
 
-    return compileTileMap(candidate, compileOpts);
+    return playback.isPlaybackSpec(candidate)
+      ? playback.compile(candidate, compileOpts)
+      : compileTileMap(candidate, compileOpts);
   }
 
   // ---------------------------------------------------------------------------
@@ -335,7 +342,7 @@ export function createTileMap(
       const stateCode = el.getAttribute('data-state');
       if (!stateCode) continue;
 
-      const content = layout.tooltipDescriptors.get(stateCode);
+      const tooltipContent = () => layout.tooltipDescriptors.get(stateCode);
       const tile = tilesByStateCode.get(stateCode);
 
       const handleMouseEnter = (e: Event) => {
@@ -344,6 +351,7 @@ export function createTileMap(
         const mouseEvent = e as MouseEvent;
         tilesGroup?.classList.add('oc-hover-active');
         el.classList.add('oc-tilemap-tile--hover');
+        const content = tooltipContent();
         if (content && tooltipManager && options?.tooltip !== false) {
           const svgRect = svg.getBoundingClientRect();
           const x = mouseEvent.clientX - svgRect.left;
@@ -361,6 +369,7 @@ export function createTileMap(
       };
 
       const handleMouseMove = (e: Event) => {
+        const content = tooltipContent();
         if (content && tooltipManager && options?.tooltip !== false) {
           const mouseEvent = e as MouseEvent;
           const svgRect = svg.getBoundingClientRect();
@@ -431,7 +440,10 @@ export function createTileMap(
     // Cancel the running entrance; one still waiting to be seen re-arms.
     entrance.reset();
     const hasData = currentLayout.tiles.some((tile) => tile.hasData);
-    const animate = entrance.claim(hasData, !!currentLayout.animation?.enter);
+    const animate = entrance.claim(
+      hasData,
+      !!currentLayout.animation?.enter && !playback.isPlaybackSpec(currentSpec),
+    );
 
     // Remove old SVG
     if (svgElement) {
@@ -449,6 +461,12 @@ export function createTileMap(
     });
     container.appendChild(newSvg);
     svgElement = newSvg;
+    playback.render({
+      svg: newSvg,
+      layout: currentLayout,
+      spec: currentSpec,
+      darkMode: resolveDarkMode(options?.darkMode),
+    });
 
     // Wire interactions
     cleanupTooltipEvents = wireTooltipAndInteraction(newSvg, currentLayout);
@@ -493,7 +511,7 @@ export function createTileMap(
 
     // Read the tiles as drawn before render() snaps any in-flight tween, so
     // an interrupting update continues from what is on screen.
-    const update = nextLayout.animation?.update;
+    const update = playback.isPlaybackSpec(newSpec) ? undefined : nextLayout.animation?.update;
     const prevTiles =
       update && !entrance.playing && !entrance.waiting ? captureTiles(svgElement) : null;
 
@@ -531,6 +549,13 @@ export function createTileMap(
     options_?: JPGExportOptions | SVGExportOptions | GIFExportOptions,
   ): string | Promise<Blob> | Promise<string> {
     if (!svgElement) return '';
+    const playbackGIF =
+      format === 'gif' &&
+      playback.exportGIF(svgElement, {
+        theme: currentLayout.theme,
+        ...(options_ as GIFExportOptions | undefined),
+      });
+    if (playbackGIF) return playbackGIF;
 
     // Export settled geometry, independent of transient hover and animation.
     // Only the GIF keeps the entrance stamps its frame sampler reads; it drops
@@ -541,6 +566,8 @@ export function createTileMap(
       animate,
     });
     if (animate) cancelAnimations(terminalSvg);
+    // A time map exports the frame on screen.
+    playback.drawFrame(terminalSvg);
     const resolvedOptions = { theme: currentLayout.theme, ...options_ };
     prepareSettledExportTheme(svgElement, terminalSvg, resolvedOptions.theme, !!options_?.theme);
 
@@ -570,6 +597,7 @@ export function createTileMap(
 
     // Cancel the running entrance and any update tween
     entrance.destroy();
+    playback.destroy();
     updateTween?.cancel();
     updateTween = null;
 
@@ -646,7 +674,7 @@ export function createTileMap(
       return currentLayout;
     },
     get playback(): PlaybackController | null {
-      return null;
+      return playback.controller;
     },
   };
 }

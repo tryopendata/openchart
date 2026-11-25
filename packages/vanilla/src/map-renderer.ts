@@ -6,6 +6,8 @@ import {
   resolveMapLabelOverlay,
 } from './map-labels';
 import { renderGeoMapViews } from './map-view-renderer';
+import { NO_DATA_FILL_ATTRIBUTE } from './playback/map-frames';
+import { renderMapOverlays } from './playback/map-overlays';
 import { createRenderContext, type RenderContext } from './render-context';
 import { createSVGElement } from './renderers/svg-dom';
 /**
@@ -26,6 +28,7 @@ import {
   type ResolvedAnimation,
   shuffledSweepDelays,
 } from '@opendata-ai/openchart-core';
+import type { PlaybackOverlayLayout } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
 import { FOCUS_DIM_OPACITY } from './map-camera';
 import { buildPatternDefs, resolvePatternFill } from './pattern-utils';
@@ -391,6 +394,10 @@ export function renderMapSVG(
     defs,
     ctx,
   );
+  // A playback frame writer hatches features that lose their value mid-run with this fill.
+  if (noDataSwatch?.pattern) {
+    svg.setAttribute(NO_DATA_FILL_ATTRIBUTE, resolvePatternFill(noDataSwatch.pattern, patternMap));
+  }
 
   if (layout.views) {
     renderGeoMapViews(
@@ -475,6 +482,9 @@ export function renderMapSVG(
     mapGroup.appendChild(cameraGroup);
     svg.appendChild(mapGroup);
   }
+
+  // The period label sits over the map, outside the camera, so zooming never moves it.
+  renderMapOverlays(svg, layout as GeoMapLayout & PlaybackOverlayLayout, ctx);
 
   // Render chrome AFTER the map group so the title/subtitle paint on top of a
   // focus-zoomed map that overflows up into the chrome band. Earlier SVG

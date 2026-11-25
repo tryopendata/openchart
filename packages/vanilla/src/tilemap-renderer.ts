@@ -14,7 +14,9 @@ import {
   type TileMapTileMark,
   tilemapTileDelays,
 } from '@opendata-ai/openchart-core';
+import type { PlaybackOverlayLayout } from '@opendata-ai/openchart-engine';
 import { stampAnimationVars } from './animation-vars';
+import { renderMapOverlays } from './playback/map-overlays';
 import { renderAttributionBrand } from './renderers/brand';
 import { renderChromeElement } from './renderers/chrome';
 import { renderLegend } from './renderers/legend';
@@ -371,6 +373,7 @@ export function renderTileMapSVG(
 
   // Render tiles
   renderTiles(svg, tiles, animate ? animation : undefined, ctx);
+  renderMapOverlays(svg, layout as TileMapLayout & PlaybackOverlayLayout, ctx);
 
   // Render legend (gradient for quantitative, categorical for nominal)
   if (layout.categoricalLegend) {
