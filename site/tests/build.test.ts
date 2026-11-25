@@ -34,7 +34,9 @@ import { gistempGlobalAnnual } from "@datasets/gistemp-global-annual";
 import { githubLanguageDevelopers } from "@datasets/github-language-developers";
 import { greenCardsByCountry } from "@datasets/green-cards-by-country";
 import { hudPitHomelessnessNational } from "@datasets/hud-pit-homelessness-national";
+import { insuredUnemployment2020 } from "@datasets/insured-unemployment-2020";
 import { irsStateMigration } from "@datasets/irs-state-migration";
+import { japanPopulation } from "@datasets/japan-population";
 import { mlbHitsVsStrikeouts } from "@datasets/mlb-hits-vs-strikeouts";
 import { mortgageRateWeekly } from "@datasets/mortgage-rate-weekly";
 import { nflHomeAdvantage } from "@datasets/nfl-home-advantage";
@@ -54,6 +56,7 @@ import { usEnergyFlow2024 } from "@datasets/us-energy-flow-2024";
 import { usImportShares } from "@datasets/us-import-shares";
 import { usInflation } from "@datasets/us-inflation";
 import { usStateUnemployment } from "@datasets/us-state-unemployment";
+import { wealthHealthHistory } from "@datasets/wealth-health-history";
 import { worldGdpRaceSource } from "@datasets/world-gdp-race";
 import { build as esbuild } from "esbuild";
 import { Window } from "happy-dom";
@@ -1036,6 +1039,12 @@ const TIER_1_LABELS = [
   { source: worldGdpRaceSource },
   // Verified against census/state-population; the rows and the query live in the post's demo module.
   statePopulation,
+  // World Bank WDI via OpenData (worldbank/gdp-per-capita, life-expectancy, population).
+  wealthHealthHistory,
+  // DOL weekly claims via OpenData (dol/weekly-claims), insured unemployment rate by state.
+  insuredUnemployment2020,
+  // UN WPP 2024 medium variant CSV, population by five-year age group and sex.
+  japanPopulation,
 ].map((dataset) => sourceOf(dataset).label);
 
 /** Whether a figure's caption cites a tier-1 dataset. */
