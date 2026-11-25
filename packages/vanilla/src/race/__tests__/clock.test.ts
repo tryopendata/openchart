@@ -213,6 +213,21 @@ describe('race clock', () => {
     expect(states).toEqual([]);
   });
 
+  it('names the subject in its range errors', () => {
+    const race = setup({ subject: 'Race' }).clock;
+    expect(() => race.seek(NaN)).toThrow(new RangeError('Race seek position must be finite'));
+    expect(() => race.setSpeed(0)).toThrow(
+      new RangeError('Race playback speed must be finite and greater than zero'),
+    );
+    const playback = setup().clock;
+    expect(() => playback.seek(NaN)).toThrow(
+      new RangeError('Playback seek position must be finite'),
+    );
+    expect(() => playback.setSpeed(0)).toThrow(
+      new RangeError('Playback speed must be finite and greater than zero'),
+    );
+  });
+
   it('cancels a pending frame on destroy and ignores later commands', () => {
     const { clock, frame, pending, states, ticks } = setup();
     clock.play();

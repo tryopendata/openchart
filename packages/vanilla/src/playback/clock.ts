@@ -29,6 +29,8 @@ export interface PlaybackClockOptions {
   onStateChange?: (state: PlaybackClockState) => void;
   /** Defaults to requestAnimationFrame and cancelAnimationFrame. */
   scheduler?: PlaybackFrameScheduler;
+  /** Leads the RangeError messages. Defaults to `Playback`; the race passes `Race`. */
+  subject?: string;
 }
 
 /** Controls for a running clock. */
@@ -50,25 +52,38 @@ const animationFrameScheduler: PlaybackFrameScheduler = {
   cancel: (id) => cancelAnimationFrame(id),
 };
 
-function assertFinitePosition(t: number): void {
-  if (!Number.isFinite(t)) throw new RangeError('Playback seek position must be finite');
+/** Default lead word of the clock's RangeError messages. */
+export const DEFAULT_PLAYBACK_SUBJECT = 'Playback';
+
+function assertFinitePosition(t: number, subject: string): void {
+  if (!Number.isFinite(t)) throw new RangeError(`${subject} seek position must be finite`);
 }
 
-function assertValidSpeed(speed: number): void {
-  if (!Number.isFinite(speed) || speed <= 0) {
-    throw new RangeError('Playback speed must be finite and greater than zero');
-  }
+/**
+ * Check a playback speed multiplier.
+ * @throws {RangeError} If speed is not finite and positive. The message opens with `subject`,
+ *   e.g. "Race playback speed must be finite and greater than zero".
+ */
+export function assertValidSpeed(speed: number, subject = DEFAULT_PLAYBACK_SUBJECT): void {
+  if (Number.isFinite(speed) && speed > 0) return;
+  // "Playback playback speed" would repeat itself, so the default subject stands alone.
+  const noun = subject === DEFAULT_PLAYBACK_SUBJECT ? subject : `${subject} playback`;
+  throw new RangeError(`${noun} speed must be finite and greater than zero`);
 }
 
 /**
  * The clock's starting state, restored from a previous run when given.
  * @throws {RangeError} If the restored position is non-finite or its speed is invalid.
  */
-function startingState(lastPeriod: number, restored?: PlaybackClockState): PlaybackClockState {
+function startingState(
+  lastPeriod: number,
+  subject: string,
+  restored?: PlaybackClockState,
+): PlaybackClockState {
   const state: PlaybackClockState = { t: 0, playing: false, speed: 1, ended: false };
   if (!restored) return state;
-  assertFinitePosition(restored.t);
-  assertValidSpeed(restored.speed);
+  assertFinitePosition(restored.t, subject);
+  assertValidSpeed(restored.speed, subject);
   state.t = Math.min(Math.max(0, restored.t), lastPeriod);
   state.speed = restored.speed;
   state.ended = restored.ended && state.t === lastPeriod && !restored.playing;
@@ -88,9 +103,10 @@ export function createPlaybackClock(options: PlaybackClockOptions): PlaybackCloc
     onTick,
     onStateChange,
     scheduler = animationFrameScheduler,
+    subject = DEFAULT_PLAYBACK_SUBJECT,
   } = options;
   const lastPeriod = periodCount - 1;
-  const state = startingState(lastPeriod, options.initialState);
+  const state = startingState(lastPeriod, subject, options.initialState);
   const stepMs = durationMs / lastPeriod;
   let elapsedMs = (state.t / lastPeriod) * durationMs;
   let stepped = false;
@@ -120,7 +136,7 @@ export function createPlaybackClock(options: PlaybackClockOptions): PlaybackCloc
   }
 
   function seek(t: number) {
-    assertFinitePosition(t);
+    assertFinitePosition(t, subject);
     if (destroyed) return;
     const position = Math.min(Math.max(0, t), lastPeriod);
     elapsedMs = (position / lastPeriod) * durationMs;
@@ -205,7 +221,7 @@ export function createPlaybackClock(options: PlaybackClockOptions): PlaybackCloc
     },
     setSpeed(speed) {
       if (destroyed) return;
-      assertValidSpeed(speed);
+      assertValidSpeed(speed, subject);
       if (speed === state.speed) return;
       state.speed = speed;
       notifyState();

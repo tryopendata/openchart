@@ -97,6 +97,9 @@ type RendererFor<Mark extends RaceMarkType> = (
 
 const renderers: { [Mark in RaceMarkType]?: RendererFor<Mark> } = RACE_RENDERERS;
 
+/** Lead word of playback RangeErrors, e.g. "Race seek position must be finite". */
+const RACE_SUBJECT = 'Race';
+
 function rendererFor<Mark extends RaceMarkType>(mark: Mark): RendererFor<Mark> {
   const factory = renderers[mark];
   if (!factory) {
@@ -239,8 +242,8 @@ export function createRace(
     if (!model.spec.a11y?.hidden) a11y?.announce(raceFrameAt(model, t));
   }
 
-  // Compile before starting playback so an unusable layout throws before any frame is requested.
   const initialLayout = compileLayout(model);
+  // Playback starts only after the first render, so a render that throws leaves no clock running.
   const session = createPlaybackSession({
     container,
     timing: sessionTiming(model),
@@ -249,8 +252,10 @@ export function createRace(
     draw: (t) => view?.draw(t),
     onAnnounce: announce,
     classPrefix: RACE_CLASS_PREFIX,
+    subject: RACE_SUBJECT,
     animate: spec.animation !== false,
     initialState,
+    deferStart: true,
   });
 
   function focusedControl() {
@@ -326,11 +331,13 @@ export function createRace(
     font = nextFont;
     session.retime(sessionTiming(model), model.periodLabels);
     render(nextLayout, focus, anchor);
+    session.syncPeriod();
     if (fontChanged) scheduleFontResize(font);
   }
 
   render(initialLayout);
   scheduleFontResize(font);
+  session.start();
 
   let observer: ResizeObserver | undefined;
   if (autoResize && typeof ResizeObserver === 'function') {
