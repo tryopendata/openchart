@@ -4,8 +4,7 @@
  */
 import type { ChartPlayback } from '@opendata-ai/openchart-engine';
 import type { GIFExportOptions } from '../export-gif';
-import { createChartFrameWriter } from './chart-frames';
-import { createChartTrailWriter } from './chart-trails';
+import { createChartWriters } from './chart-session';
 import { exportPlaybackGIF } from './export-gif';
 import { applySeriesHiding } from './series-hiding';
 
@@ -67,13 +66,9 @@ function bindFrame(
   playback: ChartPlayback,
   hiddenKeys: ReadonlySet<string>,
 ): (t: number) => void {
-  const frames = createChartFrameWriter(frame, playback);
-  const trails = createChartTrailWriter(frame, playback);
+  const writers = createChartWriters(frame, playback);
   applySeriesHiding(frame, hiddenKeys);
-  return (t) => {
-    trails?.draw(t);
-    frames.draw(t);
-  };
+  return (t) => writers.draw(t);
 }
 
 /** The distinct point fills of the base layout, reserved so series colors survive quantization. */
