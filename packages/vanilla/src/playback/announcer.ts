@@ -21,7 +21,7 @@ export interface PlaybackAnnouncer {
   /** The polite, atomic live region. */
   readonly element: HTMLElement;
   /** Announce `describe(state.t)` on pause, seek or step while not playing; ignore everything else. */
-  notify(cause: PlaybackAnnounceCause, state: PlaybackClockState): void;
+  notify(cause: PlaybackAnnounceCause, state: Pick<PlaybackClockState, 't' | 'playing'>): void;
   /** Move the live region to a new host, keeping its text. */
   attach(host: HTMLElement): void;
   /** Remove the live region. Later calls are no-ops. */

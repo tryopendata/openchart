@@ -4,12 +4,7 @@
  * come from the shared playback announcer.
  */
 import type { A11yMetadata, RaceFrame } from '@opendata-ai/openchart-core';
-import {
-  type RaceModel,
-  raceA11y,
-  raceA11yLeaders,
-  raceFrameAt,
-} from '@opendata-ai/openchart-engine';
+import { type RaceModel, raceA11y, raceA11yLeaders } from '@opendata-ai/openchart-engine';
 import { applySrOnlyStyles } from '../dom-helpers';
 import { createPlaybackAnnouncer } from '../playback/announcer';
 import { pageIdScope } from '../svg-ids';
@@ -41,16 +36,16 @@ function sameMetadata(a: A11yMetadata, b: A11yMetadata): boolean {
 }
 
 /** Name up to three current leaders, prefixed with the period unless the reader is scrubbing. */
-function describeLeaders(model: RaceModel, shell: RaceShell, t: number): string {
+function describeLeaders(model: RaceModel, shell: RaceShell, frame: RaceFrame): string {
   // Fades can leave an exact leader out of the visual frame's items.
-  const leaders = raceA11yLeaders(model, t);
+  const leaders = raceA11yLeaders(model, frame.t);
   const message = leaders.length
     ? `${leaders.join(', ')} ${leaders.length === 1 ? 'leads' : 'lead'}`
     : 'No ranked entries';
   const active = shell.root.ownerDocument.activeElement;
   const scrubberFocused =
     active?.matches('input[type="range"]') && shell.controlsSlot.contains(active);
-  return scrubberFocused ? message : `${raceFrameAt(model, t).period.label}: ${message}`;
+  return scrubberFocused ? message : `${frame.period.label}: ${message}`;
 }
 
 function appendPeriodTable(wrapper: HTMLElement, name: string, metadata: A11yMetadata): void {
@@ -100,9 +95,11 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
 
   let currentModel = model;
   let currentShell = shell;
+  // announce() stores the mount's frame before notifying, so describe reads its period label.
+  let announcedFrame!: RaceFrame;
   const announcer = createPlaybackAnnouncer({
     host: wrapper,
-    describe: (t) => describeLeaders(currentModel, currentShell, t),
+    describe: () => describeLeaders(currentModel, currentShell, announcedFrame),
   });
   let destroyed = false;
   let detachDescription: (() => void) | undefined;
@@ -137,8 +134,9 @@ export function createRaceA11y(shell: RaceShell, model: RaceModel): RaceA11y {
     attach,
     announce(frame) {
       if (!detachDescription) return;
-      // The mount announces only while paused, so the frame stands for a paused playhead.
-      announcer.notify('seek', { t: frame.t, playing: false, speed: 1, ended: false });
+      announcedFrame = frame;
+      // The mount announces only while paused.
+      announcer.notify('seek', { t: frame.t, playing: false });
     },
     destroy() {
       destroyed = true;

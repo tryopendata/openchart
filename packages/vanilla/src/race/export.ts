@@ -43,6 +43,7 @@ export async function exportRaceGIF(
       holdEndMs: END_HOLD_MS,
       styleSelectors: RACE_STYLE_SELECTORS,
       paletteSeed: layout.colors,
+      noun: 'race',
       signal,
     },
     { fps: options?.fps, dpi: RACE_DPI, loop: layout.playback.loop, theme: layout.theme },

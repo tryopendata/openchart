@@ -8,6 +8,7 @@ import type { GIFExportOptions } from '../export-gif';
 import { encodeSVGFrames } from '../gif-frame-encoder';
 import { SVG_NS, setAttrs } from '../renderers/svg-dom';
 import { prepareSettledExportTheme } from '../theme-style-block';
+import { snapshotStyles } from './frame-styles';
 
 /** A mounted playback view to capture frame by frame. */
 export interface PlaybackGIFSource {
@@ -25,6 +26,8 @@ export interface PlaybackGIFSource {
   styleSelectors: string[];
   /** Colors reserved in the global palette so series colors survive quantization. */
   paletteSeed: readonly string[];
+  /** Names the form in error messages, e.g. `race`. Defaults to `playback`. */
+  noun?: string;
   /** Rejects the export when aborted. */
   signal?: AbortSignal;
 }
@@ -36,26 +39,13 @@ export type PlaybackGIFOptions = Pick<
 >;
 
 const DEFAULT_FPS = 25;
+const DEFAULT_NOUN = 'playback';
 const MAX_FRAMES = 1200;
 const MIN_DELAY_CS = 2; // Browsers can display a shorter delay as 100 ms.
 const MAX_DELAY_CS = 0xffff;
+const MAX_DURATION_MS = (MAX_FRAMES - 1) * MAX_DELAY_CS * 10;
 // Set aside most of the palette for series colors and keep space for chrome and antialiasing.
 const MAX_SEEDED_COLORS = 224;
-const CLASS_NAMESPACE = 'oc-';
-
-const FRAME_STYLE_PROPERTIES = [
-  'fill',
-  'stroke',
-  'opacity',
-  'font-family',
-  'font-size',
-  'font-weight',
-  'font-variant-numeric',
-  'letter-spacing',
-  'dominant-baseline',
-  'direction',
-] as const;
-const PAINT_PROPERTIES: ReadonlySet<string> = new Set(['fill', 'stroke', 'opacity']);
 
 interface FramePlan {
   /** Frames sampled across the run, before the hold. */
@@ -63,16 +53,37 @@ interface FramePlan {
   durationCs: number;
 }
 
+/** Reject a source whose period count, duration or hold can't describe a run. */
+function assertPlayableSource({ periodCount, durationMs, holdEndMs }: PlaybackGIFSource): void {
+  if (!(periodCount >= 1)) {
+    throw new RangeError(
+      `GIF export needs at least one period, received periodCount ${periodCount}`,
+    );
+  }
+  if (!Number.isFinite(durationMs) || durationMs < 0) {
+    throw new RangeError(`GIF export durationMs must be finite and >= 0, received ${durationMs}`);
+  }
+  if (!Number.isFinite(holdEndMs) || holdEndMs < 0) {
+    throw new RangeError(`GIF export holdEndMs must be finite and >= 0, received ${holdEndMs}`);
+  }
+}
+
+/** The over-limit message, naming the form with its noun, e.g. "Race duration ...". */
+function durationLimitMessage(noun: string, durationMs: number): string {
+  const message = `${noun.charAt(0).toUpperCase()}${noun.slice(1)} duration exceeds the GIF limit. Shorten the ${noun} duration.`;
+  // Other nouns keep the race's published message verbatim; only the default adds numbers.
+  if (noun !== DEFAULT_NOUN) return message;
+  return `${message} Received ${durationMs} ms; the maximum is ${MAX_DURATION_MS} ms.`;
+}
+
 /** Pick the frame count for a run, within GIF frame and delay limits. */
-function planFrames(durationMs: number, fps: number): FramePlan {
+function planFrames(durationMs: number, fps: number, noun: string): FramePlan {
   if (!Number.isFinite(fps) || fps <= 0) {
     throw new RangeError('GIF export fps must be finite and greater than zero');
   }
   const durationCs = Math.max(MIN_DELAY_CS, Math.round(durationMs / 10));
   const minimumFrames = Math.ceil(durationCs / MAX_DELAY_CS);
-  if (minimumFrames >= MAX_FRAMES) {
-    throw new RangeError('Playback duration exceeds the GIF limit. Shorten the duration.');
-  }
+  if (minimumFrames >= MAX_FRAMES) throw new RangeError(durationLimitMessage(noun, durationMs));
   const count = Math.min(
     MAX_FRAMES - 1,
     Math.floor(durationCs / MIN_DELAY_CS),
@@ -81,77 +92,9 @@ function planFrames(durationMs: number, fps: number): FramePlan {
   return { count, durationCs };
 }
 
-/** The library class that names an element's role, e.g. `oc-race-period`. */
-function roleClass(element: Element): string | undefined {
-  return Array.from(element.classList).find((name) => name.startsWith(CLASS_NAMESPACE));
-}
-
-/** One sample element per selector, in document order: the root, roles, then classless text and lines. */
-function collectStyleSamples(source: SVGElement, styleSelectors: string[]): Map<string, Element> {
-  const samples = new Map<string, Element>();
-  const rootRole = roleClass(source);
-  if (rootRole) samples.set(`.${rootRole}`, source);
-  if (!styleSelectors.length) return samples;
-
-  const query = styleSelectors.flatMap((selector) => [selector, `${selector} *`]).join(', ');
-  for (const element of source.querySelectorAll(query)) {
-    const role = roleClass(element);
-    if (role) {
-      if (!samples.has(`.${role}`)) samples.set(`.${role}`, element);
-      continue;
-    }
-    if (element.localName !== 'line' && element.localName !== 'text') continue;
-    let group = element.parentElement;
-    while (group && !roleClass(group)) group = group.parentElement;
-    const groupRole = group && roleClass(group);
-    if (!groupRole) continue;
-    const selector = `.${groupRole} ${element.localName}`;
-    if (!samples.has(selector)) samples.set(selector, element);
-  }
-  return samples;
-}
-
-/** The computed declarations a detached frame needs to match the sampled element. */
-function frameDeclarations(element: Element, computed: CSSStyleDeclaration): string[] {
-  const declarations: string[] = [];
-  for (const property of FRAME_STYLE_PROPERTIES) {
-    // The caller's draw updates these paint attributes as playback advances.
-    if (PAINT_PROPERTIES.has(property) && element.hasAttribute(property)) continue;
-    const value = computed.getPropertyValue(property);
-    if (property === 'dominant-baseline') {
-      // A baseline inherited from renderer markup belongs to that subtree.
-      // Applying the y-axis baseline to all axis labels moves the x-axis labels.
-      const baseline = element.closest('[dominant-baseline]')?.getAttribute(property) ?? 'auto';
-      if (value === baseline) continue;
-    }
-    if (value) declarations.push(`${property}: ${value};`);
-  }
-  return declarations;
-}
-
-/** Snapshot sampled computed styles as CSS, plus one probe per font the samples use. */
-function snapshotStyles(source: SVGElement, styleSelectors: string[], fallbackFont: string) {
-  const doc = source.ownerDocument;
-  const win = doc.defaultView;
-  if (!win) return { css: '', fonts: [] };
-
-  const fonts = new Map<string, SVGTextElement>();
-  const rules: string[] = [];
-  for (const [selector, element] of collectStyleSamples(source, styleSelectors)) {
-    const computed = win.getComputedStyle(element);
-    const declarations = frameDeclarations(element, computed);
-    if (declarations.length) rules.push(`${selector} { ${declarations.join(' ')} }`);
-
-    const family = computed.fontFamily || fallbackFont;
-    const weight = computed.fontWeight;
-    const key = `${family}:${weight}`;
-    if (fonts.has(key)) continue;
-    const probe = doc.createElementNS(SVG_NS, 'text');
-    probe.style.fontFamily = family;
-    probe.style.fontWeight = weight;
-    fonts.set(key, probe);
-  }
-  return { css: rules.join('\n'), fonts: [...fonts.values()] };
+/** The final frame's delay, clamped to what GIF stores and browsers honor like run frames. */
+function holdDelayMs(holdEndMs: number): number {
+  return Math.min(MAX_DELAY_CS, Math.max(MIN_DELAY_CS, Math.round(holdEndMs / 10))) * 10;
 }
 
 /** A strip of one-pixel swatches whose colors the encoder reserves in its palette. */
@@ -233,7 +176,8 @@ async function abortable(encoding: Promise<Blob>, signal: AbortSignal | undefine
  * Render the run from the first period through the end hold as a GIF. Frames sample
  * `durationMs` at `fps`; the settled final frame carries `holdEndMs`. A given theme is
  * inlined as a style block.
- * @throws {RangeError} If fps is not finite and positive, or the duration exceeds GIF limits.
+ * @throws {RangeError} If periodCount is below 1, durationMs or holdEndMs is negative or not
+ * finite, fps is not finite and positive, or the duration exceeds GIF limits.
  * @throws {Error} If gifenc is missing or fails to load, or the SVG has zero dimensions.
  * @throws The signal's reason when the export is aborted.
  */
@@ -241,9 +185,12 @@ export async function exportPlaybackGIF(
   source: PlaybackGIFSource,
   options?: PlaybackGIFOptions,
 ): Promise<Blob> {
-  const { signal, durationMs, holdEndMs } = source;
+  const { signal, durationMs } = source;
   signal?.throwIfAborted();
-  const { count, durationCs } = planFrames(durationMs, options?.fps ?? DEFAULT_FPS);
+  assertPlayableSource(source);
+  const fps = options?.fps ?? DEFAULT_FPS;
+  const { count, durationCs } = planFrames(durationMs, fps, source.noun ?? DEFAULT_NOUN);
+  const holdMs = holdDelayMs(source.holdEndMs);
   const end = source.periodCount - 1;
   // Snapshot the live SVG and theme before yielding to the optional encoder import.
   const { frame, fonts } = cloneFrame(source, options);
@@ -268,7 +215,7 @@ export async function exportPlaybackGIF(
         draw(index) {
           if (index === null) {
             source.draw(end, frame);
-            return holdEndMs;
+            return holdMs;
           }
           // Sample at the displayed start time, including the rounding to centiseconds.
           const before = Math.round((index / count) * durationCs);
