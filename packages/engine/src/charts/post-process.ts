@@ -157,6 +157,7 @@ export function resolveRendererKey(
   markDef: Partial<NormalizedMarkDef>,
 ): string {
   if (markType === 'bar') {
+    if (markDef.mirror === true) return 'bar-mirror';
     if (isBinnedBarEncoding(markType, encoding)) {
       return 'bar:binned';
     }

@@ -127,7 +127,7 @@ export function validateLayerSpec(
         }
         if (mergedForValidation.data && mergedForValidation.encoding) {
           const leafErrors: ValidationError[] = [];
-          validateChartSpec(mergedForValidation, leafErrors);
+          validateChartSpec(mergedForValidation, leafErrors, { inLayer: true });
           const leafPrefix = `${prefix}${jsonPointer('layer', i)}`;
           for (const error of leafErrors)
             errors.push({

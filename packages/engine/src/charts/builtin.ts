@@ -12,6 +12,7 @@
  */
 
 import { barRenderer } from './bar';
+import { computeMirrorMarks } from './bar/mirror';
 import { beeswarmRenderer } from './beeswarm';
 import { binnedBarRenderer } from './binned-bar';
 import { calendarRenderer } from './calendar';
@@ -49,6 +50,7 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   bar: barRenderer, // horizontal bars
   'bar:vertical': columnRenderer, // vertical bars (old 'column')
   'bar:binned': binnedBarRenderer, // histogram: rects sized from a linear x scale via x2
+  'bar-mirror': computeMirrorMarks, // mirrored bars (population pyramid): halves around a gutter
   // Safety net. `compileChart` always expands sugar before dispatch, so these
   // keys should be unreachable — but an unregistered key yields zero marks
   // with no error, i.e. a silently blank chart, which is the exact failure

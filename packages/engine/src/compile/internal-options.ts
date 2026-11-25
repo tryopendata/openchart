@@ -1,7 +1,14 @@
-import type { CompileOptions, LegendEntry, Rect } from '@opendata-ai/openchart-core';
+import type {
+  CompileOptions,
+  LayoutStrategy,
+  LegendEntry,
+  Rect,
+} from '@opendata-ai/openchart-core';
+import type { BarLabelPlan } from '../charts/bar/label-plan';
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { FigureBudget } from '../layout/budget';
 import type { LayoutPlan } from '../layout/plan';
+import type { ResolvedScales } from '../layout/scales';
 
 /**
  * A layer assembly's resolved plot, shared by every leaf it compiles so their
@@ -27,6 +34,19 @@ export interface LeafContext {
 }
 
 /**
+ * Out-parameters a single-chart compile reports for a playback freeze: the inputs the chart
+ * renderer needs to draw any frame against the same scales and plot area.
+ */
+export interface FrameCapture {
+  scales?: ResolvedScales;
+  chartArea?: Rect;
+  labelPlan?: BarLabelPlan;
+  /** The normalized spec the renderer drew from (filtered data). */
+  renderSpec?: NormalizedChartSpec;
+  strategy?: LayoutStrategy;
+}
+
+/**
  * Engine-internal compile options. Layer assembly passes these to leaf
  * compiles; they are not part of the public `CompileOptions` contract.
  */
@@ -49,4 +69,6 @@ export interface InternalCompileOptions extends CompileOptions {
   frozenBudget?: FrozenBudget;
   /** Receives the leaf's budget for the layer assembly. */
   leafContext?: LeafContext;
+  /** Receives the renderer inputs of a non-faceted compile, for the playback freeze. */
+  frameCapture?: FrameCapture;
 }

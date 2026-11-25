@@ -22,7 +22,11 @@ import type {
   LayerSpec,
 } from '@opendata-ai/openchart-core';
 import { isLayerSpec } from '@opendata-ai/openchart-core';
-import { resolveLayerTheme } from '@opendata-ai/openchart-engine';
+import {
+  compileChartPlayback,
+  hasTimeEncoding,
+  resolveLayerTheme,
+} from '@opendata-ai/openchart-engine';
 import { cancelAnimations, computeAnimationDuration } from './animation';
 import { createEditSession } from './chart-editing';
 import { createChartExporter } from './chart-export';
@@ -52,6 +56,7 @@ import {
   resolveInteractionMode,
   type UpdateOptions,
 } from './mount-types';
+import { type ChartPlaybackMount, mountChartPlayback } from './playback/chart-session';
 import { observeResize } from './resize-observer';
 import { resolveDarkMode } from './resolve-dark-mode';
 import type { EntranceHandle } from './scatter-canvas/entrance';
@@ -137,6 +142,8 @@ export function createChart<TData extends DataRow = DataRow>(
   // and resizes need no canvas-specific handling beyond destroying it here.
   let canvasLayer: ScatterCanvasLayer | null = null;
   let canvasEntrance: EntranceHandle | null = null;
+  // Playback for a spec with encoding.time; null otherwise.
+  let chartPlayback: ChartPlaybackMount | null = null;
   let warnedCanvasEditMode = false;
   let srTableWrapper: HTMLElement | null = null;
   let destroyed = false;
@@ -355,6 +362,26 @@ export function createChart<TData extends DataRow = DataRow>(
     if (retainedSVG && svgElement) {
       reconcileSVG(retainedSVG, svgElement);
       svgElement = retainedSVG;
+    }
+    if (svgElement && hasTimeEncoding(currentSpec)) {
+      const mounted = mountChartPlayback({
+        container,
+        svg: svgElement,
+        playback: compileChartPlayback(currentSpec as ChartSpec, {
+          width: currentLayout.dimensions.width,
+          height: currentLayout.dimensions.height,
+          theme: options?.theme,
+          darkMode: resolveDarkMode(options?.darkMode),
+          watermark: options?.watermark,
+          measureText,
+        }),
+        darkMode: currentLayout.theme.isDark,
+      });
+      chartPlayback = mounted;
+      track(() => {
+        mounted.destroy();
+        chartPlayback = null;
+      });
     }
     tooltipManager = createTooltipManager(container);
 
@@ -942,7 +969,7 @@ export function createChart<TData extends DataRow = DataRow>(
       return currentLayout;
     },
     get playback() {
-      return null;
+      return chartPlayback?.controller ?? null;
     },
     getSelectedElement(): ElementRef | null {
       return edits.selected;
