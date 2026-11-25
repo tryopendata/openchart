@@ -5,7 +5,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ChartSpec } from "@opendata-ai/openchart-core";
-import { compileChart, compileChartPlayback } from "@opendata-ai/openchart-engine";
+import { compileChart, compileChartPlayback, isTrailMark } from "@opendata-ai/openchart-engine";
 import { describe, expect, it } from "vitest";
 import { staticSvgPair } from "../../lib/demo/static-svg";
 import { validateDemo } from "../../lib/demo/validate";
@@ -148,7 +148,7 @@ describe("the animated bubble chart post's figures", () => {
       });
       expect(warnings, demo.id).toEqual([]);
       expect(
-        layout.marks.filter((mark) => mark.type === "point"),
+        layout.marks.filter((mark) => mark.type === "point" && !isTrailMark(mark)),
         demo.id,
       ).toHaveLength(
         (demo.spec as ChartSpec).data.filter(
