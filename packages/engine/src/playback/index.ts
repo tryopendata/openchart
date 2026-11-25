@@ -1,3 +1,8 @@
+export {
+  PLAYBACK_LABEL_KEY_PREFIX,
+  playbackLabelKey,
+  playbackLabelPointKey,
+} from '../charts/scatter/playback-labels';
 export { compileChartPlayback } from './chart-playback';
 export type {
   ChartPlayback,
@@ -16,6 +21,7 @@ export {
   type PlaybackMatrixOptions,
 } from './matrix';
 export { type ResolvedPlayback, resolvePlayback } from './options';
+export { PERIOD_LABEL_KEY } from './overlays';
 export { formatPeriodLabels } from './period-labels';
 export {
   orderPeriods,

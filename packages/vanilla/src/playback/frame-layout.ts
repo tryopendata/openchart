@@ -3,21 +3,21 @@
  * `sampleLayout()` and exports: the frame's marks and overlays as the reader sees them.
  */
 import type { ChartLayout, LineMark, Mark } from '@opendata-ai/openchart-core';
-import type { ChartPlayback, FrameMark } from '@opendata-ai/openchart-engine';
+import {
+  type ChartPlayback,
+  type FrameMark,
+  playbackLabelPointKey,
+} from '@opendata-ai/openchart-engine';
 
 /** Matches the live trail stroke in chart-trails.ts. */
 const TRAIL_STROKE_WIDTH = 1.5;
 const TRAIL_OPACITY = 0.45;
 
-/** Key prefix of a name label; the rest of the key is its point's key. */
-const NAME_LABEL_KEY_PREFIX = 'oc-playback-label|';
-
 /** Whether `key` is hidden: listed in `hiddenKeys`, or a name label for a hidden point. */
 function isHidden(key: string, hiddenKeys: ReadonlySet<string>): boolean {
   if (hiddenKeys.has(key)) return true;
-  return (
-    key.startsWith(NAME_LABEL_KEY_PREFIX) && hiddenKeys.has(key.slice(NAME_LABEL_KEY_PREFIX.length))
-  );
+  const pointKey = playbackLabelPointKey(key);
+  return pointKey !== null && hiddenKeys.has(pointKey);
 }
 
 /**

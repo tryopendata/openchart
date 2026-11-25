@@ -5,12 +5,11 @@
 import type {
   ChartSpec,
   CompileOptions,
-  DataRow,
   Encoding,
   EncodingChannel,
   Mark,
 } from '@opendata-ai/openchart-core';
-import { createFrameDrawer, type FrameDrawer } from '../charts/scatter/playback-frames';
+import { createFrameDrawer, createFrameMarks } from '../charts/scatter/playback-frames';
 import { prepareChartSpec } from '../compile/prepare';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { computeTooltipDescriptors } from '../tooltips/compute';
@@ -20,22 +19,16 @@ import {
   playbackIdentity,
   playbackStaticFields,
 } from './channels';
-import type { ChartPlayback, FrameMark, FrozenChartFrame, ObservedValues } from './chart-types';
+import type { ChartPlayback, FrameMark, ObservedValues } from './chart-types';
 import { collectPlaybackWarnings } from './chart-warnings';
 import { createFrameSampler, type FrameSampler } from './frame-sampler';
 import { freezeChartFrame, specMarkType } from './freeze';
 import { buildPlaybackMatrix, type PlaybackChannel, type PlaybackMatrix } from './matrix';
-import { type ResolvedPlayback, resolvePlayback } from './options';
-import {
-  buildFrameOverlays,
-  decideLabelSides,
-  type OverlayPlan,
-  type PeriodLabelKind,
-  paintOrder,
-  periodLabelPlacement,
-} from './overlays';
+import { resolvePlayback } from './options';
+import { createOverlaysAt } from './overlay-plan';
+import { paintOrder } from './overlays';
 import { formatPeriodLabels } from './period-labels';
-import type { PlaybackPeriod, PlaybackTimeEncoding, PlaybackTimeType } from './periods';
+import type { PlaybackTimeEncoding, PlaybackTimeType } from './periods';
 import { resolveTrailKeys, trailsAt } from './trails';
 
 /**
@@ -75,85 +68,6 @@ function observedValues(
     if (Number.isFinite(value)) values[field] = formatters[field](value);
   }
   return values;
-}
-
-/**
- * Remembers the last frame drawn. The frame writer asks for the marks and the overlays at
- * the same `t`, and the overlays are built from the marks, so each frame draws once.
- */
-function lastFrameCache(drawAt: (t: number) => FrameMark[]): (t: number) => FrameMark[] {
-  let lastT = Number.NaN;
-  let lastFrame: FrameMark[] = [];
-  return (t) => {
-    if (t !== lastT) {
-      lastFrame = drawAt(t);
-      lastT = t;
-    }
-    return lastFrame;
-  };
-}
-
-/** Fewer periods with values than this and the chart renders static (RFC 2.7). */
-const MIN_PLAYBACK_PERIODS = 2;
-
-/** Whether at least two periods have a drawn key, so the run has periods worth labelling. */
-function hasPlayablePeriods(sampler: FrameSampler, order: number[]): boolean {
-  let withValues = 0;
-  for (let period = 0; period < sampler.matrix.periods.length; period++) {
-    if (order.some((keyIndex) => sampler.isPresent(keyIndex, period))) withValues++;
-    if (withValues >= MIN_PLAYBACK_PERIODS) return true;
-  }
-  return false;
-}
-
-/**
- * What `auto` places the period label for: a mirrored bar chart is a pyramid, which keeps
- * the upper right corner clear; plain bars and points take it centered behind the marks.
- */
-function periodLabelKind(source: ChartSpec, frame: FrozenChartFrame): PeriodLabelKind {
-  const mirrored = specMarkType(source) === 'bar' && frame.spec.markDef.mirror === true;
-  return mirrored ? 'pyramid' : 'scatter';
-}
-
-/** The marks at every period of the run, for decisions that must hold across all of them. */
-function* periodFrames(marksAt: (t: number) => FrameMark[], periodCount: number) {
-  for (let period = 0; period < periodCount; period++) yield marksAt(period);
-}
-
-/**
- * Period label text and placement, and each name label's side, fixed for the run. A run
- * without two playable periods renders as a static chart, which shows no period label.
- */
-function planOverlays(
-  source: ChartSpec,
-  frame: FrozenChartFrame,
-  timing: ResolvedPlayback,
-  periods: PlaybackPeriod[] | null,
-  time: EncodingChannel,
-  marksAt: (t: number) => FrameMark[],
-  periodCount: number,
-): OverlayPlan {
-  const { period } = timing;
-  const kind = periodLabelKind(source, frame);
-  const periodTexts =
-    period === false || periods === null
-      ? null
-      : formatPeriodLabels(periods, period.format ? { ...time, format: period.format } : time);
-  return {
-    periodTexts,
-    placement: periodLabelPlacement(
-      period === false ? 'auto' : period.position,
-      frame.chartArea,
-      kind,
-    ),
-    labelSides: decideLabelSides(
-      source.playback?.labels ?? [],
-      periodFrames(marksAt, periodCount),
-      frame.theme,
-      frame.chartArea,
-    ),
-    theme: frame.theme,
-  };
 }
 
 /** A time spec's transformed rows pivoted into the observed (not yet gap-filled) matrix. */
@@ -196,35 +110,6 @@ function pivotSpecRows(
     warn,
   );
   return { source, identity: identity.field, time, channels, observed };
-}
-
-/** Every base key's mark at `t`, in base order, drawn by the renderer from interpolated rows. */
-function drawFrame(
-  pivot: PivotedSpec,
-  sampler: FrameSampler,
-  order: number[],
-  draw: FrameDrawer,
-  t: number,
-): FrameMark[] {
-  const { matrix } = sampler;
-  const states = order.map((keyIndex) => sampler.stateAt(keyIndex, t));
-  const rows: DataRow[] = order.map((keyIndex, position) => {
-    const row: DataRow = { ...matrix.statics[keyIndex], [pivot.identity]: matrix.keys[keyIndex] };
-    for (const [channel, value] of states[position].values.entries()) {
-      if (Number.isFinite(value)) row[pivot.channels[channel].field] = value;
-    }
-    return row;
-  });
-  const drawn = draw(rows);
-  const frameMarks: FrameMark[] = [];
-  order.forEach((keyIndex, position) => {
-    const key = matrix.keys[keyIndex];
-    const mark = drawn.get(key);
-    // Statics are constant per key and held values stay finite, so a key the renderer
-    // draws once it draws at every t; this only skips keys it can never draw.
-    if (mark) frameMarks.push({ key, mark, presence: states[position].presence });
-  });
-  return frameMarks;
 }
 
 /** A compiled playback plus each frame's marks and overlays in paint order. */
@@ -272,28 +157,29 @@ export function compilePaintedChartPlayback(
   const timing = resolvePlayback(source.playback, observed.periods.length);
   const sampler = createFrameSampler(observed, channels, timing.gaps);
   const { matrix } = sampler;
-  collectPlaybackWarnings({ matrix, channels, timing, time: pivot.time }, warn);
+  // The authored spec: sugar turns a value sort into a fixed domain in `source`.
+  collectPlaybackWarnings({ matrix, channels, timing, time: pivot.time, spec }, warn);
 
   const frame = freezeChartFrame(source, { ...options, onWarn: warn }, matrix);
-  const draw = createFrameDrawer(frame, frame.layout.dimensions.width);
+  const draw = createFrameDrawer(frame, frame.layout.dimensions.width, options.measureText);
   const order = baseKeyOrder(matrix, sampler);
-  const marksAt = lastFrameCache((t: number) => drawFrame(pivot, sampler, order, draw, t));
+  const { marksAt, fixedMarksAt } = createFrameMarks(draw, sampler, order, {
+    identity: pivot.identity,
+    channelFields: channels.map(({ field }) => field),
+  });
   const finalPeriod = matrix.periods.length - 1;
   const periodLabels = formatPeriodLabels(matrix.periods, pivot.time);
-  const labelledPeriods = hasPlayablePeriods(sampler, order) ? matrix.periods : null;
-  const overlayPlan = planOverlays(
+  const overlaysFor = createOverlaysAt({
     source,
     frame,
     timing,
-    labelledPeriods,
-    pivot.time,
+    sampler,
+    order,
+    time: pivot.time,
     marksAt,
-    matrix.periods.length,
-  );
-  // The label shows the period the playhead has reached, like the controls and period events.
-  const overlaysFor = (t: number) =>
-    buildFrameOverlays(overlayPlan, marksAt(t), Math.min(finalPeriod, Math.max(0, Math.floor(t))));
-  const frameMarksAt = (t: number) => paintOrder(overlaysFor(t), marksAt(t));
+  });
+  const fixedMarks = fixedMarksAt(finalPeriod);
+  const frameMarksAt = (t: number) => paintOrder(overlaysFor(t), [...marksAt(t), ...fixedMarks]);
   const finalMarks = marksAt(finalPeriod);
   const baseMarks: Mark[] = frameMarksAt(finalPeriod).map(({ mark }) => mark);
   const trailKeys = source.playback?.trails

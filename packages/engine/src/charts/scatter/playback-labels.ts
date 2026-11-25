@@ -17,9 +17,19 @@ const LABEL_GAP = 4;
 /** Which side of its bubble a name label sits on. */
 export type PlaybackLabelSide = 'left' | 'right';
 
+/** Key prefix of every name label; the rest of the key is its point's key. */
+export const PLAYBACK_LABEL_KEY_PREFIX = 'oc-playback-label|';
+
 /** The name label's identity for the point keyed `pointKey`; frames match it by `data-key`. */
 export function playbackLabelKey(pointKey: string): string {
-  return `oc-playback-label|${pointKey}`;
+  return `${PLAYBACK_LABEL_KEY_PREFIX}${pointKey}`;
+}
+
+/** The point key a name label's key names, or null when `key` isn't a name label's. */
+export function playbackLabelPointKey(key: string): string | null {
+  return key.startsWith(PLAYBACK_LABEL_KEY_PREFIX)
+    ? key.slice(PLAYBACK_LABEL_KEY_PREFIX.length)
+    : null;
 }
 
 function labelFont(theme: ResolvedTheme) {

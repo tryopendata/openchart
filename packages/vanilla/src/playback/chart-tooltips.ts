@@ -3,7 +3,7 @@
  * at the current playhead, so an open tooltip follows the frame as playback moves.
  */
 import type { TooltipContent } from '@opendata-ai/openchart-core';
-import type { ChartPlayback } from '@opendata-ai/openchart-engine';
+import { type ChartPlayback, playbackLabelPointKey } from '@opendata-ai/openchart-engine';
 import type { HoverEmphasis } from '../interactions/hover-emphasis';
 import type { TooltipManager } from '../tooltip';
 import { playbackTooltip } from './tooltip';
@@ -33,22 +33,23 @@ interface HoverTarget {
   y: number;
 }
 
-/** Key prefix of the playback's overlay text marks (period label and name labels). */
-const OVERLAY_KEY_PREFIX = 'oc-playback-';
-/** Key prefix of a name label; the rest of the key is its point's key. */
-const NAME_LABEL_KEY_PREFIX = 'oc-playback-label|';
-
 /**
- * The point mark an event target stands for: the keyed mark it's in, or the point a name
- * label names. Other overlays (the period label) stand for no mark. CSS already makes the
- * overlays inert to the pointer; this keeps them so where that CSS isn't loaded.
+ * The data mark an event target stands for: the keyed mark it's in when that key is one the
+ * playback draws, or the point a name label names. The period label and the renderer's
+ * fixed labels (a pyramid's gutter and half labels) stand for no mark. CSS already makes
+ * the playback overlays inert to the pointer; this keeps them so where that CSS isn't loaded.
  */
-function keyedMark(svg: SVGElement, target: EventTarget | null): Element | null {
+function keyedMark(
+  svg: SVGElement,
+  playback: ChartPlayback | null,
+  target: EventTarget | null,
+): Element | null {
   const element = target instanceof Element ? target.closest('[data-key]') : null;
   const key = element?.getAttribute('data-key');
-  if (!element || !key?.startsWith(OVERLAY_KEY_PREFIX)) return element ?? null;
-  if (!key.startsWith(NAME_LABEL_KEY_PREFIX)) return null;
-  const pointKey = key.slice(NAME_LABEL_KEY_PREFIX.length);
+  if (!element || !key || !playback) return null;
+  const pointKey = playbackLabelPointKey(key);
+  if (pointKey === null) return playback.keys.includes(key) ? element : null;
+  if (!playback.keys.includes(pointKey)) return null;
   return svg.querySelector(`[data-key="${CSS.escape(pointKey)}"]`);
 }
 
@@ -78,14 +79,14 @@ export function wirePlaybackTooltips(options: PlaybackTooltipOptions): PlaybackT
   }
 
   function onPointerMove(event: Event) {
-    const element = keyedMark(svg, event.target);
+    const element = keyedMark(svg, options.playback(), event.target);
     const { clientX, clientY } = event as MouseEvent;
     if (element) hoverAt(element, clientX, clientY);
   }
 
   function onPointerOut(event: Event) {
     if (!hovered) return;
-    const next = keyedMark(svg, (event as MouseEvent).relatedTarget);
+    const next = keyedMark(svg, options.playback(), (event as MouseEvent).relatedTarget);
     if (next === hovered.element) return;
     hovered = null;
     tooltips.hide();
@@ -94,7 +95,7 @@ export function wirePlaybackTooltips(options: PlaybackTooltipOptions): PlaybackT
 
   function onTouchStart(event: Event) {
     const touch = (event as TouchEvent).touches[0];
-    const element = keyedMark(svg, event.target);
+    const element = keyedMark(svg, options.playback(), event.target);
     if (touch && element) hoverAt(element, touch.clientX, touch.clientY);
   }
 

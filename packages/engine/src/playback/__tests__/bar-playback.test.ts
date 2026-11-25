@@ -1,18 +1,15 @@
 /**
  * Bar charts with `encoding.time`: the mirrored pyramid and plain grouped and stacked bars,
  * driven through `compileChartPlayback` and compared with static compiles of single periods.
- *
- * Tests declared with `it.fails` pin behavior that needs changes in chart-playback.ts or the
- * frame drawer (charts/scatter/playback-frames.ts); each says which.
- * They flip to failures once the fix lands, so they get converted to `it` then.
  */
-import type {
-  ChartSpec,
-  CompileOptions,
-  DataRow,
-  Mark,
-  RectMark,
-  TextMarkLayout,
+import {
+  type ChartSpec,
+  type CompileOptions,
+  type DataRow,
+  estimateTextWidth,
+  type Mark,
+  type RectMark,
+  type TextMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { describe, expect, it } from 'vitest';
 import {
@@ -196,10 +193,7 @@ describe('mirrored bars over time', () => {
     expect(presence('Male|0-9', 0)).toBe(1);
   });
 
-  // Needs compileChartPlayback to keep the renderer's marks that aren't matrix keys (the
-  // `oc-mirror-category|*` gutter labels and `oc-mirror-half|*` half labels) in the base
-  // layout; drawFrame keeps only matrix keys, so both label sets vanish.
-  it.fails('keeps the gutter category labels and the half labels in the base layout', () => {
+  it('keeps the gutter category labels and the half labels in the base layout', () => {
     const expected = compileChart(staticPeriodSpec(pyramidSpec(), 2002, playback), compileOptions);
     for (const prefix of ['oc-mirror-category|', 'oc-mirror-half|']) {
       const want = textMarks(expected.marks, prefix).map(({ key, text, x, y }) => ({
@@ -219,10 +213,8 @@ describe('mirrored bars over time', () => {
     }
   });
 
-  // Needs the frame drawer (charts/scatter/playback-frames.ts) to pass the compile's
-  // measureText to the renderer: without it the mirror sizes its gutter from estimates while
-  // the frozen axis ticks were placed with the real measurements.
-  it.fails('puts the bars’ inner edges on the frozen axis zero ticks when text is measured', () => {
+  // The mirror sizes its gutter from measured text, as the frozen axis ticks were placed.
+  it('puts the bars’ inner edges on the frozen axis zero ticks when text is measured', () => {
     const measured: CompileOptions = {
       ...compileOptions,
       measureText: (text, fontSize) => ({ width: text.length * fontSize * 0.9, height: fontSize }),
@@ -286,6 +278,39 @@ describe('the Japan pyramid, 1950 to 2100', () => {
     };
     expect(pixelsPer('Male', '0-4', 30)).toBeCloseTo(pixelsPer('Male', '0-4', 0), 6);
     expect(pixelsPer('Female', '70-74', 15)).toBeCloseTo(pixelsPer('Male', '0-4', 0), 6);
+  });
+
+  it('shrinks the period label on a phone so no bar or value label in any year reaches it', () => {
+    const narrow = compileChartPlayback(pyramidSpec(rows, JAPAN_AGE_GROUPS), {
+      ...compileOptions,
+      width: 360,
+      height: 600,
+    });
+    const labelAt = (run: ChartPlayback, t: number) => {
+      const found = run.overlaysAt(t).find(({ key }) => key === PERIOD_LABEL_KEY)?.mark;
+      if (found?.type !== 'textMark') throw new Error('no period label');
+      return found;
+    };
+    const label = labelAt(narrow, 0);
+    expect(label.fontSize).toBeLessThan(labelAt(playback, 0).fontSize);
+    const weight = narrow.frame.theme.fonts.weights.bold;
+    const labelLeft = label.x - estimateTextWidth('2100', label.fontSize, weight);
+    const labelBottom = label.y + label.fontSize * 0.8;
+    for (let period = 0; period < narrow.periods.length; period++) {
+      for (const { mark } of narrow.marksAt(period)) {
+        if (mark.type !== 'rect') continue;
+        if (mark.y < labelBottom) expect(mark.x + mark.width).toBeLessThanOrEqual(labelLeft);
+        const value = mark.label;
+        if (!value?.visible || value.style.textAnchor === 'end') continue;
+        const { fontSize, fontWeight, dominantBaseline } = value.style;
+        const valueTop =
+          dominantBaseline === 'central' ? value.y - fontSize / 2 : value.y - fontSize;
+        if (valueTop >= labelBottom) continue;
+        expect(value.x + estimateTextWidth(value.text, fontSize, fontWeight)).toBeLessThanOrEqual(
+          labelLeft,
+        );
+      }
+    }
   });
 
   it('stacks the oldest group on top and the youngest at the bottom', () => {
