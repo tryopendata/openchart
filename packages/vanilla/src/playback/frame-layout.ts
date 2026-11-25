@@ -2,16 +2,14 @@
  * The chart layout a playback chart shows at a playhead, for `chart.layout`,
  * `sampleLayout()` and exports: the frame's marks and overlays as the reader sees them.
  */
-import type { ChartLayout, LineMark, Mark } from '@opendata-ai/openchart-core';
+import type { ChartLayout, Mark } from '@opendata-ai/openchart-core';
 import {
   type ChartPlayback,
   type FrameMark,
   playbackLabelPointKey,
+  trailColorsByKey,
+  trailMarks,
 } from '@opendata-ai/openchart-engine';
-
-/** Matches the live trail stroke in chart-trails.ts. */
-const TRAIL_STROKE_WIDTH = 1.5;
-const TRAIL_OPACITY = 0.45;
 
 /** Whether `key` is hidden: listed in `hiddenKeys`, or a name label for a hidden point. */
 function isHidden(key: string, hiddenKeys: ReadonlySet<string>): boolean {
@@ -30,32 +28,15 @@ function visibleMark({ mark, presence }: FrameMark): Mark | null {
   return { ...mark, fillOpacity: (mark.fillOpacity ?? 1) * presence };
 }
 
-function markColor(mark: Mark | undefined): string {
-  if (mark?.type === 'point' && typeof mark.fill === 'string') return mark.fill;
-  return 'currentColor';
-}
-
-/** The playback's trails at `t` as decorative line marks, so exports and readers carry them. */
-function trailMarks(
+/** The playback's trails at `t`, minus hidden keys, as the engine's decorative trail marks. */
+function visibleTrailMarks(
   playback: ChartPlayback,
   t: number,
   base: ChartLayout,
   hiddenKeys: ReadonlySet<string>,
-): LineMark[] {
-  const byKey = new Map(base.marks.map((mark) => [String(mark.key), mark]));
-  return playback
-    .trailsAt(t)
-    .filter((trail) => !hiddenKeys.has(trail.key))
-    .map((trail) => ({
-      type: 'line',
-      key: `oc-playback-trail|${trail.key}`,
-      points: [...trail.points, trail.head],
-      stroke: markColor(byKey.get(trail.key)),
-      strokeWidth: TRAIL_STROKE_WIDTH,
-      opacity: TRAIL_OPACITY,
-      data: [],
-      aria: { decorative: true },
-    }));
+): Mark[] {
+  const trails = playback.trailsAt(t).filter((trail) => !hiddenKeys.has(trail.key));
+  return trailMarks(trails, trailColorsByKey(base));
 }
 
 /**
@@ -76,7 +57,7 @@ export function layoutAtPlayhead(
   for (const frameMark of [...playback.marksAt(t), ...playback.overlaysAt(t)]) {
     frameMarks.set(frameMark.key, visibleMark(frameMark));
   }
-  const marks: Mark[] = [...trailMarks(playback, t, base, hiddenKeys)];
+  const marks: Mark[] = visibleTrailMarks(playback, t, base, hiddenKeys);
   for (const mark of base.marks) {
     const key = mark.key === undefined ? undefined : String(mark.key);
     if (key === undefined) {
