@@ -1,3 +1,8 @@
+/**
+ * The error type for data that cannot form a playback matrix. Spec problems go through
+ * validation instead; this covers what only the rows reveal.
+ */
+
 /** Codes for data that cannot form a playback matrix. */
 export type PlaybackDataErrorCode = 'DUPLICATE_KEY_PERIOD' | 'TOO_FEW_PERIODS' | 'NO_VALUES';
 
@@ -8,7 +13,8 @@ export class PlaybackDataError extends Error {
   constructor(
     readonly code: PlaybackDataErrorCode,
     message: string,
+    options?: ErrorOptions,
   ) {
-    super(message);
+    super(message, options);
   }
 }

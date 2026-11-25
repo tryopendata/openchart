@@ -1,6 +1,8 @@
+/** Validation of a race's `race` block and of the `playback` block a race may carry instead. */
 import { jsonPointer, type RaceConfig } from '@opendata-ai/openchart-core';
 import type { ValidationError } from '../types';
 import { didYouMean } from './helpers';
+import { validatePlaybackBlock } from './playback';
 
 const RACE_OPTIONS = [
   'top',
@@ -16,6 +18,25 @@ const RACE_OPTIONS = [
   'period',
   'summary',
 ] satisfies (keyof RaceConfig)[];
+
+/** Field order of race block errors. '' is the block itself (duration and step together). */
+const RACE_ERROR_ORDER = [
+  '',
+  'top',
+  'duration',
+  'step',
+  'swap',
+  'holdEnd',
+  'rescale',
+  'gaps',
+  'loop',
+  'controls',
+  'autoplay',
+  'summary',
+  'period',
+];
+
+const CHART_ONLY_PLAYBACK_OPTIONS = ['labels', 'trails'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -40,40 +61,20 @@ function checkUnknownRaceKeys(race: Record<string, unknown>, errors: ValidationE
   }
 }
 
-function checkTiming(race: Record<string, unknown>, errors: ValidationError[]): number {
-  if (race.duration !== undefined && race.step !== undefined) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race',
-      message: 'Spec error: race.duration and race.step are mutually exclusive',
-      suggestion:
-        'Keep duration for the whole race or step for each period. Remove the other option.',
-    });
-  }
-
-  const timingErrorStart = errors.length;
-  const timingExamples = { duration: 12000, step: 700, swap: 0, holdEnd: 0 };
-  for (const [option, example] of Object.entries(timingExamples)) {
-    const value = race[option];
-    if (value === undefined) continue;
-    const allowZero = option === 'swap' || option === 'holdEnd';
-    if (!isFiniteNumber(value) || value < 0 || (value === 0 && !allowZero)) {
-      errors.push({
-        code: 'INVALID_VALUE',
-        path: jsonPointer('race', option),
-        message: `Spec error: race.${option} must be a finite number ${allowZero ? 'of zero or more' : 'greater than zero'}`,
-        suggestion: `Use ${option}: ${example} or omit the option. Times are in milliseconds.`,
-      });
-    }
-  }
-  return timingErrorStart;
+function checkSwap(swap: unknown, errors: ValidationError[]): void {
+  if (swap === undefined || (isFiniteNumber(swap) && swap >= 0)) return;
+  errors.push({
+    code: 'INVALID_VALUE',
+    path: '/race/swap',
+    message: 'Spec error: race.swap must be a finite number of zero or more',
+    suggestion: 'Use swap: 0 or omit the option. Times are in milliseconds.',
+  });
 }
 
-function checkScale(race: Record<string, unknown>, errors: ValidationError[], topAt: number): void {
-  const { top, rescale, gaps } = race;
+function checkScale(race: Record<string, unknown>, errors: ValidationError[]): void {
+  const { top, rescale } = race;
   if (top !== undefined && (!isFiniteNumber(top) || !Number.isInteger(top) || top < 1)) {
-    // Preserve the order of diagnostics. Report top before individual timing values.
-    errors.splice(topAt, 0, {
+    errors.push({
       code: 'INVALID_VALUE',
       path: '/race/top',
       message: 'Spec error: race.top must be an integer of at least 1',
@@ -95,73 +96,62 @@ function checkScale(race: Record<string, unknown>, errors: ValidationError[], to
         'Use "frame" to follow visible values, "fixed" to keep one scale, or { min: 100 } to set a floor on the maximum.',
     });
   }
+}
 
-  if (gaps !== undefined && gaps !== 'interpolate' && gaps !== 'hold' && gaps !== 'drop') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/gaps',
-      message: 'Spec error: race.gaps must be "interpolate", "hold", or "drop"',
-      suggestion:
-        'Use "interpolate" to fill gaps between observed periods, "hold" to carry the last value, or "drop" to leave values absent.',
-    });
+function checkSummary(summary: unknown, errors: ValidationError[]): void {
+  if (summary === undefined || summary === 'sum' || summary === false) return;
+  errors.push({
+    code: 'INVALID_VALUE',
+    path: '/race/summary',
+    message: 'Spec error: race.summary must be "sum" or false',
+    suggestion: 'Use "sum" to show the total for visible items or false to hide the summary.',
+  });
+}
+
+/** The race block field an error path names: `/race/period/format` gives `period`, `/race` gives ''. */
+function raceField(path: string): string {
+  return path.split('/')[2] ?? '';
+}
+
+/** Shared and race-only field checks, reported in the race's field order. */
+function checkRaceFields(race: Record<string, unknown>, errors: ValidationError[]): void {
+  const fieldErrors: ValidationError[] = [];
+  validatePlaybackBlock('race', race, fieldErrors);
+  checkScale(race, fieldErrors);
+  checkSwap(race.swap, fieldErrors);
+  checkSummary(race.summary, fieldErrors);
+  const rank = (error: ValidationError) => RACE_ERROR_ORDER.indexOf(raceField(error.path));
+  errors.push(...fieldErrors.sort((a, b) => rank(a) - rank(b)));
+}
+
+function checkPlaybackAgainstRace(
+  race: unknown,
+  playback: Record<string, unknown>,
+  errors: ValidationError[],
+): void {
+  for (const field of Object.keys(playback)) {
+    if (CHART_ONLY_PLAYBACK_OPTIONS.includes(field)) {
+      errors.push({
+        code: 'INVALID_VALUE',
+        path: jsonPointer('playback', field),
+        message: `Spec error: playback.${field} applies to point and circle charts only`,
+        suggestion: `Remove playback.${field} from the race spec.`,
+      });
+    } else if (isRecord(race) && race[field] !== undefined && playback[field] !== undefined) {
+      errors.push({
+        code: 'INVALID_VALUE',
+        path: jsonPointer('playback', field),
+        message: `Spec error: ${field} is set in both race and playback`,
+        suggestion: `Keep ${field} in one block. Remove it from race or from playback.`,
+      });
+    }
   }
 }
 
-function checkPeriod(period: unknown, errors: ValidationError[]): void {
-  if (period === undefined || period === false) return;
-  if (!isRecord(period)) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/period',
-      message: 'Spec error: race.period must be false or an object',
-      suggestion:
-        'Use period: false to hide the label, period: { format: "%Y" } to format it, or omit period to use the default label.',
-    });
-    return;
-  }
-  if (period.format !== undefined && typeof period.format !== 'string') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/period/format',
-      message: 'Spec error: race.period.format must be a string',
-      suggestion: 'Use a format string such as format: "%Y" for temporal years or omit format.',
-    });
-  }
-}
-
-function validatePlaybackOptions(race: Record<string, unknown>, errors: ValidationError[]): void {
-  for (const option of ['loop', 'controls']) {
-    if (race[option] === undefined || typeof race[option] === 'boolean') continue;
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: jsonPointer('race', option),
-      message: `Spec error: race.${option} must be true or false`,
-      suggestion: `Use ${option}: false to disable it or ${option}: true to enable it.`,
-    });
-  }
-
-  const { autoplay, summary, period } = race;
-  if (autoplay !== undefined && autoplay !== 'visible' && typeof autoplay !== 'boolean') {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/autoplay',
-      message: 'Spec error: race.autoplay must be "visible", true, or false',
-      suggestion:
-        'Use "visible" to start when the chart is in view, true to start immediately, or false to wait for play.',
-    });
-  }
-  if (summary !== undefined && summary !== 'sum' && summary !== false) {
-    errors.push({
-      code: 'INVALID_VALUE',
-      path: '/race/summary',
-      message: 'Spec error: race.summary must be "sum" or false',
-      suggestion: 'Use "sum" to show the total for visible items or false to hide the summary.',
-    });
-  }
-
-  checkPeriod(period, errors);
-}
-
+/**
+ * Append problems with a race's `race` block to `errors` without throwing: unknown options
+ * first, then each field's problems in the race's field order.
+ */
 export function validateOptions(race: unknown, errors: ValidationError[]): void {
   if (race === undefined) return;
   if (!isRecord(race)) {
@@ -175,7 +165,20 @@ export function validateOptions(race: unknown, errors: ValidationError[]): void 
   }
 
   checkUnknownRaceKeys(race, errors);
-  const timingErrorStart = checkTiming(race, errors);
-  checkScale(race, errors, timingErrorStart);
-  validatePlaybackOptions(race, errors);
+  checkRaceFields(race, errors);
+}
+
+/**
+ * Append problems with a race's top-level `playback` block to `errors` without throwing:
+ * the shared playback checks, the chart-only `labels` and `trails`, and any field also set
+ * in `race`, each at `/playback/<field>`.
+ */
+export function validateRacePlayback(
+  race: unknown,
+  playback: unknown,
+  errors: ValidationError[],
+): void {
+  if (playback === undefined) return;
+  validatePlaybackBlock('playback', playback, errors);
+  if (isRecord(playback)) checkPlaybackAgainstRace(race, playback, errors);
 }

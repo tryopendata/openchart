@@ -1,3 +1,4 @@
+/** Playback timing defaults shared by the race and the playback charts and maps. */
 import type { PlaybackPeriodPosition, PlaybackTimingConfig } from '@opendata-ai/openchart-core';
 import type { PlaybackGaps } from './matrix';
 
@@ -14,6 +15,40 @@ export interface ResolvedPlayback {
   period: false | { format?: string; position: PlaybackPeriodPosition };
 }
 
+const DEFAULT_HOLD_END_MS = 1500;
+const DEFAULT_MS_PER_PERIOD = 700;
+const MIN_DEFAULT_DURATION_MS = 8000;
+const MAX_DEFAULT_DURATION_MS = 90000;
+
+function resolveDurationMs(
+  block: PlaybackTimingConfig,
+  periodCount: number,
+  blockName: string,
+): number {
+  if (block.step === undefined) {
+    return (
+      block.duration ??
+      Math.max(
+        MIN_DEFAULT_DURATION_MS,
+        Math.min(MAX_DEFAULT_DURATION_MS, periodCount * DEFAULT_MS_PER_PERIOD),
+      )
+    );
+  }
+  const durationMs = block.step * (periodCount - 1);
+  if (!Number.isFinite(durationMs)) {
+    throw new RangeError(
+      `${blockName}.step is too large for ${periodCount} periods. Use a shorter step.`,
+    );
+  }
+  return durationMs;
+}
+
+function resolvePeriod(period: PlaybackTimingConfig['period']): ResolvedPlayback['period'] {
+  if (period === false) return false;
+  const position = period?.position ?? 'auto';
+  return period?.format === undefined ? { position } : { format: period.format, position };
+}
+
 /**
  * Apply the shared playback defaults: holdEnd 1500, loop false, autoplay "visible",
  * controls true, gaps "interpolate", period { position: "auto" }. Duration is `step x
@@ -28,8 +63,14 @@ export function resolvePlayback(
   periodCount: number,
   blockName: 'race' | 'playback' = 'playback',
 ): ResolvedPlayback {
-  void block;
-  void periodCount;
-  void blockName;
-  throw new Error('not implemented');
+  const timing = block ?? {};
+  return {
+    durationMs: resolveDurationMs(timing, periodCount, blockName),
+    holdEndMs: timing.holdEnd ?? DEFAULT_HOLD_END_MS,
+    loop: timing.loop ?? false,
+    autoplay: timing.autoplay ?? 'visible',
+    controls: timing.controls ?? true,
+    gaps: timing.gaps ?? 'interpolate',
+    period: resolvePeriod(timing.period),
+  };
 }

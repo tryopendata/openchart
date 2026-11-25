@@ -1,11 +1,7 @@
-/** Data that cannot form a race timeline. */
-export class RaceDataError extends Error {
-  override readonly name = 'RaceDataError';
+/** The race's name for playback data errors, so race callers keep their `instanceof` checks. */
+import { PlaybackDataError } from '../playback/errors';
 
-  constructor(
-    readonly code: 'DUPLICATE_KEY_PERIOD' | 'TOO_FEW_PERIODS' | 'NO_VALUES',
-    message: string,
-  ) {
-    super(message);
-  }
+/** Data that cannot form a race timeline. A `PlaybackDataError` with the race's name. */
+export class RaceDataError extends PlaybackDataError {
+  override readonly name: string = 'RaceDataError';
 }
