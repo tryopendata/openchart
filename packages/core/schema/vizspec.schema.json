@@ -17278,7 +17278,7 @@
           "required": [
             "field"
           ],
-          "description": "Playback field. Temporal dates or years and quantitative values sort by value. Ordinal values use `sort` or first-seen order."
+          "description": "Playback field. Temporal dates or years and quantitative values sort by value. Ordinal values use a `sort` array, first-seen order, or the reverse of first-seen order with `sort: \"descending\"`."
         },
         "key": {
           "type": "object",

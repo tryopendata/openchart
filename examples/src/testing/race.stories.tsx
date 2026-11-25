@@ -26,6 +26,11 @@ const gdp: RaceSpec = {
 };
 
 const loop: RaceSpec = { ...gdp, race: { loop: true, top: 5 } };
+const playbackBlock: RaceSpec = {
+  ...gdp,
+  race: { top: 5 },
+  playback: { duration: 12000, loop: true },
+};
 const fixed: RaceSpec = { ...gdp, race: { rescale: 'fixed' } };
 const noControls: RaceSpec = { ...gdp, race: { controls: false, autoplay: true } };
 const barStill: RaceSpec = { ...gdp, race: { autoplay: false } };
@@ -125,6 +130,7 @@ function RaceStory({
 
 export const Bar = () => <RaceStory spec={gdp} belowFold />;
 export const Loop = () => <RaceStory spec={loop} />;
+export const PlaybackBlock = () => <RaceStory spec={playbackBlock} />;
 export const FixedScale = () => <RaceStory spec={fixed} />;
 export const NoControls = () => <RaceStory spec={noControls} />;
 export const Dark = () => <RaceStory spec={gdp} dark />;

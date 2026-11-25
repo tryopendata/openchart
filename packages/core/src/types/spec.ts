@@ -3337,7 +3337,7 @@ type RaceFieldEncoding<TType extends FieldType = FieldType> = Omit<EncodingChann
 
 /** Field mappings shared by bar, line, and table races. */
 export interface RaceEncoding {
-  /** Playback field. Temporal dates or years and quantitative values sort by value. Ordinal values use `sort` or first-seen order. */
+  /** Playback field. Temporal dates or years and quantitative values sort by value. Ordinal values use a `sort` array, first-seen order, or the reverse of first-seen order with `sort: "descending"`. */
   time: RaceFieldEncoding<'temporal' | 'ordinal' | 'quantitative'>;
   /** Stable identity across periods. Also the display name by default. */
   key: RaceFieldEncoding;
