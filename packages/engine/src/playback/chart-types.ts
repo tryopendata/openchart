@@ -75,7 +75,7 @@ export interface ChartPlayback {
   /**
    * The layout the DOM is built from: the frozen layout with one mark per key in the union
    * of all periods, drawn at the final period, ordered by maximum size so small marks draw
-   * on top.
+   * on top. The period label comes before those marks and the name labels after them.
    */
   base: ChartLayout;
   /** Periods in playback order. */
@@ -89,6 +89,13 @@ export interface ChartPlayback {
   warnings: string[];
   /** One entry per base key, in base order. `t` is a continuous period index, clamped. */
   marksAt(t: number): FrameMark[];
+  /**
+   * Text marks drawn over the run at `t`: the period label (key `oc-playback-period`, absent
+   * when `playback.period` is false) first, then one name label per `playback.labels` key
+   * (key `oc-playback-label|<key>`) beside its point, with the point's presence. Optional
+   * only so hand-built test doubles can leave it out; `compileChartPlayback` always sets it.
+   */
+  overlaysAt?(t: number): FrameMark[];
   /** Trails for the keys `playback.trails` names; empty when trails are off. */
   trailsAt(t: number): TrailPath[];
   /** The key's values at the period nearest `t`, or null when the key has none there. */
