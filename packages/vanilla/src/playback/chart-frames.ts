@@ -27,8 +27,8 @@ function writePresence(element: Element, presence: number): void {
 
 /**
  * Bind to the `[data-key]` mark elements of `svg` and write each frame's geometry (cx, cy,
- * r for points; x, y, width, height for rects) and opacity (`presence` times the mark's own
- * opacity) by key. Keys with no element are ignored, and elements without `data-key` are
+ * r for points; x, y, width, height for rects) and `presence` as the `opacity` attribute, by
+ * key. Fill opacity stays as the renderer set it. Keys with no element are ignored, and elements without `data-key` are
  * never touched; matching never uses array position or `data-mark-id`.
  */
 export function createChartFrameWriter(svg: SVGElement, playback: ChartPlayback): ChartFrameWriter {
