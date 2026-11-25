@@ -3,7 +3,7 @@
  * few periods, too many marks, irregular period spacing, too little time per period, an
  * oversized matrix, and autoplay without controls.
  */
-import { largestPeriodCount } from './freeze';
+import { presentCountsByPeriod } from './freeze';
 import type { PlaybackChannel, PlaybackMatrix } from './matrix';
 import type { ResolvedPlayback } from './options';
 import type { PlaybackPeriod, PlaybackTimeEncoding } from './periods';
@@ -12,6 +12,8 @@ const MAX_MARKS_PER_PERIOD = 1000;
 const MIN_MS_PER_PERIOD = 50;
 const MAX_MATRIX_CELLS = 2_000_000;
 const MS_PER_DAY = 86_400_000;
+/** Numeric temporal periods below this magnitude are years; larger ones are epoch ms. */
+const YEAR_LIMIT = 10_000;
 
 /** What the warnings inspect: the gap-filled matrix, its channels and the timing. */
 export interface WarningInput {
@@ -24,7 +26,8 @@ export interface WarningInput {
 /** Gaps between consecutive temporal periods, in the coarsest calendar unit that fits. */
 function periodSpacing(periods: PlaybackPeriod[]): { gaps: number[]; unit: string } {
   const plainYears = periods.every(
-    ({ value, sortKey }) => typeof value === 'number' && value === sortKey,
+    ({ value, sortKey }) =>
+      Number.isInteger(value) && Math.abs(value as number) < YEAR_LIMIT && value === sortKey,
   );
   const dates = periods.map(
     ({ value, sortKey }) => new Date(plainYears ? Date.UTC(Number(value), 0, 1) : sortKey),
@@ -59,6 +62,32 @@ function warnIrregularSpacing(input: WarningInput, warn: (message: string) => vo
   );
 }
 
+/** Values a log axis drops, too few periods with values, and too many marks per period. */
+function warnAboutValues(input: WarningInput, warn: (message: string) => void): void {
+  const { matrix, channels, time } = input;
+  for (const channel of channels) {
+    const count = matrix.nonPositiveCounts[channel.name];
+    if (count > 0) {
+      warn(
+        `${count} values <= 0 in '${channel.field}' can't sit on a log scale, so playback treats them as missing.`,
+      );
+    }
+  }
+  const counts = presentCountsByPeriod(matrix);
+  const periodsWithValues = counts.filter((count) => count > 0).length;
+  if (periodsWithValues < 2) {
+    warn(
+      `Playback needs at least two periods with values in '${time.field}' and found ${periodsWithValues}, so the chart renders as a static chart.`,
+    );
+  }
+  const perPeriod = Math.max(0, ...counts);
+  if (perPeriod > MAX_MARKS_PER_PERIOD) {
+    warn(
+      `${perPeriod} marks in one period of '${time.field}' is more than the ${MAX_MARKS_PER_PERIOD.toLocaleString('en')} that playback draws smoothly in SVG. Filter the data to fewer keys.`,
+    );
+  }
+}
+
 /**
  * Send every advisory warning about a chart playback's data and timing to `warn`.
  * Never throws: these are advice, not errors.
@@ -69,25 +98,7 @@ export function collectPlaybackWarnings(
 ): void {
   const { matrix, channels, timing, time } = input;
   const periodCount = matrix.periods.length;
-  for (const channel of channels) {
-    const count = matrix.nonPositiveCounts[channel.name];
-    if (count > 0) {
-      warn(
-        `${count} values <= 0 in '${channel.field}' can't sit on a log scale, so playback treats them as missing.`,
-      );
-    }
-  }
-  if (periodCount < 2) {
-    warn(
-      `Playback needs at least two periods in '${time.field}' and found ${periodCount}, so the chart renders as a static chart.`,
-    );
-  }
-  const perPeriod = largestPeriodCount(matrix);
-  if (perPeriod > MAX_MARKS_PER_PERIOD) {
-    warn(
-      `${perPeriod} points in one period of '${time.field}' is more than the ${MAX_MARKS_PER_PERIOD.toLocaleString('en')} that playback draws smoothly in SVG. Filter the data to fewer keys.`,
-    );
-  }
+  warnAboutValues(input, warn);
   warnIrregularSpacing(input, warn);
   const msPerPeriod = periodCount >= 2 ? timing.durationMs / (periodCount - 1) : Infinity;
   if (msPerPeriod < MIN_MS_PER_PERIOD) {

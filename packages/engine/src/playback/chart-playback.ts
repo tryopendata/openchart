@@ -10,30 +10,34 @@ import type {
   EncodingChannel,
   Mark,
 } from '@opendata-ai/openchart-core';
-import { createFrameDrawer, type FrameDrawer } from '../charts/scatter/playback-frames';
 import {
-  channelField,
-  pointPlaybackChannels,
-  pointStaticFields,
-} from '../charts/scatter/playback-spec';
+  type PlaybackIdentity,
+  playbackChannels,
+  playbackIdentity,
+  playbackStaticFields,
+} from '../charts/scatter/playback-channels';
+import { createFrameDrawer, type FrameDrawer } from '../charts/scatter/playback-frames';
 import { prepareChartSpec } from '../compile/prepare';
 import { emitSpecWarnings } from '../compile/spec-sugar';
 import { computeTooltipDescriptors } from '../tooltips/compute';
 import type { ChartPlayback, FrameMark, ObservedValues } from './chart-types';
 import { collectPlaybackWarnings } from './chart-warnings';
 import { createFrameSampler, type FrameSampler } from './frame-sampler';
-import { freezeChartFrame } from './freeze';
+import { freezeChartFrame, specMarkType } from './freeze';
 import { buildPlaybackMatrix, type PlaybackChannel, type PlaybackMatrix } from './matrix';
 import { resolvePlayback } from './options';
 import { formatPeriodLabels } from './period-labels';
 import type { PlaybackTimeEncoding, PlaybackTimeType } from './periods';
 import { resolveTrailKeys, trailsAt } from './trails';
 
-function requireIdentity(encoding: Encoding): string {
-  const identity = channelField(encoding.key);
+/**
+ * @throws {Error} When the spec names no identity. Validation rejects such specs before
+ * this runs, so reaching it means a validation rule is missing.
+ */
+function requireIdentity(identity: PlaybackIdentity | undefined, spec: ChartSpec) {
   if (identity) return identity;
   throw new Error(
-    'Playback needs encoding.key to follow each mark from one period to the next. Add encoding.key naming the identity field.',
+    `Playback found no identity for '${specMarkType(spec)}' marks: points and circles need encoding.key, bars an x/y category. Time validation should have rejected this spec.`,
   );
 }
 
@@ -59,7 +63,8 @@ function observedValues(
     values[field] = String(value);
   }
   for (const { name, field } of channels) {
-    values[field] = formatters[field](matrix.values[name][keyIndex][period]);
+    const value = matrix.values[name][keyIndex][period];
+    if (Number.isFinite(value)) values[field] = formatters[field](value);
   }
   return values;
 }
@@ -85,21 +90,25 @@ function pivotSpecRows(
   options: CompileOptions,
   warn: (message: string) => void,
 ): PivotedSpec {
-  // Sugar and normalize warnings surface once, from the envelope compile.
-  const prepared = prepareChartSpec(spec, { ...options, onWarn: () => {} });
+  const prepared = prepareChartSpec(spec, { ...options, onWarn: warn });
   const source = prepared.expandedSpec as ChartSpec;
+  const markType = specMarkType(source);
   const encoding = source.encoding as Encoding & { time: EncodingChannel };
   const time = { ...encoding.time, type: encoding.time.type as PlaybackTimeType };
-  const identity = requireIdentity(encoding);
-  const channels = pointPlaybackChannels(encoding);
-  const staticFields = pointStaticFields(encoding, channels);
+  const identity = requireIdentity(
+    playbackIdentity(markType, encoding, prepared.chartSpec.data),
+    source,
+  );
+  const channels = playbackChannels(markType, encoding);
+  const staticFields = playbackStaticFields(encoding, channels);
+  const noun = markType === 'bar' ? 'bars' : 'points';
   const observed = buildPlaybackMatrix(
-    prepared.chartSpec.data,
-    { identity, time, channels, staticFields, noun: 'points' },
+    identity.rows,
+    { identity: identity.field, time, channels, staticFields, noun },
     'drop',
     warn,
   );
-  return { source, identity, time, channels, observed };
+  return { source, identity: identity.field, time, channels, observed };
 }
 
 /** Every base key's mark at `t`, in base order, drawn by the renderer from interpolated rows. */
@@ -115,7 +124,7 @@ function drawFrame(
   const rows: DataRow[] = order.map((keyIndex, position) => {
     const row: DataRow = { ...matrix.statics[keyIndex], [pivot.identity]: matrix.keys[keyIndex] };
     for (const [channel, value] of states[position].values.entries()) {
-      row[pivot.channels[channel].field] = value;
+      if (Number.isFinite(value)) row[pivot.channels[channel].field] = value;
     }
     return row;
   });
@@ -143,7 +152,10 @@ function drawFrame(
  */
 export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): ChartPlayback {
   const warnings: string[] = [];
+  // The validating prepare and the envelope compile both run the sugar and normalize
+  // passes, so each message is sent once.
   const warn = (message: string) => {
+    if (warnings.includes(message)) return;
     warnings.push(message);
     emitSpecWarnings([message], options.onWarn);
   };
