@@ -369,6 +369,14 @@ Shared scales means shared **domains**, not just a shared plot rect. `compileLay
 
 `instance.update()` applies a new spec, including its `theme`, and retains the playhead across a mark swap. `instance.setTheme({ theme, darkMode })` swaps the mount-level theme or color scheme in place and keeps the clock (t, playing, ended, speed); the framework wrappers and the docs site call it instead of remounting. Other mount options (`autoResize`, `watermark`) are read once.
 
+## Chart playback overlays
+
+| Concern | Where to look |
+|---------|---------------|
+| Period label | `packages/engine/src/playback/overlays.ts`: key `oc-playback-period`, placement (`periodLabelPlacement`; `auto` is centered except upper right on a `mirror: true` bar pyramid), faint ink (`periodInk`), and `paintOrder()`, which both the base layout and `compile-chart-time.ts` use so the label paints behind the marks. |
+| Name labels (`playback.labels`) | `packages/engine/src/charts/scatter/playback-labels.ts`: key `oc-playback-label\|<pointKey>`, beside the bubble on one side chosen per run by `decideLabelSides()` in `overlays.ts`. Labels carry the point's `data`, which series hiding reads. |
+| Drawing and reading them | `ChartPlayback.overlaysAt(t)` returns both, behind first. `packages/vanilla/src/playback/chart-frames.ts` writes them per frame by `data-key`; `frame-layout.ts` applies them in `chart.layout` and exports; `chart-tooltips.ts` maps a name label to its point and ignores the period label. `core/src/styles/playback.css` makes them `pointer-events: none`. |
+
 ## Visual regression
 
 - Playwright spec at `e2e/visual/stories.spec.ts`, baselines under `e2e/visual/__screenshots__/`.

@@ -26,7 +26,14 @@ import { createFrameSampler, type FrameSampler } from './frame-sampler';
 import { freezeChartFrame, specMarkType } from './freeze';
 import { buildPlaybackMatrix, type PlaybackChannel, type PlaybackMatrix } from './matrix';
 import { type ResolvedPlayback, resolvePlayback } from './options';
-import { buildFrameOverlays, type OverlayPlan, periodLabelPlacement } from './overlays';
+import {
+  buildFrameOverlays,
+  decideLabelSides,
+  type OverlayPlan,
+  type PeriodLabelKind,
+  paintOrder,
+  periodLabelPlacement,
+} from './overlays';
 import { formatPeriodLabels } from './period-labels';
 import type { PlaybackPeriod, PlaybackTimeEncoding, PlaybackTimeType } from './periods';
 import { resolveTrailKeys, trailsAt } from './trails';
@@ -71,11 +78,6 @@ function observedValues(
 }
 
 /**
- * Name labels are overlay text marks (see `overlays.ts`), so the frame drawer never swaps a
- * point for its label.
- */
-
-/**
  * Remembers the last frame drawn. The frame writer asks for the marks and the overlays at
  * the same `t`, and the overlays are built from the marks, so each frame draws once.
  */
@@ -105,8 +107,22 @@ function hasPlayablePeriods(sampler: FrameSampler, order: number[]): boolean {
 }
 
 /**
- * Period label text and placement, and the keys to name, fixed for the run. A run without
- * two playable periods renders as a static chart, which shows no period label.
+ * What `auto` places the period label for: a mirrored bar chart is a pyramid, which keeps
+ * the upper right corner clear; plain bars and points take it centered behind the marks.
+ */
+function periodLabelKind(source: ChartSpec, frame: FrozenChartFrame): PeriodLabelKind {
+  const mirrored = specMarkType(source) === 'bar' && frame.spec.markDef.mirror === true;
+  return mirrored ? 'pyramid' : 'scatter';
+}
+
+/** The marks at every period of the run, for decisions that must hold across all of them. */
+function* periodFrames(marksAt: (t: number) => FrameMark[], periodCount: number) {
+  for (let period = 0; period < periodCount; period++) yield marksAt(period);
+}
+
+/**
+ * Period label text and placement, and each name label's side, fixed for the run. A run
+ * without two playable periods renders as a static chart, which shows no period label.
  */
 function planOverlays(
   source: ChartSpec,
@@ -114,22 +130,28 @@ function planOverlays(
   timing: ResolvedPlayback,
   periods: PlaybackPeriod[] | null,
   time: EncodingChannel,
+  marksAt: (t: number) => FrameMark[],
+  periodCount: number,
 ): OverlayPlan {
   const { period } = timing;
-  const kind = specMarkType(source) === 'bar' ? 'pyramid' : 'scatter';
+  const kind = periodLabelKind(source, frame);
   const periodTexts =
     period === false || periods === null
       ? null
       : formatPeriodLabels(periods, period.format ? { ...time, format: period.format } : time);
   return {
     periodTexts,
-    area: frame.chartArea,
     placement: periodLabelPlacement(
       period === false ? 'auto' : period.position,
       frame.chartArea,
       kind,
     ),
-    labelled: new Set(source.playback?.labels ?? []),
+    labelSides: decideLabelSides(
+      source.playback?.labels ?? [],
+      periodFrames(marksAt, periodCount),
+      frame.theme,
+      frame.chartArea,
+    ),
     theme: frame.theme,
   };
 }
@@ -205,18 +227,38 @@ function drawFrame(
   return frameMarks;
 }
 
+/** A compiled playback plus each frame's marks and overlays in paint order. */
+export interface PaintedChartPlayback {
+  playback: ChartPlayback;
+  /** Overlays behind, then marks, then overlays above, at `t`; what static output draws. */
+  frameMarksAt(t: number): FrameMark[];
+}
+
 /**
  * Validate a time spec, pivot its rows into the playback matrix, freeze the frame and
  * return the base layout plus `marksAt`, `overlaysAt`, `trailsAt`, `observedAt` and
- * `describe`. Frames
- * call the registered chart renderer with the frozen scales, plot area and label plan; no
- * frame compiles. Warnings (RFC 2.7) go to `warnings` and to `options.onWarn`.
+ * `describe`. Frames call the registered chart renderer with the frozen scales, plot area
+ * and label plan; no frame compiles. Warnings (RFC 2.7) go to `warnings` and to
+ * `options.onWarn`.
  *
  * @throws The validation error `compileChart` throws for an invalid spec.
  * @throws {PlaybackDataError} DUPLICATE_KEY_PERIOD when two rows share a key and period.
  * @throws {RangeError} When `playback.step` overflows over the period count.
  */
 export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): ChartPlayback {
+  return compilePaintedChartPlayback(spec, options).playback;
+}
+
+/**
+ * `compileChartPlayback`, also returning `frameMarksAt` so the static compile orders its
+ * marks the way the base layout does.
+ *
+ * @throws The errors `compileChartPlayback` throws.
+ */
+export function compilePaintedChartPlayback(
+  spec: ChartSpec,
+  options: CompileOptions,
+): PaintedChartPlayback {
   const warnings: string[] = [];
   // The validating prepare and the envelope compile both run the sugar and normalize
   // passes, so each message is sent once.
@@ -239,16 +281,21 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
   const finalPeriod = matrix.periods.length - 1;
   const periodLabels = formatPeriodLabels(matrix.periods, pivot.time);
   const labelledPeriods = hasPlayablePeriods(sampler, order) ? matrix.periods : null;
-  const overlayPlan = planOverlays(source, frame, timing, labelledPeriods, pivot.time);
+  const overlayPlan = planOverlays(
+    source,
+    frame,
+    timing,
+    labelledPeriods,
+    pivot.time,
+    marksAt,
+    matrix.periods.length,
+  );
   // The label shows the period the playhead has reached, like the controls and period events.
   const overlaysFor = (t: number) =>
     buildFrameOverlays(overlayPlan, marksAt(t), Math.min(finalPeriod, Math.max(0, Math.floor(t))));
-  const finalT = matrix.periods.length - 1;
-  const finalMarks = marksAt(finalT);
-  const finalOverlays = overlaysFor(finalT);
-  const baseMarks: Mark[] = [...finalOverlays.behind, ...finalMarks, ...finalOverlays.above].map(
-    ({ mark }) => mark,
-  );
+  const frameMarksAt = (t: number) => paintOrder(overlaysFor(t), marksAt(t));
+  const finalMarks = marksAt(finalPeriod);
+  const baseMarks: Mark[] = frameMarksAt(finalPeriod).map(({ mark }) => mark);
   const trailKeys = source.playback?.trails
     ? resolveTrailKeys(source.playback.trails, matrix.keys, warn)
     : [];
@@ -273,7 +320,7 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
     return `${periodLabels[period]}: ${shown} of ${order.length} points shown.`;
   };
 
-  return {
+  const playback: ChartPlayback = {
     frame,
     base: {
       ...frame.layout,
@@ -294,4 +341,5 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
     observedAt,
     describe,
   };
+  return { playback, frameMarksAt };
 }

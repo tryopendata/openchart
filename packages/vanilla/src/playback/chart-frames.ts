@@ -27,8 +27,8 @@ function writePresence(element: Element, presence: number): void {
 }
 
 /**
- * Writes a text mark's anchor (a name label flips side near the plot's right edge) and its
- * text, which changes only at period boundaries, so it's written only then.
+ * Writes a text mark's anchor and text when they differ from the element's. The period
+ * label's text changes only at period boundaries, so most frames write nothing here.
  */
 function writeText(element: Element, mark: Mark): void {
   if (mark.type !== 'textMark') return;
@@ -41,8 +41,8 @@ function writeText(element: Element, mark: Mark): void {
 /**
  * Bind to the `[data-key]` elements of `svg` and write each frame's marks and overlays by
  * key: geometry (cx, cy, r for points; x, y, width, height for rects; x, y for text), text
- * content and anchor for text marks when they change, and `presence` as the `opacity` attribute. Fill
- * opacity stays as the renderer set it. Keys with no element are ignored, and elements
+ * content and anchor for text marks when they change, and `presence` as the `opacity`
+ * attribute. Fill opacity stays as the renderer set it. Keys with no element are ignored, and elements
  * without `data-key` are never touched; matching never uses array position or
  * `data-mark-id`.
  */

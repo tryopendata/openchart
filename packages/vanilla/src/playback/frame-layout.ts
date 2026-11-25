@@ -1,6 +1,6 @@
 /**
  * The chart layout a playback chart shows at a playhead, for `chart.layout`,
- * `sampleLayout()` and exports: the frame's marks as the reader sees them.
+ * `sampleLayout()` and exports: the frame's marks and overlays as the reader sees them.
  */
 import type { ChartLayout, LineMark, Mark } from '@opendata-ai/openchart-core';
 import type { ChartPlayback, FrameMark } from '@opendata-ai/openchart-engine';
@@ -9,7 +9,21 @@ import type { ChartPlayback, FrameMark } from '@opendata-ai/openchart-engine';
 const TRAIL_STROKE_WIDTH = 1.5;
 const TRAIL_OPACITY = 0.45;
 
-/** The frame mark as drawn: faded by its presence, or null when it isn't drawn at all. */
+/** Key prefix of a name label; the rest of the key is its point's key. */
+const NAME_LABEL_KEY_PREFIX = 'oc-playback-label|';
+
+/** Whether `key` is hidden: listed in `hiddenKeys`, or a name label for a hidden point. */
+function isHidden(key: string, hiddenKeys: ReadonlySet<string>): boolean {
+  if (hiddenKeys.has(key)) return true;
+  return (
+    key.startsWith(NAME_LABEL_KEY_PREFIX) && hiddenKeys.has(key.slice(NAME_LABEL_KEY_PREFIX.length))
+  );
+}
+
+/**
+ * The frame mark as drawn: faded by its presence, or null when it isn't drawn at all. Text
+ * marks have no fill opacity to fade, so a fading name label is drawn whole.
+ */
 function visibleMark({ mark, presence }: FrameMark): Mark | null {
   if (presence <= 0) return null;
   if (presence >= 1 || (mark.type !== 'point' && mark.type !== 'rect')) return mark;
@@ -46,9 +60,11 @@ function trailMarks(
 
 /**
  * The rendered layout (the playback's base, or a copy of it with legend state) with each
- * keyed mark replaced by its frame mark at `t`. Keys absent at `t` (presence 0) and keys in
- * `hiddenKeys` are dropped; fading keys carry their presence in `fillOpacity`. Marks the
- * frame doesn't name keep their base geometry. Trails at `t` come first, under the marks.
+ * keyed mark and overlay replaced by its frame mark at `t`: the period label reads the
+ * period at `t` and name labels sit beside their points at `t`. Keys absent at `t`
+ * (presence 0), keys in `hiddenKeys` and the name labels of hidden keys are dropped; fading
+ * points and bars carry their presence in `fillOpacity`. Marks the frame doesn't name keep
+ * their base geometry. Trails at `t` come first, under the marks.
  */
 export function layoutAtPlayhead(
   playback: ChartPlayback,
@@ -57,7 +73,7 @@ export function layoutAtPlayhead(
   hiddenKeys: ReadonlySet<string> = new Set(),
 ): ChartLayout {
   const frameMarks = new Map<string, Mark | null>();
-  for (const frameMark of playback.marksAt(t)) {
+  for (const frameMark of [...playback.marksAt(t), ...playback.overlaysAt(t)]) {
     frameMarks.set(frameMark.key, visibleMark(frameMark));
   }
   const marks: Mark[] = [...trailMarks(playback, t, base, hiddenKeys)];
@@ -67,7 +83,7 @@ export function layoutAtPlayhead(
       marks.push(mark);
       continue;
     }
-    if (hiddenKeys.has(key)) continue;
+    if (isHidden(key, hiddenKeys)) continue;
     const drawn = frameMarks.has(key) ? frameMarks.get(key) : mark;
     if (drawn) marks.push(drawn);
   }

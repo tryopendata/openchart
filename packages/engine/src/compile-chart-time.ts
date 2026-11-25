@@ -3,9 +3,8 @@
  * `renderStaticSVG` return for a playback spec.
  */
 import type { ChartLayout, ChartSpec, CompileOptions, Mark } from '@opendata-ai/openchart-core';
-import { compileChartPlayback } from './playback/chart-playback';
+import { compilePaintedChartPlayback } from './playback/chart-playback';
 import type { FrameMark } from './playback/chart-types';
-import { PERIOD_LABEL_KEY } from './playback/overlays';
 import { computeTooltipDescriptors } from './tooltips/compute';
 
 /** A frame mark as a static mark: absent keys dropped, fading ones at their faded opacity. */
@@ -30,16 +29,9 @@ function staticMarks(frame: FrameMark[]): Mark[] {
  * @throws {PlaybackDataError} DUPLICATE_KEY_PERIOD when two rows share a key and period.
  */
 export function compileTimeChart(spec: ChartSpec, options: CompileOptions): ChartLayout {
-  const playback = compileChartPlayback(spec, options);
+  const { playback, frameMarksAt } = compilePaintedChartPlayback(spec, options);
   const t = options.playbackT ?? playback.periods.length - 1;
-  const overlays = playback.overlaysAt(t);
-  const behind = overlays.filter(({ key }) => key === PERIOD_LABEL_KEY);
-  const above = overlays.filter(({ key }) => key !== PERIOD_LABEL_KEY);
-  const marks = [
-    ...staticMarks(behind),
-    ...staticMarks(playback.marksAt(t)),
-    ...staticMarks(above),
-  ];
+  const marks = staticMarks(frameMarksAt(t));
   return {
     ...playback.base,
     marks,

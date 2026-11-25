@@ -98,16 +98,18 @@ describe('chart frame writer overlays', () => {
     expect(label.getAttribute('opacity')).toBeNull();
   });
 
-  it('writes a name label’s anchor when it flips side', () => {
+  it('writes a text mark’s anchor when it changes', () => {
     const playback = withOverlays();
     const flipped: ChartPlayback = {
       ...playback,
       overlaysAt: (t) =>
-        (playback.overlaysAt?.(t) ?? []).map((entry) =>
-          entry.mark.type === 'textMark' && t > 1
-            ? { ...entry, mark: { ...entry.mark, textAnchor: 'end' } }
-            : entry,
-        ),
+        playback
+          .overlaysAt(t)
+          .map((entry) =>
+            entry.mark.type === 'textMark' && t > 1
+              ? { ...entry, mark: { ...entry.mark, textAnchor: 'end' } }
+              : entry,
+          ),
     };
     const { svg, byKey } = setup(flipped);
     const writer = createChartFrameWriter(svg, flipped);

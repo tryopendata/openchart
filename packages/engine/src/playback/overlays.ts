@@ -3,14 +3,19 @@
  * `playback.labels` draws beside its points. Both are text marks the frame writer matches by
  * key, built per frame from the frame's marks.
  */
-import type {
-  PlaybackPeriodPosition,
-  Rect,
-  ResolvedTheme,
-  TextMarkLayout,
+import {
+  isOpaqueColor,
+  type PlaybackPeriodPosition,
+  type Rect,
+  type ResolvedTheme,
+  type TextMarkLayout,
 } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
-import { labelPlaybackPoint } from '../charts/scatter/playback-labels';
+import {
+  labelOverflowsRight,
+  labelPlaybackPoint,
+  type PlaybackLabelSide,
+} from '../charts/scatter/playback-labels';
 import type { FrameMark } from './chart-types';
 
 /** Key of the period label's text mark. */
@@ -93,12 +98,20 @@ export function periodLabelPlacement(
 }
 
 /**
- * The period label's fill: the theme text color mixed toward the background. A transparent
- * background yields the text color at low alpha instead, so the label stays faint on any page.
+ * The period label's fill: the theme text color mixed toward an opaque background. When the
+ * background isn't an opaque color (the default 'transparent', 'none', a CSS variable) there
+ * is nothing to mix toward, so the label is the text color at low alpha and stays faint on
+ * whatever page hosts the chart.
  */
 function periodInk(theme: ResolvedTheme): string {
   const share = theme.isDark ? PERIOD_INK_DARK : PERIOD_INK_LIGHT;
-  return interpolateRgb(theme.colors.background, theme.colors.text)(share);
+  const { background, text } = theme.colors;
+  // A text color d3 can't parse (a CSS variable) gets its alpha from the browser instead.
+  if (!isOpaqueColor(text)) return `color-mix(in srgb, ${text} ${share * 100}%, transparent)`;
+  // d3 takes a NaN channel from the other end, so mixing from 'transparent' keeps the
+  // text's channels and only ramps the alpha.
+  const ground = isOpaqueColor(background) ? background : 'transparent';
+  return interpolateRgb(ground, text)(share);
 }
 
 /** The period label's text mark reading `text` at `placement`. */
@@ -127,17 +140,15 @@ export function periodLabelMark(
 
 /** What a chart's overlays need, fixed for the whole run. */
 export interface OverlayPlan {
-  /** Period label text per period index, or null when `playback.period` is false. */
+  /** Period label text per period index, or null when there's no period label. */
   periodTexts: string[] | null;
   placement: PeriodLabelPlacement;
-  /** Plot area; a name label that would run past its right edge flips left of its point. */
-  area: Rect;
-  /** Point keys that get a name label. */
-  labelled: ReadonlySet<string>;
+  /** The side of its bubble each labelled point key's name label sits on, for the whole run. */
+  labelSides: ReadonlyMap<string, PlaybackLabelSide>;
   theme: ResolvedTheme;
 }
 
-/** One frame's overlays, split by paint order relative to the marks. */
+/** One frame's overlays, split by where they paint relative to the marks. */
 export interface FrameOverlays {
   /** Drawn before the marks: the period label. */
   behind: FrameMark[];
@@ -146,8 +157,32 @@ export interface FrameOverlays {
 }
 
 /**
- * The overlays for one frame: the period label for `period` (the period the
- * playhead has reached) and a name label beside each labelled point in `marks`, sharing its presence.
+ * The side each of `labelled` gets for the run: right of its bubble, unless at any of
+ * `periodFrames` (the marks at every period) the right-side label would pass the right edge
+ * of `area`, in which case left for the whole run. Positions between periods interpolate
+ * between those frames, so checking each period covers the run.
+ */
+export function decideLabelSides(
+  labelled: Iterable<string>,
+  periodFrames: Iterable<FrameMark[]>,
+  theme: ResolvedTheme,
+  area: Rect,
+): Map<string, PlaybackLabelSide> {
+  const sides = new Map<string, PlaybackLabelSide>();
+  for (const key of labelled) sides.set(key, 'right');
+  if (sides.size === 0) return sides;
+  for (const frame of periodFrames) {
+    for (const { key, mark } of frame) {
+      if (mark.type !== 'point' || sides.get(key) !== 'right') continue;
+      if (labelOverflowsRight(mark, key, theme, area)) sides.set(key, 'left');
+    }
+  }
+  return sides;
+}
+
+/**
+ * The overlays for one frame: the period label for `period` (the period the playhead has
+ * reached) and a name label beside each labelled point in `marks`, sharing its presence.
  */
 export function buildFrameOverlays(
   plan: OverlayPlan,
@@ -162,9 +197,19 @@ export function buildFrameOverlays(
   }
   const above: FrameMark[] = [];
   for (const { key, mark, presence } of marks) {
-    if (mark.type !== 'point' || !plan.labelled.has(key)) continue;
-    const label = labelPlaybackPoint(mark, key, plan.theme, plan.area);
+    const side = plan.labelSides.get(key);
+    if (mark.type !== 'point' || side === undefined) continue;
+    const label = labelPlaybackPoint(mark, key, plan.theme, side);
     above.push({ key: String(label.key), mark: label, presence });
   }
   return { behind, above };
+}
+
+/**
+ * A frame's marks and overlays in paint order: the overlays behind the marks, the marks,
+ * then the overlays above them. The base layout and the static compile both order their
+ * marks through this, so the two never disagree.
+ */
+export function paintOrder(overlays: FrameOverlays, marks: FrameMark[]): FrameMark[] {
+  return [...overlays.behind, ...marks, ...overlays.above];
 }
