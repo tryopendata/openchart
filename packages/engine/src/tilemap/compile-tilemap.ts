@@ -52,6 +52,9 @@ import { compile as compileSpec } from '../compiler/index';
 import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
+import { compileTileMapAtPlayhead } from '../playback/map-playback';
+import type { TileMapPlaybackScope } from '../playback/map-types';
+import { hasTimeEncoding } from '../playback/time-spec';
 import { computeTilePositions, STATE_CODE_SET, STATE_NAMES, US_STATE_TILES } from './layout';
 import type { NormalizedTileMapSpec } from './types';
 
@@ -131,6 +134,23 @@ function growContentHeight(
  * @throws Error if spec is invalid or not a tilemap type.
  */
 export function compileTileMap(spec: unknown, options: CompileOptions): TileMapLayout {
+  // A spec with encoding.time compiles one frame of its playback (options.playbackT, else
+  // the final period).
+  if (hasTimeEncoding(spec)) return compileTileMapAtPlayhead(spec, options);
+  return compileTileMapFrame(spec, options);
+}
+
+/**
+ * Compile one tile map frame. `scope` is how a playback run freezes the value scale over
+ * every period and reads the tile builder back; without it this is the plain static compile.
+ *
+ * @throws Error if spec is invalid or not a tilemap type.
+ */
+export function compileTileMapFrame(
+  spec: unknown,
+  options: CompileOptions,
+  scope?: TileMapPlaybackScope,
+): TileMapLayout {
   // 1. Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
   // before validation, then validate + normalize via the shared compiler
   // pipeline. Surface any normalize warnings (e.g. "only N of M rows have
@@ -240,6 +260,7 @@ export function compileTileMap(spec: unknown, options: CompileOptions): TileMapL
     isDarkMode,
     watermark,
     chromeLayout,
+    scope,
   );
 }
 
@@ -256,6 +277,7 @@ function compileQuantitative(
   isDarkMode: boolean | undefined,
   watermark: boolean,
   chromeLayout: 'subtract' | 'grow' | 'notes',
+  scope?: TileMapPlaybackScope,
 ): TileMapLayout {
   const stateField = tilemapSpec.encoding.state.field;
   const valueField = tilemapSpec.encoding.value.field;
@@ -269,7 +291,10 @@ function compileQuantitative(
     }
   }
 
-  const values = Array.from(stateValueMap.values());
+  // A playback run scales over every period's values, so the ramp never moves mid-run.
+  const values = scope?.valueRows
+    ? scope.valueRows.flatMap((row) => finiteNumber(row[valueField]) ?? [])
+    : Array.from(stateValueMap.values());
   const min = values.length > 0 ? Math.min(...values) : 0;
   const max = values.length > 0 ? Math.max(...values) : 100;
 
@@ -301,42 +326,36 @@ function compileQuantitative(
   // Encoding-level format (v8 canonical) wins over deprecated top-level valueFormat
   const formatter = resolveFieldFormatter({
     surfaceFormat: tilemapSpec.encoding.value.format ?? tilemapSpec.valueFormat,
-    values: Array.from(stateValueMap.values()),
+    values,
   });
   // The theme's own neutrals, so a warm or cool theme gets matching empty cells.
   const neutralFill = isDarkMode ? theme.colors.neutral[800] : theme.colors.neutral[100];
   const neutralStroke = isDarkMode ? theme.colors.neutral[600] : theme.colors.neutral[300];
 
+  const tileAt = (stateCode: string, value: number | null): TileMapTileMark => {
+    const hasData = value !== null;
+    return buildTileMark({
+      stateCode,
+      pos: tilePositions.positions.get(stateCode) ?? { x: 0, y: 0 },
+      tileSize: tilePositions.tileSize,
+      gridOffsetX: tileGridOffsetX,
+      gridOffsetY: tileGridOffsetY,
+      fill: hasData ? baseColor : neutralFill,
+      fillOpacity: hasData ? opacityScale(value) : 1,
+      stroke: hasData ? 'none' : neutralStroke,
+      value,
+      formattedValue: hasData ? formatter(value) : '–',
+      hasData,
+      theme,
+      isDarkMode: !!isDarkMode,
+    });
+  };
   const tiles: TileMapTileMark[] = [];
   for (const { state: stateCode } of US_STATE_TILES) {
-    const pos = tilePositions.positions.get(stateCode);
-    if (!pos) continue;
-
-    const hasData = stateValueMap.has(stateCode);
-    const value = hasData ? stateValueMap.get(stateCode)! : null;
-    const opacity = hasData ? opacityScale(value!) : 0;
-    const fill = hasData ? baseColor : neutralFill;
-    const stroke = hasData ? 'none' : neutralStroke;
-    const formattedValue = hasData ? formatter(value!) : '–';
-
-    tiles.push(
-      buildTileMark({
-        stateCode,
-        pos,
-        tileSize: tilePositions.tileSize,
-        gridOffsetX: tileGridOffsetX,
-        gridOffsetY: tileGridOffsetY,
-        fill,
-        fillOpacity: hasData ? opacity : 1,
-        stroke,
-        value,
-        formattedValue,
-        hasData,
-        theme,
-        isDarkMode: !!isDarkMode,
-      }),
-    );
+    if (!tilePositions.positions.has(stateCode)) continue;
+    tiles.push(tileAt(stateCode, stateValueMap.get(stateCode) ?? null));
   }
+  scope?.capture?.({ tileAt });
 
   assignAnimationIndices(tiles);
 
@@ -351,7 +370,7 @@ function compileQuantitative(
 
     // "No data" is its own class, keyed beside the ramp rather than at its low
     // end -- and only when the grid actually has empty tiles.
-    const hasEmptyTiles = tiles.some((t) => !t.hasData);
+    const hasEmptyTiles = scope?.noDataEver || tiles.some((t) => !t.hasData);
     const noDataLabel = 'No data';
     const noDataLabelWidth = estimateTextWidth(noDataLabel, 11);
     const noDataBlockWidth = hasEmptyTiles

@@ -50,6 +50,8 @@ import {
   computeContinuousLegendContentForChannel,
 } from '../legend/continuous';
 import { computeSizeLegendContent, sizeLegendTitleStyle } from '../legend/size';
+import { compileGeoMapAtPlayhead, hasMapTimeEncoding } from '../playback/map-playback';
+import type { GeoMapFrozenScales, GeoMapPlaybackScope } from '../playback/map-types';
 import { buildGeoColorKey, geoColorKeyReserve } from './color-key';
 import { joinDataToFeatures } from './join';
 import { compilePreparedGeoLabels, hasGeoLabels, prepareGeoLabels } from './labels';
@@ -236,9 +238,32 @@ function validateGeoFeatures(geo: NormalizedGeoMapSpec['geo']): Topology {
   return topo as unknown as Topology;
 }
 
+/**
+ * Compile a map spec into a GeoMapLayout. A spec with `encoding.time` or `points.time`
+ * compiles one frame of its playback: `options.playbackT`, else the final period.
+ *
+ * @throws The validation error for an invalid spec, and `GeoViewGeometryError` when the
+ * authored views have no positive frame.
+ */
 export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLayout {
+  if (hasMapTimeEncoding(spec)) return compileGeoMapAtPlayhead(spec, options);
+  return compileGeoMapFrame(spec, options);
+}
+
+/**
+ * Compile one geo map frame. `scope` is how a playback run freezes the scales over every
+ * period and reads them back; without it this is the plain static compile.
+ *
+ * @throws The validation error for an invalid spec, and `GeoViewGeometryError` when the
+ * authored views have no positive frame.
+ */
+export function compileGeoMapFrame(
+  spec: unknown,
+  options: CompileOptions,
+  scope?: GeoMapPlaybackScope,
+): GeoMapLayout {
   try {
-    return compileGeoMapImpl(spec, options);
+    return compileGeoMapImpl(spec, options, scope);
   } catch (error) {
     if (error instanceof GeoViewGeometryError)
       options.onDiagnostic?.({
@@ -253,7 +278,29 @@ export function compileGeoMap(spec: unknown, options: CompileOptions): GeoMapLay
     throw error;
   }
 }
-function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout {
+/** Feature id per data key, joining one row per key the way the choropleth joins its data. */
+function joinPlaybackKeys(
+  geoFeatures: GeoJSON.Feature[],
+  keyRows: Array<Record<string, unknown>> | undefined,
+  mapSpec: NormalizedGeoMapSpec,
+): Map<string, string | number> {
+  const keyField = mapSpec.encoding.key?.field;
+  const featureIds = new Map<string, string | number>();
+  if (!keyRows || !keyField) return featureIds;
+  const features = geoFeatures.map((f) => ({
+    id: f.id as string | number,
+    properties: (f.properties ?? {}) as Record<string, unknown>,
+  }));
+  const { joined } = joinDataToFeatures(features, keyRows, keyField, mapSpec.geo.idField);
+  for (const [featureId, row] of joined) featureIds.set(String(row[keyField]), featureId);
+  return featureIds;
+}
+
+function compileGeoMapImpl(
+  spec: unknown,
+  options: CompileOptions,
+  scope?: GeoMapPlaybackScope,
+): GeoMapLayout {
   // 1. Sugar expansion + validate + normalize
   const sugarWarnings: string[] = [];
   const expandedSpec =
@@ -453,7 +500,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
   let classScale: ClassScale | null = null;
   if (colorEncoding && isQuantitative) {
     const colorValues: number[] = [];
-    for (const row of mapSpec.data) {
+    for (const row of scope?.colorRows ?? mapSpec.data) {
       const value = finiteNumber(row[colorEncoding.field]);
       if (value !== undefined) colorValues.push(value);
     }
@@ -557,11 +604,12 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
   const hasNoData =
     colorEncoding &&
     isQuantitative &&
-    geoFeatures.some(
-      (feature) =>
-        finiteNumber(joined.get(feature.id as string | number)?.[colorEncoding.field]) ===
-        undefined,
-    );
+    (scope?.noDataEver ||
+      geoFeatures.some(
+        (feature) =>
+          finiteNumber(joined.get(feature.id as string | number)?.[colorEncoding.field]) ===
+          undefined,
+      ));
   const noDataRowHeight =
     continuousContent && hasNoData ? Math.ceil(keyStyle.fontSize * 1.35) + 8 : 0;
   if (continuousContent)
@@ -646,8 +694,9 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
     pointColor?.type === 'quantitative'
       ? { ...pointColor, scale: { ...pointColor.scale, type: 'quantile' } }
       : undefined;
+  const pointScaleRows = scope?.pointRows ?? mapSpec.points?.data ?? [];
   const pointColorValues = pointColorChannel
-    ? mapSpec.points!.data.flatMap((row) => {
+    ? pointScaleRows.flatMap((row) => {
         const value = finiteNumber(row[pointColorChannel.field]);
         return value === undefined ? [] : [value];
       })
@@ -761,7 +810,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
               return [caption.title, caption.unit].filter(Boolean).join('\n');
             })(),
           },
-          mapSpec.points.data,
+          pointScaleRows,
           theme,
           {
             curve: SIZE_SCALE_DEFAULTS.mapPoint.curve,
@@ -1168,7 +1217,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
       // "No data" is a class of its own, detached from the ramp so nobody reads
       // it as the low end of the scale. Only drawn when the map actually has
       // holes in it.
-      const hasUnmatched = featureMarks.some((m) => m.noData);
+      const hasUnmatched = !!scope?.noDataEver || featureMarks.some((m) => m.noData);
       const noDataX = bounds.x;
       const noDataY = bounds.y + bounds.height - featureKeyExtra - noDataRowHeight + 8;
       const noDataSize = labelStyle.fontSize;
@@ -1367,6 +1416,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
   let pointCategoricalLegend: CategoricalLegendLayout | null = null;
   let pointContinuousLegend: ContinuousLegendLayout | null = null;
   let pointSizeLegend: SizeLegendLayout | null = null;
+  let pointPaint: Pick<GeoMapFrozenScales, 'pointRadius' | 'pointFill'> | undefined;
 
   if (mapSpec.points) {
     const pts = mapSpec.points;
@@ -1375,7 +1425,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
     const keyChannel = pts.key;
 
     // Size scale
-    const sizeScale = buildSizeScale(pts.size, pts.data, SIZE_SCALE_DEFAULTS.mapPoint);
+    const sizeScale = buildSizeScale(pts.size, pointScaleRows, SIZE_SCALE_DEFAULTS.mapPoint);
 
     // Color scale (independent from choropleth)
     let pointColorScale: ((val: unknown) => string) | null = null;
@@ -1402,7 +1452,7 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
         }
         // Also pick up any categories in the data that aren't in the explicit domain
         const seen = new Set<string>(pointCategories);
-        for (const row of pts.data) {
+        for (const row of pointScaleRows) {
           const raw = row[pts.color.field];
           if (raw != null) {
             const cat = String(raw);
@@ -1486,6 +1536,15 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
     for (let i = 0; i < pointMarks.length; i++) {
       pointMarks[i].animationIndex = i;
     }
+    pointPaint = {
+      pointRadius: (size) => (sizeScale && size !== undefined ? sizeScale.scale(size) : 5),
+      pointFill: (color) =>
+        pointColorScale && pts.color
+          ? pointColorScale(color)
+          : pts.color?.type === 'quantitative'
+            ? neutralFill
+            : defaultFill,
+    };
 
     if (droppedPoints.length > 0) {
       const sample = droppedPoints
@@ -1716,6 +1775,15 @@ function compileGeoMapImpl(spec: unknown, options: CompileOptions): GeoMapLayout
       }
     }
   }
+
+  scope?.capture?.({
+    classScale,
+    neutralFill,
+    featureIds: joinPlaybackKeys(geoFeatures, scope.keyRows, mapSpec),
+    formatValue: formatter,
+    pointRadius: pointPaint?.pointRadius ?? (() => 5),
+    pointFill: pointPaint?.pointFill ?? (() => neutralFill),
+  });
 
   // 16. Tooltips
   const tooltipChannels = mapSpec.encoding.tooltip

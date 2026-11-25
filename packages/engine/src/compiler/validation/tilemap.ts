@@ -1,6 +1,7 @@
 /** TileMap spec validation. */
 import { jsonPointer } from '@opendata-ai/openchart-core';
 import type { ValidationError } from '../types';
+import { validateTileMapTime } from './geo-time';
 import { checkSchemeUnused, didYouMean, MAP_PALETTE_NAMES } from './helpers';
 
 // ---------------------------------------------------------------------------
@@ -11,6 +12,7 @@ export function validateTileMapSpec(
   spec: Record<string, unknown>,
   errors: ValidationError[],
 ): void {
+  validateTileMapTime(spec, errors);
   // Validate data (can be record or array)
   if (!spec.data || typeof spec.data !== 'object') {
     errors.push({

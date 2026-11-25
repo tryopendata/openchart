@@ -14,6 +14,19 @@ export type {
 export { PlaybackDataError, type PlaybackDataErrorCode } from './errors';
 export { interpolatePlaybackLogValue, interpolatePlaybackValue } from './interpolate';
 export {
+  compileGeoMapPlayback,
+  compileTileMapPlayback,
+  hasMapTimeEncoding,
+} from './map-playback';
+export type {
+  GeoMapPlayback,
+  MapFillFrame,
+  MapPlayback,
+  MapPointFrame,
+  PlaybackOverlayLayout,
+  TileMapPlayback,
+} from './map-types';
+export {
   buildPlaybackMatrix,
   type PlaybackChannel,
   type PlaybackGaps,

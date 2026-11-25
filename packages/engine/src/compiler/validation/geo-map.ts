@@ -2,6 +2,7 @@
 import { jsonPointer } from '@opendata-ai/openchart-core';
 import { resolveDefaultProjection } from '../../geo/projections';
 import type { ValidationError } from '../types';
+import { validateGeoMapTime } from './geo-time';
 import { checkMapSchemeName } from './helpers';
 
 // ---------------------------------------------------------------------------
@@ -43,6 +44,7 @@ function validateGeoMapZoom(zoom: unknown, errors: ValidationError[]): void {
 }
 
 export function validateGeoMapSpec(spec: Record<string, unknown>, errors: ValidationError[]): void {
+  validateGeoMapTime(spec, errors);
   validateGeoMapLabels(spec, errors);
   validateGeoMapViews(spec, errors);
   if (spec.colorKey !== undefined) {
