@@ -24,6 +24,13 @@ describe('playback announcer', () => {
     expect(announcer.element.textContent).toBe('');
   });
 
+  it('is hidden visually, since its host is the visible chart or map root', () => {
+    const { announcer } = setup();
+    expect(announcer.element.classList.contains('oc-sr-only')).toBe(true);
+    expect(announcer.element.style.position).toBe('absolute');
+    expect(announcer.element.style.width).toBe('1px');
+  });
+
   it.each(['pause', 'seek', 'step'] as const)('announces describe(t) on %s', (cause) => {
     const { announcer } = setup();
     announcer.notify(cause, paused(2));

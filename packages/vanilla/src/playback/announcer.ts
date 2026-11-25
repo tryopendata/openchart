@@ -3,6 +3,7 @@
  * stops or moves it (pause, seek, step), never while playback runs, so screen readers
  * aren't flooded with a message per frame.
  */
+import { applySrOnlyStyles } from '../dom-helpers';
 import type { PlaybackClockState } from './clock';
 
 /** What changed the playhead. Only `pause`, `seek` and `step` are announced. */
@@ -36,6 +37,9 @@ export function createPlaybackAnnouncer(options: PlaybackAnnouncerOptions): Play
   const element = host.ownerDocument.createElement('div');
   element.setAttribute('aria-live', 'polite');
   element.setAttribute('aria-atomic', 'true');
+  // Hosts are visible containers (the chart or map root), so the region hides itself.
+  element.className = 'oc-sr-only';
+  applySrOnlyStyles(element);
   host.append(element);
   let destroyed = false;
 
