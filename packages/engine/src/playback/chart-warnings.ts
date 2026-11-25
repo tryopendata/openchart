@@ -1,8 +1,9 @@
 /**
  * Advisory warnings for chart playback (RFC 2.7): data that can't sit on a log axis, too
  * few periods, too many marks, irregular period spacing, too little time per period, an
- * oversized matrix, and autoplay without controls.
+ * oversized matrix, autoplay without controls, and bars ranked by value.
  */
+import type { ChartSpec, EncodingChannel } from '@opendata-ai/openchart-core';
 import { presentCountsByPeriod } from './freeze';
 import type { PlaybackChannel, PlaybackMatrix } from './matrix';
 import type { ResolvedPlayback } from './options';
@@ -21,6 +22,31 @@ export interface WarningInput {
   channels: PlaybackChannel[];
   timing: ResolvedPlayback;
   time: PlaybackTimeEncoding;
+  /** The authored spec, before sugar resolves a value sort into a fixed domain. */
+  spec?: ChartSpec;
+}
+
+/** Sort forms that rank categories by a value rather than by the category itself. */
+function isValueSort(sort: EncodingChannel['sort']): boolean {
+  if (typeof sort === 'string') return /^-?[xy]$/.test(sort);
+  return typeof sort === 'object' && sort !== null && !Array.isArray(sort);
+}
+
+/**
+ * Bars whose category axis is sorted by value (`sort: '-x'`, `{ field, order }`). Sugar
+ * ranks the categories once over every period's rows, so the order holds still while the
+ * values move, and bars never overtake one another.
+ */
+export function warnFrozenValueSort(spec: ChartSpec, warn: (message: string) => void): void {
+  const markType = typeof spec.mark === 'string' ? spec.mark : spec.mark.type;
+  if (markType !== 'bar') return;
+  for (const name of ['x', 'y'] as const) {
+    const channel = spec.encoding[name];
+    if (!channel || !('field' in channel) || !isValueSort(channel.sort)) continue;
+    warn(
+      `Bars sorted by value (${name} sort ${JSON.stringify(channel.sort)}) keep one category order ranked over all periods, so they don't re-rank during playback. Use type: 'race' for bars that re-rank each period.`,
+    );
+  }
 }
 
 /** Gaps between consecutive temporal periods, in the coarsest calendar unit that fits. */
@@ -96,9 +122,10 @@ export function collectPlaybackWarnings(
   input: WarningInput,
   warn: (message: string) => void,
 ): void {
-  const { matrix, channels, timing, time } = input;
+  const { matrix, channels, timing, time, spec } = input;
   const periodCount = matrix.periods.length;
   warnAboutValues(input, warn);
+  if (spec) warnFrozenValueSort(spec, warn);
   warnIrregularSpacing(input, warn);
   const msPerPeriod = periodCount >= 2 ? timing.durationMs / (periodCount - 1) : Infinity;
   if (msPerPeriod < MIN_MS_PER_PERIOD) {
