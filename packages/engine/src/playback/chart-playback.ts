@@ -20,14 +20,15 @@ import {
   playbackIdentity,
   playbackStaticFields,
 } from './channels';
-import type { ChartPlayback, FrameMark, ObservedValues } from './chart-types';
+import type { ChartPlayback, FrameMark, FrozenChartFrame, ObservedValues } from './chart-types';
 import { collectPlaybackWarnings } from './chart-warnings';
 import { createFrameSampler, type FrameSampler } from './frame-sampler';
 import { freezeChartFrame, specMarkType } from './freeze';
 import { buildPlaybackMatrix, type PlaybackChannel, type PlaybackMatrix } from './matrix';
-import { resolvePlayback } from './options';
+import { type ResolvedPlayback, resolvePlayback } from './options';
+import { buildFrameOverlays, type OverlayPlan, periodLabelPlacement } from './overlays';
 import { formatPeriodLabels } from './period-labels';
-import type { PlaybackTimeEncoding, PlaybackTimeType } from './periods';
+import type { PlaybackPeriod, PlaybackTimeEncoding, PlaybackTimeType } from './periods';
 import { resolveTrailKeys, trailsAt } from './trails';
 
 /**
@@ -67,6 +68,71 @@ function observedValues(
     if (Number.isFinite(value)) values[field] = formatters[field](value);
   }
   return values;
+}
+
+/**
+ * Name labels are overlay text marks (see `overlays.ts`), so the frame drawer never swaps a
+ * point for its label.
+ */
+const NO_POINT_LABELS: ReadonlySet<string> = new Set();
+
+/**
+ * Remembers the last frame drawn. The frame writer asks for the marks and the overlays at
+ * the same `t`, and the overlays are built from the marks, so each frame draws once.
+ */
+function lastFrameCache(drawAt: (t: number) => FrameMark[]): (t: number) => FrameMark[] {
+  let lastT = Number.NaN;
+  let lastFrame: FrameMark[] = [];
+  return (t) => {
+    if (t !== lastT) {
+      lastFrame = drawAt(t);
+      lastT = t;
+    }
+    return lastFrame;
+  };
+}
+
+/** Fewer periods with values than this and the chart renders static (RFC 2.7). */
+const MIN_PLAYBACK_PERIODS = 2;
+
+/** Whether at least two periods have a drawn key, so the run has periods worth labelling. */
+function hasPlayablePeriods(sampler: FrameSampler, order: number[]): boolean {
+  let withValues = 0;
+  for (let period = 0; period < sampler.matrix.periods.length; period++) {
+    if (order.some((keyIndex) => sampler.isPresent(keyIndex, period))) withValues++;
+    if (withValues >= MIN_PLAYBACK_PERIODS) return true;
+  }
+  return false;
+}
+
+/**
+ * Period label text and placement, and the keys to name, fixed for the run. A run without
+ * two playable periods renders as a static chart, which shows no period label.
+ */
+function planOverlays(
+  source: ChartSpec,
+  frame: FrozenChartFrame,
+  timing: ResolvedPlayback,
+  periods: PlaybackPeriod[] | null,
+  time: EncodingChannel,
+): OverlayPlan {
+  const { period } = timing;
+  const kind = specMarkType(source) === 'bar' ? 'pyramid' : 'scatter';
+  const periodTexts =
+    period === false || periods === null
+      ? null
+      : formatPeriodLabels(periods, period.format ? { ...time, format: period.format } : time);
+  return {
+    periodTexts,
+    area: frame.chartArea,
+    placement: periodLabelPlacement(
+      period === false ? 'auto' : period.position,
+      frame.chartArea,
+      kind,
+    ),
+    labelled: new Set(source.playback?.labels ?? []),
+    theme: frame.theme,
+  };
 }
 
 /** A time spec's transformed rows pivoted into the observed (not yet gap-filled) matrix. */
@@ -142,7 +208,8 @@ function drawFrame(
 
 /**
  * Validate a time spec, pivot its rows into the playback matrix, freeze the frame and
- * return the base layout plus `marksAt`, `trailsAt`, `observedAt` and `describe`. Frames
+ * return the base layout plus `marksAt`, `overlaysAt`, `trailsAt`, `observedAt` and
+ * `describe`. Frames
  * call the registered chart renderer with the frozen scales, plot area and label plan; no
  * frame compiles. Warnings (RFC 2.7) go to `warnings` and to `options.onWarn`.
  *
@@ -167,16 +234,23 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
   collectPlaybackWarnings({ matrix, channels, timing, time: pivot.time }, warn);
 
   const frame = freezeChartFrame(source, { ...options, onWarn: warn }, matrix);
-  const labelled = new Set(source.playback?.labels ?? []);
-  const draw = createFrameDrawer(frame, frame.layout.dimensions.width, labelled);
+  const draw = createFrameDrawer(frame, frame.layout.dimensions.width, NO_POINT_LABELS);
   const order = baseKeyOrder(matrix, sampler);
-  const marksAt = (t: number) => drawFrame(pivot, sampler, order, draw, t);
-  const finalMarks = marksAt(matrix.periods.length - 1);
-  const baseMarks: Mark[] = finalMarks.map(({ mark }) => mark);
+  const marksAt = lastFrameCache((t: number) => drawFrame(pivot, sampler, order, draw, t));
+  const periodLabels = formatPeriodLabels(matrix.periods, pivot.time);
+  const labelledPeriods = hasPlayablePeriods(sampler, order) ? matrix.periods : null;
+  const overlayPlan = planOverlays(source, frame, timing, labelledPeriods, pivot.time);
+  const overlaysFor = (t: number) =>
+    buildFrameOverlays(overlayPlan, marksAt(t), sampler.nearestPeriod(t));
+  const finalT = matrix.periods.length - 1;
+  const finalMarks = marksAt(finalT);
+  const finalOverlays = overlaysFor(finalT);
+  const baseMarks: Mark[] = [...finalOverlays.behind, ...finalMarks, ...finalOverlays.above].map(
+    ({ mark }) => mark,
+  );
   const trailKeys = source.playback?.trails
     ? resolveTrailKeys(source.playback.trails, matrix.keys, warn)
     : [];
-  const periodLabels = formatPeriodLabels(matrix.periods, pivot.time);
   const keyIndexes = new Map(matrix.keys.map((key, index) => [key, index]));
 
   const observedAt = (key: string, t: number): ObservedValues | null => {
@@ -211,6 +285,10 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
     keys: finalMarks.map(({ key }) => key),
     warnings,
     marksAt,
+    overlaysAt: (t) => {
+      const { behind, above } = overlaysFor(t);
+      return [...behind, ...above];
+    },
     trailsAt: (t) => (trailKeys.length ? trailsAt(matrix, frame, trailKeys, t) : []),
     observedAt,
     describe,
