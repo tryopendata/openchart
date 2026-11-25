@@ -121,13 +121,13 @@ describe('period label auto position for bars', () => {
     },
   });
 
-  it('centers the label behind plain bars', () => {
+  it('puts it in the upper right of plain bars, clear of the marks', () => {
     const playback = compileChartPlayback(barSpec('bar'), compileOptions);
     const area = playback.frame.chartArea;
     expect(text(overlays(playback, 0), PERIOD_LABEL_KEY)).toMatchObject({
-      x: area.x + area.width / 2,
-      y: area.y + area.height / 2,
-      textAnchor: 'middle',
+      x: area.x + area.width - 8,
+      y: area.y + 8,
+      textAnchor: 'end',
     });
   });
 
@@ -148,7 +148,7 @@ describe('periodLabelPlacement', () => {
   it.each([
     ['scatter', { x: 340, y: 220, textAnchor: 'middle' }],
     ['map', { x: 48, y: 412, textAnchor: 'start' }],
-    ['pyramid', { x: 632, y: 28, textAnchor: 'end' }],
+    ['bar', { x: 632, y: 28, textAnchor: 'end' }],
   ] as const)('resolves auto for a %s', (kind, expected) => {
     expect(periodLabelPlacement('auto', area, kind)).toMatchObject(expected);
   });

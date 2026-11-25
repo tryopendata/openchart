@@ -33,6 +33,18 @@ The demo's data has 32 periods, one every other year, so the default duration is
 
 `gaps: "interpolate"` fills a gap along a straight line between the periods on either side, or along a geometric curve on a log axis. Gaps only fill between two periods where the key has values. Before its first value and after its last, a key is absent: it fades in over the second half of the interval before it appears and fades out over the first half of the interval after it leaves.
 
+## Bar charts
+
+<Demo id="change-over-time/playback-bars" />
+
+A [bar chart](/docs/spec/marks/) with `encoding.time` keeps each category on its own row for the whole run while the bars grow and shrink. Bars sorted by value keep one order, ranked over every period, and the engine warns about it. For bars that re-rank every period, use a [race](/docs/change-over-time/race/).
+
+## Races
+
+<Demo id="change-over-time/playback-race" />
+
+A race reads `duration`, `step`, `gaps`, `holdEnd`, `loop`, `autoplay`, `controls` and `period` from a top-level `playback` block as well as from `race`. Setting the same field in both is a validation error, and `labels` and `trails` don't apply to races.
+
 ## When playback starts
 
 With `autoplay: "visible"`, a chart far down the page waits until the reader scrolls to it. `autoplay: false` opens on the final period, the same frame a static render shows.

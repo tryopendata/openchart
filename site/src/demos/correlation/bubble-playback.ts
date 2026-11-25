@@ -51,10 +51,35 @@ export const bubblePlaybackTrails = defineDemo({
   ...figure,
   id: "correlation/bubble-playback-trails",
   title: trailsTitle,
+  static: false,
   spec: {
     ...gapminderSpec,
     playback: { duration: 20000, labels: ["China", "India"], trails: ["China", "India"] },
     chrome: { title: trailsTitle, subtitle },
   },
   caption: "Each trail has a dot for every period the country has reached so far.",
+});
+
+const africaTitle = "South Africa lost nine years of life expectancy from 1990 to 2004";
+
+export const bubblePlaybackAfrica = defineDemo({
+  ...figure,
+  id: "correlation/bubble-playback-africa",
+  title: africaTitle,
+  static: false,
+  spec: {
+    ...gapminderSpec,
+    transform: [{ filter: { field: "region", equal: "Africa" } }],
+    playback: {
+      duration: 20000,
+      labels: ["South Africa", "Kenya"],
+      trails: ["South Africa", "Kenya"],
+    },
+    chrome: {
+      title: africaTitle,
+      subtitle: "The 17 African countries in the data, every other year from 1960 to 2022. Circle size = population.",
+    },
+  },
+  caption:
+    "South Africa's life expectancy fell from 62.9 years in 1990 to 54.0 in 2004, and its trail turns back down the chart before it climbs again.",
 });

@@ -376,4 +376,12 @@ describe('grouped and stacked bars over time', () => {
     expect(high).toBeGreaterThanOrEqual(55);
     expect(high).toBeLessThan(65);
   });
+
+  it('puts the period label in the upper right corner, not behind the bars', () => {
+    const playback = compileChartPlayback(columnSpec(false), compileOptions);
+    const label = playback.overlaysAt(0).find(({ key }) => key === PERIOD_LABEL_KEY)?.mark;
+    if (label?.type !== 'textMark') throw new Error('no period label');
+    expect(label.textAnchor).toBe('end');
+    expect(label.dominantBaseline).toBe('hanging');
+  });
 });

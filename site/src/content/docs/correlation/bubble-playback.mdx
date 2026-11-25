@@ -57,6 +57,10 @@ The large faint year behind the bubbles is the period label. It uses the time ch
 
 `playback.trails` draws each named key's path so far: a thin line in the bubble's color through every period it has reached, with a small dot at each one. China's trail climbs steeply until about 1980 and then runs right. `trails: true` draws one for every key, and above 30 keys the engine warns that the chart will be crowded.
 
+<Demo id="correlation/bubble-playback-africa" />
+
+A trail shows a key moving backwards as plainly as forwards. South Africa's climbs until 1990, drops until 2004 and then climbs again. Kenya's drops by about five years over the same stretch.
+
 ## Countries that appear and disappear
 
 A country without values for a period is absent from it. Russia enters in 1988 and Afghanistan in 2000, the first years the World Bank reports their GDP per capita. Each fades in over the second half of the interval before it appears, and a country that stops reporting fades out over the first half of the interval after its last value. A missing period between two reported ones is filled in by default; `playback.gaps` sets that.
@@ -67,7 +71,7 @@ Hovering a bubble shows the values from the nearest period, titled with that per
 
 ## Static output
 
-`compileChart`, `renderStaticSVG` and a page without JavaScript draw the final period, with its year as the period label. To draw another period, pass `t` to `renderStaticSVG`:
+`compileChart`, `renderStaticSVG` and a page without JavaScript draw the final period, with its year as the period label. Trails are drawn up to that period. To draw another period, pass `t` to `renderStaticSVG`:
 
 ```ts title="static.ts"
 import { renderStaticSVG } from "@opendata-ai/openchart-vanilla/static";

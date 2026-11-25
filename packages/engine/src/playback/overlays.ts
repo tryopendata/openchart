@@ -22,7 +22,7 @@ import type { FrameMark } from './chart-types';
 export const PERIOD_LABEL_KEY = 'oc-playback-period';
 
 /** What the period label sits behind, which decides where `auto` puts it. */
-export type PeriodLabelKind = 'scatter' | 'map' | 'pyramid';
+export type PeriodLabelKind = 'scatter' | 'map' | 'bar';
 
 /** Where and how large the period label is drawn. */
 export interface PeriodLabelPlacement {
@@ -50,7 +50,7 @@ const PERIOD_INK_DARK = 0.16;
 const AUTO_POSITION: Record<PeriodLabelKind, Exclude<PlaybackPeriodPosition, 'auto'>> = {
   scatter: 'center',
   map: 'bottom-left',
-  pyramid: 'top-right',
+  bar: 'top-right',
 };
 
 function scaledSize(area: Rect, size: typeof CENTER_SIZE): number {
@@ -60,7 +60,7 @@ function scaledSize(area: Rect, size: typeof CENTER_SIZE): number {
 
 /**
  * Where the period label goes in `area` for an authored `position`. `auto` resolves per
- * kind: centered behind a scatter, lower left on a map, upper right on a pyramid. Corner
+ * kind: centered behind a scatter, lower left on a map, upper right on bars. Corner
  * positions sit `CORNER_INSET` px inside the plot area.
  */
 export function periodLabelPlacement(

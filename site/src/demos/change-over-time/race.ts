@@ -11,7 +11,7 @@ const tableTitle = "China was No. 2 in 2024";
 const loopTitle = "The US led every year";
 const fixedTitle = "US GDP reached $28.8T";
 const subtitle = "Annual GDP in current US dollars";
-const bar: RaceSpec = {
+export const bar: RaceSpec = {
   type: "race",
   mark: "bar",
   data: worldGdpRace.map(({ country, year, gdp }) => ({ country, year, gdp: gdp * 1e9 })),

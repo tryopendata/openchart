@@ -128,12 +128,11 @@ function hasPlayablePeriods(sampler: FrameSampler, order: number[]): boolean {
 }
 
 /**
- * What `auto` places the period label for: a mirrored bar chart is a pyramid, which keeps
- * the upper right corner clear; plain bars and points take it centered behind the marks.
+ * What `auto` places the period label for: bars, plain or mirrored, keep it in the upper
+ * right corner, shrunk to clear them; points take it centered behind the marks.
  */
-function periodLabelKind(source: ChartSpec, frame: FrozenChartFrame): PeriodLabelKind {
-  const mirrored = specMarkType(source) === 'bar' && frame.spec.markDef.mirror === true;
-  return mirrored ? 'pyramid' : 'scatter';
+function periodLabelKind(source: ChartSpec): PeriodLabelKind {
+  return specMarkType(source) === 'bar' ? 'bar' : 'scatter';
 }
 
 /** The marks at every period of the run, for decisions that must hold across all of them. */
@@ -160,7 +159,7 @@ export function planOverlays(input: OverlayPlanInput): OverlayPlan {
   const placement = periodLabelPlacement(
     timing.period === false ? 'auto' : timing.period.position,
     frame.chartArea,
-    periodLabelKind(source, frame),
+    periodLabelKind(source),
   );
   return {
     periodTexts: texts,
