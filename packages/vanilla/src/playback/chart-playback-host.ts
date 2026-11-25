@@ -50,6 +50,14 @@ export interface PlaybackRenderArgs {
   darkMode: boolean;
 }
 
+/** A playback chart's base layout with the playback compiled for it, as GIF export reads it. */
+export interface PlaybackExportSource {
+  /** The base layout: every keyed mark present, drawn per frame by the playback. */
+  layout: ChartLayout;
+  playback: ChartPlayback;
+  hiddenKeys: ReadonlySet<string>;
+}
+
 /** One chart mount's playback, null-safe for specs without time. */
 export interface ChartPlaybackHost {
   /**
@@ -67,6 +75,11 @@ export interface ChartPlaybackHost {
    * export's note-band variant), replaces the rendered layout when given.
    */
   frameLayout(compiled?: ChartLayout): ChartLayout | null;
+  /**
+   * What a playback GIF captures: the rendered layout (or `compiled`, as for
+   * `frameLayout`), its playback and the legend-hidden keys. Null without playback.
+   */
+  exportSource(compiled?: ChartLayout): PlaybackExportSource | null;
   /** Forget compiled playbacks so the next render recompiles, e.g. once webfonts load. */
   invalidate(): void;
   /** Wire tooltips that read the playhead onto the rendered SVG. Returns the cleanup. */
@@ -127,6 +140,16 @@ export function createChartPlaybackHost(options: {
     return hiddenSeriesKeys(playback.base, spec, compiler.hiddenSeriesFor(layout));
   }
 
+  function exportSource(compiled?: ChartLayout): PlaybackExportSource | null {
+    if (!current || !mounted) return null;
+    const other = compiled && compiler.playbackFor(compiled);
+    if (!compiled || !other) {
+      return { layout: current.layout, playback: current.playback, hiddenKeys: current.hiddenKeys };
+    }
+    const hiddenKeys = hiddenKeysFor(compiled, current.spec, other);
+    return { layout: compiled, playback: other, hiddenKeys };
+  }
+
   function restart(args: PlaybackRenderArgs, next: NonNullable<typeof current>) {
     const { spec, playback } = next;
     const speed = relay?.controller.getState().speed;
@@ -172,14 +195,11 @@ export function createChartPlaybackHost(options: {
       applySeriesHiding(args.svg, hiddenKeys);
     },
     frameLayout(compiled) {
-      if (!current || !mounted) return null;
-      const other = compiled && compiler.playbackFor(compiled);
-      if (!compiled || !other) {
-        return layoutAtPlayhead(current.playback, playhead(), current.layout, current.hiddenKeys);
-      }
-      const hiddenKeys = hiddenKeysFor(compiled, current.spec, other);
-      return layoutAtPlayhead(other, playhead(), compiled, hiddenKeys);
+      const source = exportSource(compiled);
+      if (!source) return null;
+      return layoutAtPlayhead(source.playback, playhead(), source.layout, source.hiddenKeys);
     },
+    exportSource,
     invalidate() {
       compiler.clear();
     },

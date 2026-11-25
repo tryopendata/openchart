@@ -5924,7 +5924,7 @@
           "items": {
             "type": "string"
           },
-          "description": "Point and circle charts only: keys whose name is drawn next to the mark for the whole run."
+          "description": "Point marks only: keys whose name is drawn next to the mark for the whole run."
         },
         "trails": {
           "anyOf": [
@@ -5938,7 +5938,7 @@
               }
             }
           ],
-          "description": "Point and circle charts only: draw past positions as a trail. `true` is every key; an array names keys. Defaults to false."
+          "description": "Point marks only: draw past positions as a trail. `true` is every key; an array names keys. Defaults to false."
         }
       },
       "additionalProperties": false,
