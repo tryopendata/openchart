@@ -2,8 +2,8 @@
  * Bar charts with `encoding.time`: the mirrored pyramid and plain grouped and stacked bars,
  * driven through `compileChartPlayback` and compared with static compiles of single periods.
  *
- * Tests declared with `it.fails` pin behavior that needs changes outside the playback lane
- * (the mirror renderer, chart-playback.ts, freeze.ts, the frame drawer); each says which.
+ * Tests declared with `it.fails` pin behavior that needs changes in chart-playback.ts or the
+ * frame drawer (charts/scatter/playback-frames.ts); each says which.
  * They flip to failures once the fix lands, so they get converted to `it` then.
  */
 import type {
@@ -150,10 +150,9 @@ describe('mirrored bars over time', () => {
     });
   });
 
-  // Needs the mirror renderer to pick its sides from the color channel's domain (normalize
-  // turns `sort: ['Male', 'Female']` into `scale.domain`) instead of first-seen row order:
-  // frame rows arrive in sorted key order, so Female comes first and takes the left half.
-  it.fails('keeps each color on its own half, Male left as sorted, like the static chart', () => {
+  // Frame rows arrive in sorted key order (Female first), so this holds only because the
+  // mirror takes its sides from the color domain rather than row order.
+  it('keeps each color on its own half, Male left as sorted, like the static chart', () => {
     YEARS.forEach((year, period) => {
       const expected = rectsByKey(
         compileChart(staticPeriodSpec(pyramidSpec(), year, playback), compileOptions).marks,
@@ -344,10 +343,9 @@ describe('grouped and stacked bars over time', () => {
     expect(q2Top.y).toBeCloseTo(y(15 + 22.5), 6);
   });
 
-  // Needs the envelope (freeze.ts) to size a stacked axis from each period's own stacks:
-  // the envelope holds every period's rows at once, so the stack sums across periods
-  // (Q1: 10+20+30+5 = 65) instead of the tallest single-period stack (Q2 in 2001: 55).
-  it.fails('sizes a stacked axis for the tallest stack in any one period', () => {
+  // All periods stacked together would give Q1 10+20+30+5 = 65; the tallest single-period
+  // stack is Q2 in 2001, 15+40 = 55.
+  it('sizes a stacked axis for the tallest stack in any one period', () => {
     const playback = compileChartPlayback(columnSpec(true), compileOptions);
     const [, high] = playback.frame.scales.y?.scale.domain().map(Number) ?? [];
     expect(high).toBeGreaterThanOrEqual(55);

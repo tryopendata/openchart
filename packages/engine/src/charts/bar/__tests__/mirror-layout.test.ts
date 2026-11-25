@@ -175,6 +175,21 @@ describe('mirrored bar inputs', () => {
     expect(halves.map((mark) => mark.text)).toEqual(['Male', 'Female']);
   });
 
+  it('puts the first sorted color on the left even when its rows come second', () => {
+    // Playback frames hand rows over in sorted key order, so Female arrives first.
+    const femaleFirst = [...data].sort((a, b) => a.sex.localeCompare(b.sex));
+    const layout = compile({ ...pyramid(true), data: femaleFirst }, 640);
+    const middle = layout.area.x + layout.area.width / 2;
+    for (const mark of rects(layout)) {
+      const onLeft = mark.x + mark.width <= middle;
+      expect([mark.data.sex, onLeft]).toEqual([mark.data.sex, mark.data.sex === 'Male']);
+    }
+    const halves = layout.marks.filter(
+      (mark): mark is TextMarkLayout => mark.type === 'textMark' && mark.y < layout.area.y,
+    );
+    expect(halves.map((mark) => mark.text)).toEqual(['Male', 'Female']);
+  });
+
   it('never cuts the widest label of a gutter sized to fit it', () => {
     const ages = ['0-4', '5-9', '10-14', '95-99', '100+'];
     const rows = ages.flatMap((age, index) => [

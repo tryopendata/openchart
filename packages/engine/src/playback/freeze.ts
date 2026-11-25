@@ -16,6 +16,7 @@ import { freezePointRenderSpec } from '../charts/scatter/playback-spec';
 import { compileChartInternal } from '../compile/chart';
 import type { FrameCapture } from '../compile/internal-options';
 import { resolveFieldFormatter } from '../format/field-format';
+import { summedStackFields, tallestStackRows } from './bar-playback';
 import { channelField, isDrawnChannel, matrixChannelEncoding } from './channels';
 import type { FrozenChartFrame } from './chart-types';
 import type { PlaybackMatrix } from './matrix';
@@ -82,7 +83,9 @@ function envelopeRows(spec: ChartSpec, matrix: PlaybackMatrix): DataRow[] {
  * (statics attached, the time field set to the cell's period), `encoding.time`, `playback`
  * and `hiddenSeries` removed, and the playback overrides applied (no trendline). `transform`
  * is dropped too, since the matrix was built from rows the transforms already produced.
- * Hidden series stay in the envelope so hiding one never moves an axis.
+ * Hidden series stay in the envelope so hiding one never moves an axis. A stacked bar keeps
+ * each category's tallest period only (`tallestStackRows`), so its axis isn't sized from
+ * every period stacked together.
  *
  * When no cell is present (every row filtered out, or no drawable values), the envelope
  * keeps the spec's own data and transforms so the frame compiles the chart's empty state.
@@ -106,7 +109,10 @@ export function buildEnvelopeSpec(spec: ChartSpec, matrix: PlaybackMatrix): Char
   const rows = envelopeRows(spec, matrix);
   if (rows.length === 0)
     return { ...rest, mark, encoding, transform, data: spec.data } as ChartSpec;
-  return { ...rest, mark, encoding, data: rows } as ChartSpec;
+  const stack = summedStackFields(spec);
+  const timeField = channelField((spec.encoding as Encoding & { time?: unknown }).time);
+  const data = stack && timeField ? tallestStackRows(rows, stack, timeField) : rows;
+  return { ...rest, mark, encoding, data } as ChartSpec;
 }
 
 function resolveFormatters(

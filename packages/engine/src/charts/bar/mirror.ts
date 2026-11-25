@@ -150,7 +150,12 @@ export function computeMirrorMarks(
 
   const categories = yScale.domain().map(String);
   const geometry = mirrorGeometry(chartArea, categories, measureText, theme);
-  const sides = sideOrder(spec.data, colorChannel.field, colorChannel.sort);
+  const sides = sideOrder(
+    spec.data,
+    colorChannel.field,
+    colorChannel.sort,
+    colorChannel.scale?.domain,
+  );
   const rects = buildMirrorRects(spec, scales, geometry, {
     xField,
     yField,
@@ -168,15 +173,24 @@ export function computeMirrorMarks(
 
 /**
  * The two color values in side order, left first: by an explicit sort array or direction,
- * else in the order they first appear in the data. Rows with no color value pick no side.
+ * else by the color scale's domain, else in the order they first appear in the data. Rows
+ * with no color value pick no side.
+ *
+ * Normalize turns a sort array into `scale.domain`, and playback frames hand rows over in
+ * key order, so the domain (not row order) is what keeps the authored sides on every frame.
+ * The domain is used whole, so a frame missing one color's rows still keeps both sides.
  */
-function sideOrder(data: DataRow[], colorField: string, sort: unknown): string[] {
+function sideOrder(data: DataRow[], colorField: string, sort: unknown, domain: unknown): string[] {
   const firstSeen: string[] = [];
   for (const row of data) {
     const raw = row[colorField];
     if (raw === undefined || raw === null) continue;
     const value = String(raw);
     if (!firstSeen.includes(value)) firstSeen.push(value);
+  }
+  if (sort === undefined && Array.isArray(domain)) {
+    const ordered = domain.map(String);
+    return [...ordered, ...firstSeen.filter((value) => !ordered.includes(value))];
   }
   if (Array.isArray(sort)) {
     const sorted = sort.map(String).filter((value) => firstSeen.includes(value));
