@@ -13,6 +13,7 @@ import type {
   ThemeConfig,
   TileMapLayout,
   TileMapSpec,
+  TooltipContent,
 } from '@opendata-ai/openchart-core';
 import { BREAKPOINT_COMPACT_MAX, BREAKPOINT_MEDIUM_MAX } from '@opendata-ai/openchart-core';
 import { compileTileMap } from '@opendata-ai/openchart-engine';
@@ -226,8 +227,12 @@ export function createTileMap(
   // Waiting (held until seen): every re-render re-arms it on the new SVG.
   // Playing: resizes defer and replay after it settles; updates snap.
   const entrance = createEntranceLifecycle({ onDeferredResize: () => resize() });
+  // Re-shows the hovered tile's tooltip; playback calls it when the period changes.
+  let refreshHoveredTooltip: (() => void) | null = null;
   // A time spec's motion is the playback itself: no entrance, no update tween.
-  const playback = createMapPlaybackHost(container, tileMapPlaybackAdapter);
+  const playback = createMapPlaybackHost(container, tileMapPlaybackAdapter, {
+    onPeriodChange: () => refreshHoveredTooltip?.(),
+  });
   // In-flight data-update tween; every render() and destroy() snaps it.
   let updateTween: ElementTweenHandle | null = null;
 
@@ -324,6 +329,30 @@ export function createTileMap(
   // Tooltip and interaction wiring
   // ---------------------------------------------------------------------------
 
+  /**
+   * Show `content()` at the pointer, and keep showing the hovered tile's current content
+   * there as playback moves the period.
+   */
+  function showTooltipAt(
+    svg: SVGSVGElement,
+    content: () => TooltipContent | undefined,
+    event: MouseEvent,
+  ): void {
+    const svgRect = svg.getBoundingClientRect();
+    const x = event.clientX - svgRect.left;
+    const y = event.clientY - svgRect.top;
+    refreshHoveredTooltip = () => {
+      const shown = content();
+      if (shown && tooltipManager && options?.tooltip !== false) tooltipManager.show(shown, x, y);
+    };
+    refreshHoveredTooltip();
+  }
+
+  function hideTooltip(): void {
+    refreshHoveredTooltip = null;
+    tooltipManager?.hide();
+  }
+
   function wireTooltipAndInteraction(svg: SVGSVGElement, layout: TileMapLayout): () => void {
     const cleanups: Array<() => void> = [];
     const navigation: NavigableMark[] = [];
@@ -351,13 +380,7 @@ export function createTileMap(
         const mouseEvent = e as MouseEvent;
         tilesGroup?.classList.add('oc-hover-active');
         el.classList.add('oc-tilemap-tile--hover');
-        const content = tooltipContent();
-        if (content && tooltipManager && options?.tooltip !== false) {
-          const svgRect = svg.getBoundingClientRect();
-          const x = mouseEvent.clientX - svgRect.left;
-          const y = mouseEvent.clientY - svgRect.top;
-          tooltipManager.show(content, x, y);
-        }
+        showTooltipAt(svg, tooltipContent, mouseEvent);
         if (tile) {
           options?.onTileHover?.({
             stateCode: tile.stateCode,
@@ -369,14 +392,7 @@ export function createTileMap(
       };
 
       const handleMouseMove = (e: Event) => {
-        const content = tooltipContent();
-        if (content && tooltipManager && options?.tooltip !== false) {
-          const mouseEvent = e as MouseEvent;
-          const svgRect = svg.getBoundingClientRect();
-          const x = mouseEvent.clientX - svgRect.left;
-          const y = mouseEvent.clientY - svgRect.top;
-          tooltipManager.show(content, x, y);
-        }
+        showTooltipAt(svg, tooltipContent, e as MouseEvent);
       };
 
       const handleMouseLeave = () => {
@@ -384,7 +400,7 @@ export function createTileMap(
         activeLeave = null;
         tilesGroup?.classList.remove('oc-hover-active');
         el.classList.remove('oc-tilemap-tile--hover');
-        tooltipManager?.hide();
+        hideTooltip();
         options?.onTileHover?.(null);
       };
 
@@ -434,7 +450,7 @@ export function createTileMap(
 
   function render(): void {
     const focusedMark = captureMarkFocus(svgElement);
-    tooltipManager?.hide();
+    hideTooltip();
     updateTween?.cancel();
     updateTween = null;
     // Cancel the running entrance; one still waiting to be seen re-arms.

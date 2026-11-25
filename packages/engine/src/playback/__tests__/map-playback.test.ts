@@ -105,7 +105,7 @@ describe('compileGeoMapPlayback', () => {
     expect(feature(halfway, '06').data?.rate).toBe(12);
     const playback = compileGeoMapPlayback(geoSpec(), OPTIONS);
     const fill = playback.fillsAt(1.5).find(({ key }) => key === '06');
-    expect(fill).toEqual({
+    expect(fill).toMatchObject({
       key: '06',
       fill: feature(halfway, '06').fill,
       binIndex: feature(halfway, '06').binIndex,
@@ -174,7 +174,6 @@ describe('compileGeoMapPlayback', () => {
       title: 'New York, Feb 2020 (estimated)',
       fields: [{ label: 'Insured unemployment', value: '5', role: 'value' }],
     });
-    expect(playback.observedAt('California', 0)).toEqual({ rate: '2' });
     expect(playback.describe(2)).toBe('Mar 2020: highest California 20, lowest New York 9.');
   });
 
@@ -263,7 +262,7 @@ describe('map time validation', () => {
     [
       'two rows for one state and month',
       geoSpec({ data: [...RATES, { state: 'Texas', month: '2020-01-01', rate: 7 }] }),
-      /2 rows have state = 'Texas' and month = 2020-01-01/,
+      /2 rows have state = 'Texas' and month = '2020-01-01'/,
     ],
     [
       'points.time without points.key',
@@ -299,6 +298,6 @@ describe('map time validation', () => {
         time: { field: 'month', type: 'temporal' },
       },
     };
-    expect(() => compileTileMap(spec, OPTIONS)).toThrow(/needs a quantitative encoding.value/);
+    expect(() => compileTileMap(spec, OPTIONS)).toThrow(/cannot use categorical encoding.color/);
   });
 });

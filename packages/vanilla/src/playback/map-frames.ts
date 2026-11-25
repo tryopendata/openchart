@@ -1,10 +1,11 @@
 /**
  * Writes a map playback's frames onto the SVG built from its base layout: feature fills by
  * `data-key`, tile paint by `data-state`, point radius, fill and fade by `data-point-key`,
- * and the period label's text. Reads only attributes the renderer stamped, never measured
- * geometry.
+ * each element's accessible label, and the period label's text. Reads only attributes the
+ * renderer stamped, never measured geometry.
  */
 import type { MapFillFrame, MapPlayback, MapPointFrame } from '@opendata-ai/openchart-engine';
+import { type FeatureUnderlays, writeFeature } from './map-feature-paint';
 
 /** Draws frames onto one rendered map SVG. */
 export interface MapFrameWriter {
@@ -25,15 +26,6 @@ function setStyleFill(element: Element | undefined, fill: string): void {
   if (!element) return;
   const style = (element as SVGElement & ElementCSSInlineStyle).style;
   if (style.getPropertyValue('fill') !== fill) style.setProperty('fill', fill);
-}
-
-/** A geo feature path: fill (the hatch for no data), class index and no-data flag. */
-function writeFeature(path: Element, frame: MapFillFrame, noDataFill: string | null): void {
-  setIfChanged(path, 'fill', frame.noData ? (noDataFill ?? frame.fill) : frame.fill);
-  if (frame.binIndex === undefined) path.removeAttribute('data-bin-index');
-  else setIfChanged(path, 'data-bin-index', String(frame.binIndex));
-  if (frame.noData) setIfChanged(path, 'data-nodata', 'true');
-  else path.removeAttribute('data-nodata');
 }
 
 /** A tile group: the tile's paint, and its code and value labels' ink and text. */
@@ -65,6 +57,9 @@ function writePoint(circle: Element, frame: MapPointFrame): void {
   setIfChanged(circle, 'fill', frame.fill);
   if (frame.presence >= 1) circle.removeAttribute('opacity');
   else setIfChanged(circle, 'opacity', String(frame.presence));
+  // A faded-out point is gone from the frame, so it mustn't catch the pointer either.
+  if (frame.presence > 0) circle.removeAttribute('pointer-events');
+  else setIfChanged(circle, 'pointer-events', 'none');
 }
 
 function indexBy(svg: SVGElement, attribute: string): Map<string, Element[]> {
@@ -81,7 +76,8 @@ function indexBy(svg: SVGElement, attribute: string): Map<string, Element[]> {
 /**
  * Bind to the keyed elements of a rendered map SVG and write each frame by key. Insets can
  * draw a feature more than once, so every element with the key is written. Keys without an
- * element are ignored and unkeyed elements are never touched.
+ * element are ignored and unkeyed elements are never touched. Accessible labels follow the
+ * nearest period, so they're written only when it changes.
  */
 export function createMapFrameWriter(
   svg: SVGElement,
@@ -93,18 +89,27 @@ export function createMapFrameWriter(
   for (const [key, tiles] of indexBy(svg, 'data-state')) byKey.set(key, tiles);
   let byPointKey: Map<string, Element[]> | null = indexBy(svg, 'data-point-key');
   const noDataFill = svg.getAttribute(NO_DATA_FILL_ATTRIBUTE);
+  const underlays: FeatureUnderlays = new Map();
+  let labelledPeriod: number | undefined;
 
   return {
     draw(t) {
       if (!byKey || !byPointKey) return;
+      const period = Math.round(t);
+      const relabel = period !== labelledPeriod;
+      labelledPeriod = period;
       for (const frame of playback.fillsAt(t)) {
         for (const element of byKey.get(frame.key) ?? []) {
           if (element.tagName.toLowerCase() === 'g') writeTile(element, frame);
-          else writeFeature(element, frame, noDataFill);
+          else writeFeature(element, frame, noDataFill, underlays);
+          if (relabel) setIfChanged(element, 'aria-label', frame.ariaLabel);
         }
       }
       for (const frame of playback.pointsAt(t)) {
-        for (const element of byPointKey.get(frame.key) ?? []) writePoint(element, frame);
+        for (const element of byPointKey.get(frame.key) ?? []) {
+          writePoint(element, frame);
+          if (relabel) setIfChanged(element, 'aria-label', frame.ariaLabel);
+        }
       }
       for (const overlay of playback.overlaysAt(t)) {
         for (const element of byKey.get(overlay.key ?? '') ?? []) {
@@ -115,6 +120,7 @@ export function createMapFrameWriter(
     destroy() {
       byKey = null;
       byPointKey = null;
+      underlays.clear();
     },
   };
 }

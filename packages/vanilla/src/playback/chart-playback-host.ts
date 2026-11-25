@@ -21,11 +21,11 @@ import {
   wirePlaybackTooltips,
 } from './chart-tooltips';
 import { carriedPlayhead, resetPlayhead, samePlaybackShape } from './chart-update';
-import { type ControllerRelay, createControllerRelay } from './controller-relay';
-import { PLAYBACK_CONTROLS_HEIGHT } from './controls';
 import { layoutAtPlayhead } from './frame-layout';
 import { createPlaybackCompiler } from './playback-compiler';
+import { createPlaybackRun, onNearestPeriodChange } from './playback-run';
 import { applySeriesHiding, hiddenSeriesKeys } from './series-hiding';
+import { stripHeight } from './strip';
 import type { PlaybackController } from './types';
 
 type MountSpec = ChartSpec | LayerSpec;
@@ -37,8 +37,7 @@ export function isPlaybackSpec(spec: MountSpec): spec is ChartSpec {
 
 /** Height the controls strip takes below the SVG for `spec`: 0 without time or with controls off. */
 export function playbackStripHeight(spec: MountSpec): number {
-  if (!isPlaybackSpec(spec)) return 0;
-  return spec.playback?.controls === false ? 0 : PLAYBACK_CONTROLS_HEIGHT;
+  return stripHeight(isPlaybackSpec(spec), isPlaybackSpec(spec) ? spec.playback : undefined);
 }
 
 /** What `render()` hands the host after building the SVG. */
@@ -91,8 +90,7 @@ export function createChartPlaybackHost(options: {
 }): ChartPlaybackHost {
   const { container, editing } = options;
   const compiler = createPlaybackCompiler();
-  let mounted: ChartPlaybackMount | null = null;
-  let relay: ControllerRelay | null = null;
+  const run = createPlaybackRun<ChartPlaybackMount>();
   // The rendered spec and layout (base, or base with legend state) and their playback.
   let current: {
     spec: ChartSpec;
@@ -101,54 +99,40 @@ export function createChartPlaybackHost(options: {
     hiddenKeys: Set<string>;
   } | null = null;
   let tooltips: PlaybackTooltips | null = null;
-  let tooltipPeriod: number | undefined;
 
-  const playhead = () => mounted?.controller.getState().t ?? 0;
+  const playhead = run.playhead;
   const currentPlayback = () => current?.playback ?? null;
-
-  // Tooltips show the nearest period's values, so they change only when that period does.
-  function refreshTooltips(t: number) {
-    const period = Math.round(t);
-    if (period === tooltipPeriod) return;
-    tooltipPeriod = period;
-    tooltips?.refresh();
-  }
+  const refreshTooltips = onNearestPeriodChange(() => tooltips?.refresh());
 
   function teardown() {
-    mounted?.destroy();
-    mounted = null;
-    relay?.release();
-    relay = null;
+    run.teardown();
     current = null;
   }
 
-  /** Start a run from scratch, keeping the controller (and its speed) when one exists. */
   function hiddenKeysFor(layout: ChartLayout, spec: ChartSpec, playback: ChartPlayback) {
     return hiddenSeriesKeys(playback.base, spec, compiler.hiddenSeriesFor(layout));
   }
 
+  /** Start a run from scratch, keeping the controller (and its speed) when one exists. */
   function restart(args: PlaybackRenderArgs, next: NonNullable<typeof current>) {
     const { spec, playback } = next;
-    const speed = relay?.controller.getState().speed;
-    mounted?.destroy();
     current = next;
-    mounted = mountChartPlayback({
-      container,
-      svg: args.svg,
-      playback,
-      darkMode: args.darkMode,
-      animate: spec.animation !== false && !editing,
-      initialState: relay ? resetPlayhead(playback) : undefined,
-      onFrame: refreshTooltips,
-    });
-    if (speed !== undefined && speed !== 1) mounted.controller.setSpeed(speed);
-    if (relay) relay.follow(mounted.controller);
-    else relay = createControllerRelay(mounted.controller);
+    run.restart((replacing) =>
+      mountChartPlayback({
+        container,
+        svg: args.svg,
+        playback,
+        darkMode: args.darkMode,
+        animate: spec.animation !== false && !editing,
+        initialState: replacing ? resetPlayhead(playback) : undefined,
+        onFrame: refreshTooltips,
+      }),
+    );
   }
 
   return {
     get controller() {
-      return relay?.controller ?? null;
+      return run.controller;
     },
     compilerFor(spec) {
       return isPlaybackSpec(spec) ? compiler.compilerFor(spec) : undefined;
@@ -162,6 +146,7 @@ export function createChartPlaybackHost(options: {
       }
       const hiddenKeys = hiddenKeysFor(args.layout, spec, playback);
       const next = { spec, layout: args.layout, playback, hiddenKeys };
+      const { mounted } = run;
       if (!mounted || !current || !samePlaybackShape(current.spec, spec)) {
         restart(args, next);
       } else {
@@ -172,7 +157,7 @@ export function createChartPlaybackHost(options: {
       applySeriesHiding(args.svg, hiddenKeys);
     },
     frameLayout(compiled) {
-      if (!current || !mounted) return null;
+      if (!current || !run.mounted) return null;
       const other = compiled && compiler.playbackFor(compiled);
       if (!compiled || !other) {
         return layoutAtPlayhead(current.playback, playhead(), current.layout, current.hiddenKeys);
@@ -201,7 +186,7 @@ export function createChartPlaybackHost(options: {
       return playbackTooltipDescriptors(base, { svg, playback: currentPlayback, playhead });
     },
     pause() {
-      mounted?.controller.pause();
+      run.mounted?.controller.pause();
     },
     destroy() {
       tooltips?.dispose();

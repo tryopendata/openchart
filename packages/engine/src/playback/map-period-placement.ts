@@ -11,9 +11,24 @@ import {
 } from '@opendata-ai/openchart-core';
 import { type PeriodLabelPlacement, periodLabelPlacement } from './overlays';
 
+/**
+ * Corner label size on a map, about 60% of the chart corner size: a map's corners hold
+ * geography (Maine, Florida, Alaska), so a chart-sized label covers states.
+ */
+const MAP_CORNER_SIZE = { heightShare: 0.096, widthShare: 0.084, min: 14, max: 58 };
+
 /** Corners `auto` tries, in order of preference: the first of equal overlap wins. */
 const AUTO_CORNERS = ['bottom-left', 'top-left', 'bottom-right', 'top-right'] as const;
 type Corner = (typeof AUTO_CORNERS)[number];
+
+/** The corner label's font size for a map area, in px. */
+function mapCornerFontSize(area: Rect): number {
+  const fit = Math.min(
+    area.height * MAP_CORNER_SIZE.heightShare,
+    area.width * MAP_CORNER_SIZE.widthShare,
+  );
+  return Math.round(Math.max(MAP_CORNER_SIZE.min, Math.min(MAP_CORNER_SIZE.max, fit)));
+}
 
 /** A corner placement built from the two corners `periodLabelPlacement` knows. */
 function cornerPlacement(corner: Corner, area: Rect): PeriodLabelPlacement {
@@ -23,6 +38,7 @@ function cornerPlacement(corner: Corner, area: Rect): PeriodLabelPlacement {
   const top = corner.startsWith('top');
   return {
     ...lowerLeft,
+    fontSize: mapCornerFontSize(area),
     x: left ? lowerLeft.x : upperRight.x,
     y: top ? upperRight.y : lowerLeft.y,
     textAnchor: left ? 'start' : 'end',
@@ -48,7 +64,8 @@ function overlapArea(a: Rect, b: Rect): number {
 }
 
 /**
- * Place the period label in `area`. `obstacles` are the drawn geography in the same
+ * Place the period label in `area`: centered at the chart size, or in a corner at the
+ * smaller map size. `obstacles` are the drawn geography in the same
  * coordinates (feature or tile bounds); `texts` are every period's label, so the chosen
  * corner fits the widest one and never changes mid-run.
  */
@@ -59,7 +76,8 @@ export function mapPeriodPlacement(
   obstacles: Rect[],
   fontWeight: number,
 ): PeriodLabelPlacement {
-  if (position !== 'auto') return periodLabelPlacement(position, area, 'map');
+  if (position === 'center') return periodLabelPlacement(position, area, 'map');
+  if (position !== 'auto') return cornerPlacement(position, area);
   let best = cornerPlacement(AUTO_CORNERS[0], area);
   let bestOverlap = Number.POSITIVE_INFINITY;
   for (const corner of AUTO_CORNERS) {
