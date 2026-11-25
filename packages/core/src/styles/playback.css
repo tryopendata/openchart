@@ -1,10 +1,16 @@
 /*
- * Playback controls (play button, scrubber, readout) shared by races, charts and maps.
- * Each selector lists both the .oc-race-* and .oc-playback-* prefixes. The controls set
+ * Playback controls (play button, scrubber, readout) shared by races, charts and maps, and
+ * the pointer rule for a playback chart's overlay labels. Each control selector lists both the .oc-race-* and .oc-playback-* prefixes. The controls set
  * the scrubber's progress as --<prefix>-progress; the race shell sets
  * --oc-race-progress-color on its controls slot.
  */
 @layer oc.components {
+  /* The period label and name labels drawn over a playback chart describe the marks; they
+     aren't marks themselves, so pointer and touch go through them to the marks beneath. */
+  [data-key^="oc-playback-"] {
+    pointer-events: none;
+  }
+
   .oc-race-controls,
   .oc-playback-controls {
     display: flex;

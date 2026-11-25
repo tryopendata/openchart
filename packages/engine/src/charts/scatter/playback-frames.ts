@@ -17,7 +17,7 @@ export type FrameDrawer = (rows: DataRow[]) => Map<string, Mark>;
 /**
  * A drawer bound to the frozen frame. Marks without a key are left out, since frames are
  * matched to the DOM by key only.
-
+ *
  * @throws {Error} When no renderer is registered for the frame's mark type.
  */
 export function createFrameDrawer(frame: FrozenChartFrame, containerWidth: number): FrameDrawer {
