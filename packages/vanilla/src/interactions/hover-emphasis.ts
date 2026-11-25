@@ -21,6 +21,7 @@
  */
 
 import type { ChartLayout } from '@opendata-ai/openchart-core';
+import { MIRROR_HALF_KEY_PREFIX } from '../mirror-half-key';
 
 const MARKS_ACTIVE_CLASS = 'oc-hover-active';
 const MARK_HOVER_CLASS = 'oc-mark--hover';
@@ -175,9 +176,6 @@ export function wireEndpointLabelHover(svg: SVGElement, emphasis: HoverEmphasis)
     for (const cleanup of cleanups) cleanup();
   };
 }
-
-/** Key prefix of the mirrored-bar half labels (`oc-mirror-half|<side>`, set by the engine). */
-const MIRROR_HALF_KEY_PREFIX = 'oc-mirror-half|';
 
 /**
  * Hover-link the half labels above a mirrored bar chart, which replace its swatch

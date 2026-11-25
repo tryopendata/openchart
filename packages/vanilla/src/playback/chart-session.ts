@@ -4,6 +4,7 @@
  * moves it onto a freshly rendered SVG and a recompiled playback.
  */
 import type { ChartPlayback } from '@opendata-ai/openchart-engine';
+import { createChartBarWriter } from './chart-bar-frames';
 import { createChartFrameWriter } from './chart-frames';
 import { createChartTrailWriter } from './chart-trails';
 import {
@@ -23,18 +24,25 @@ export type ChartPlaybackView = PlaybackMountView<ChartPlayback>;
 /** A chart's running playback. */
 export type ChartPlaybackMount = PlaybackMount<ChartPlayback>;
 
-/** The frame writer and, when the playback has trails, the trail writer for one SVG. */
-function bindFrameWriters(svg: SVGElement, playback: ChartPlayback): PlaybackFrameWriter {
+/**
+ * Every writer a chart frame needs on one SVG: the keyed mark and overlay writer, the bar
+ * shape and value label writer when there are bars, and the trail writer when the playback
+ * has trails. The live session and the GIF export draw frames through it.
+ */
+export function createChartWriters(svg: SVGElement, playback: ChartPlayback): PlaybackFrameWriter {
   const frames = createChartFrameWriter(svg, playback);
+  const bars = createChartBarWriter(svg, playback);
   const trails = createChartTrailWriter(svg, playback);
   return {
     draw(t: number) {
       trails?.draw(t);
       frames.draw(t);
+      bars?.draw(t);
     },
     destroy() {
       trails?.destroy();
       frames.destroy();
+      bars?.destroy();
     },
   };
 }
@@ -47,5 +55,5 @@ function bindFrameWriters(svg: SVGElement, playback: ChartPlayback): PlaybackFra
  * @throws {RangeError} If `initialState` has a non-finite position or an invalid speed.
  */
 export function mountChartPlayback(options: ChartPlaybackMountOptions): ChartPlaybackMount {
-  return mountPlayback({ ...options, createWriter: bindFrameWriters });
+  return mountPlayback({ ...options, createWriter: createChartWriters });
 }

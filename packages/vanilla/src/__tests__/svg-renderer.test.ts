@@ -709,14 +709,11 @@ describe('SVG root structure', () => {
     expect(clippedGroup!.getAttribute('clip-path')).toMatch(/url\(#oc-clip-/);
   });
 
-  it('keeps text marks placed above the plot inside the clip', () => {
-    const container = createContainer(COMPILE_OPTS.width, COMPILE_OPTS.height);
+  describe('text marks above the plot', () => {
     const layout = compileChart(lineSpec, COMPILE_OPTS);
-    const plain = renderChartSVG(layout, container).querySelector('clipPath rect');
-    expect(Number(plain!.getAttribute('y'))).toBe(layout.area.y - 2);
-
-    const label = {
+    const textAbovePlot = (key: string) => ({
       type: 'textMark' as const,
+      key,
       x: layout.area.x,
       y: layout.area.y - 20,
       text: 'Male',
@@ -725,15 +722,28 @@ describe('SVG root structure', () => {
       textAnchor: 'middle' as const,
       data: {},
       aria: { decorative: true },
+    });
+    const clipRectWith = (key: string) => {
+      const marks = [...layout.marks, textAbovePlot(key)];
+      const svg = renderChartSVG({ ...layout, marks } as typeof layout, createContainer(600, 400));
+      const rect = svg.querySelector('clipPath rect');
+      const y = Number(rect!.getAttribute('y'));
+      return { top: y, bottom: y + Number(rect!.getAttribute('height')) };
     };
-    const withLabel = { ...layout, marks: [...layout.marks, label] } as typeof layout;
-    const rect = renderChartSVG(withLabel, createContainer(600, 400)).querySelector(
-      'clipPath rect',
-    );
-    expect(Number(rect!.getAttribute('y'))).toBe(layout.area.y - 34);
-    expect(Number(rect!.getAttribute('y')) + Number(rect!.getAttribute('height'))).toBe(
-      layout.area.y + layout.area.height + 2,
-    );
+
+    it('widen the clip for a mirrored bar half label', () => {
+      expect(clipRectWith('oc-mirror-half|Male')).toEqual({
+        top: layout.area.y - 34,
+        bottom: layout.area.y + layout.area.height + 2,
+      });
+    });
+
+    it('leave the clip at the plot for any other text mark', () => {
+      expect(clipRectWith('oc-playback-period')).toEqual({
+        top: layout.area.y - 2,
+        bottom: layout.area.y + layout.area.height + 2,
+      });
+    });
   });
 });
 

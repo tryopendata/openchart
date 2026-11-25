@@ -4,9 +4,8 @@
  */
 import type { ChartPlayback } from '@opendata-ai/openchart-engine';
 import type { GIFExportOptions } from '../export-gif';
-import { createChartFrameWriter } from './chart-frames';
-import { createChartTrailWriter } from './chart-trails';
-import { exportPlaybackGIF } from './export-gif';
+import { createChartWriters } from './chart-session';
+import { exportPlaybackGIF, playbackGIFTiming } from './export-gif';
 import { applySeriesHiding } from './series-hiding';
 
 /** The chart scene a playback GIF is captured from. */
@@ -34,7 +33,7 @@ export function exportChartPlaybackGIF(
   { svg, playback, hiddenKeys }: ChartPlaybackGIFView,
   options?: GIFExportOptions,
 ): Promise<Blob> {
-  const { timing } = playback;
+  const { durationMs, holdEndMs, loop } = playbackGIFTiming(playback.timing, options);
   let drawFrame: ((t: number) => void) | undefined;
   return exportPlaybackGIF(
     {
@@ -44,8 +43,8 @@ export function exportChartPlaybackGIF(
         drawFrame ??= bindFrame(frame, playback, hiddenKeys);
         drawFrame(t);
       },
-      durationMs: options?.durationMs ?? timing.durationMs,
-      holdEndMs: timing.holdEndMs,
+      durationMs,
+      holdEndMs,
       // Chart marks carry their paint as attributes and chrome is covered by the theme block.
       styleSelectors: [],
       paletteSeed: paletteSeed(playback),
@@ -53,7 +52,7 @@ export function exportChartPlaybackGIF(
     {
       fps: options?.fps,
       dpi: options?.dpi,
-      loop: options?.loop ?? timing.loop,
+      loop,
       embedFonts: options?.embedFonts,
       backgroundColor: options?.backgroundColor,
       theme: options?.theme,
@@ -67,13 +66,9 @@ function bindFrame(
   playback: ChartPlayback,
   hiddenKeys: ReadonlySet<string>,
 ): (t: number) => void {
-  const frames = createChartFrameWriter(frame, playback);
-  const trails = createChartTrailWriter(frame, playback);
+  const writers = createChartWriters(frame, playback);
   applySeriesHiding(frame, hiddenKeys);
-  return (t) => {
-    trails?.draw(t);
-    frames.draw(t);
-  };
+  return (t) => writers.draw(t);
 }
 
 /** The distinct point fills of the base layout, reserved so series colors survive quantization. */

@@ -11,20 +11,7 @@ import type {
 } from '@opendata-ai/openchart-core';
 import { compileGeoMapPlayback, compileTileMapPlayback } from '@opendata-ai/openchart-engine';
 import type { MapPlaybackAdapter } from './map-playback-host';
-
-function fieldOf(channel: unknown): unknown {
-  if (typeof channel !== 'object' || channel === null) return undefined;
-  return (channel as { field?: unknown }).field;
-}
-
-function typeOf(channel: unknown): unknown {
-  if (typeof channel !== 'object' || channel === null) return undefined;
-  return (channel as { type?: unknown }).type;
-}
-
-function timeShape(time: unknown): unknown[] {
-  return [fieldOf(time), typeOf(time)];
-}
+import { channelField, timeShape } from './update-rules';
 
 /** Geo maps: the features' time and key, and the points layer's. */
 export const geoMapPlaybackAdapter: MapPlaybackAdapter<GeoMapSpec, GeoMapLayout> = {
@@ -34,9 +21,9 @@ export const geoMapPlaybackAdapter: MapPlaybackAdapter<GeoMapSpec, GeoMapLayout>
     const points = (spec.points ?? {}) as Record<string, unknown>;
     return [
       ...timeShape(encoding.time),
-      fieldOf(encoding.key),
+      channelField(encoding.key),
       ...timeShape(points.time),
-      fieldOf(points.key),
+      channelField(points.key),
     ];
   },
   styleSelectors: ['.oc-map-feature', '.oc-map-point', '.oc-playback-period'],
@@ -47,7 +34,7 @@ export const tileMapPlaybackAdapter: MapPlaybackAdapter<TileMapSpec, TileMapLayo
   compilePlayback: (spec, options) => compileTileMapPlayback(spec, options),
   shapeOf(spec) {
     const encoding = spec.encoding as unknown as Record<string, unknown>;
-    return [...timeShape(encoding.time), fieldOf(encoding.state)];
+    return [...timeShape(encoding.time), channelField(encoding.state)];
   },
   styleSelectors: ['.oc-tilemap-tile', '.oc-playback-period'],
 };

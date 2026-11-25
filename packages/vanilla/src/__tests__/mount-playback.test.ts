@@ -52,6 +52,14 @@ function mount(spec: ChartSpec, options: Parameters<typeof createChart>[2] = {})
   return { container, chart };
 }
 
+/** Capture what period listeners report through the page's `reportError`. */
+function stubReportError(): unknown[] {
+  const reported: unknown[] = [];
+  vi.stubGlobal('reportError', (error: unknown) => reported.push(error));
+  cleanup.push(() => vi.unstubAllGlobals());
+  return reported;
+}
+
 function playback(chart: ReturnType<typeof createChart>) {
   const controller = chart.playback;
   if (!controller) throw new Error('expected a playback controller');
@@ -84,6 +92,48 @@ describe('chart.playback', () => {
     const regionRows = rows().filter((row) => row.country !== 'Borea');
     chart.update(timeSpec({ data: regionRows, encoding }));
     expect(playback(chart).getState().t).toBe(0);
+  });
+
+  it('keeps delivering periods to every listener when one throws', () => {
+    const reported = stubReportError();
+    const { chart } = mount(timeSpec({ animation: false }));
+    const controller = playback(chart);
+    const heard: string[] = [];
+    controller.on('period', () => {
+      throw new Error('listener failed');
+    });
+    controller.on('period', (period) => heard.push(period.label));
+    controller.seek(1);
+    controller.seek(0);
+    expect(heard).toEqual(['2001', '2000']);
+    expect(reported.map((error) => (error as Error).message)).toEqual([
+      'listener failed',
+      'listener failed',
+    ]);
+  });
+
+  it('finishes an update that restarts the run, then tells a throwing listener', async () => {
+    const reported = stubReportError();
+    const { container, chart } = mount(timeSpec({ animation: false }));
+    const controller = playback(chart);
+    controller.seek(1);
+    const heard: string[] = [];
+    controller.on('period', (period) => {
+      heard.push(period.label);
+      throw new Error('listener failed');
+    });
+    const encoding = { ...timeSpec().encoding, key: { field: 'region', type: 'nominal' as const } };
+    const regionRows = rows().filter((row) => row.country !== 'Borea');
+
+    chart.update(timeSpec({ animation: false, data: regionRows, encoding }));
+    expect(heard).toEqual([]);
+    await Promise.resolve();
+    expect(heard).toEqual(['2002']);
+    expect(reported).toHaveLength(1);
+
+    const north = container.querySelector('[data-key="North"]') as Element;
+    north.dispatchEvent(createMouseEvent('mouseover', 100, 100));
+    expect(container.querySelector('.oc-tooltip')?.textContent).toContain('2002');
   });
 
   it('appears when an update adds time and goes when one removes it', () => {

@@ -20,15 +20,28 @@ import {
   playbackTooltipDescriptors,
   wirePlaybackTooltips,
 } from './chart-tooltips';
-import { carriedPlayhead, resetPlayhead, samePlaybackShape } from './chart-update';
 import { layoutAtPlayhead } from './frame-layout';
 import { createPlaybackCompiler } from './playback-compiler';
 import { createPlaybackRun, onNearestPeriodChange } from './playback-run';
 import { applySeriesHiding, hiddenSeriesKeys } from './series-hiding';
 import { stripHeight } from './strip';
 import type { PlaybackController } from './types';
+import {
+  carriedPlayhead,
+  channelField,
+  resetPlayhead,
+  samePlaybackShape,
+  timeShape,
+} from './update-rules';
 
 type MountSpec = ChartSpec | LayerSpec;
+
+/** What an update must keep to carry a chart's run: mark type, time field and type, identity. */
+function shapeOf(spec: ChartSpec): unknown[] {
+  const encoding = spec.encoding as Record<string, unknown>;
+  const markType = typeof spec.mark === 'string' ? spec.mark : spec.mark.type;
+  return [markType, ...timeShape(encoding.time), channelField(encoding.key)];
+}
 
 /** Whether a mounted spec plays over time. */
 export function isPlaybackSpec(spec: MountSpec): spec is ChartSpec {
@@ -94,6 +107,29 @@ export interface ChartPlaybackHost {
 }
 
 /**
+ * `layoutAtPlayhead` that returns the same layout object while the source, playback, hidden
+ * keys and playhead stay the same, so readers that compare `chart.layout` with
+ * `sampleLayout()` see a paused frame as settled.
+ */
+function memoizeFrameLayout(): (source: PlaybackExportSource, t: number) => ChartLayout {
+  let last: { source: PlaybackExportSource; t: number; layout: ChartLayout } | null = null;
+  return (source, t) => {
+    if (
+      last &&
+      last.t === t &&
+      last.source.layout === source.layout &&
+      last.source.playback === source.playback &&
+      last.source.hiddenKeys === source.hiddenKeys
+    ) {
+      return last.layout;
+    }
+    const layout = layoutAtPlayhead(source.playback, t, source.layout, source.hiddenKeys);
+    last = { source, t, layout };
+    return layout;
+  };
+}
+
+/**
  * Create the playback host for one chart mount. `editing` opens every playback on its final
  * period without autoplay.
  */
@@ -112,6 +148,7 @@ export function createChartPlaybackHost(options: {
     hiddenKeys: Set<string>;
   } | null = null;
   let tooltips: PlaybackTooltips | null = null;
+  const frameLayoutAt = memoizeFrameLayout();
 
   const playhead = run.playhead;
   const currentPlayback = () => current?.playback ?? null;
@@ -170,7 +207,7 @@ export function createChartPlaybackHost(options: {
       const hiddenKeys = hiddenKeysFor(args.layout, spec, playback);
       const next = { spec, layout: args.layout, playback, hiddenKeys };
       const { mounted } = run;
-      if (!mounted || !current || !samePlaybackShape(current.spec, spec)) {
+      if (!mounted || !current || !samePlaybackShape(shapeOf(current.spec), shapeOf(spec))) {
         restart(args, next);
       } else {
         const t = carriedPlayhead(current.playback, playback, playhead());
@@ -181,8 +218,7 @@ export function createChartPlaybackHost(options: {
     },
     frameLayout(compiled) {
       const source = exportSource(compiled);
-      if (!source) return null;
-      return layoutAtPlayhead(source.playback, playhead(), source.layout, source.hiddenKeys);
+      return source ? frameLayoutAt(source, playhead()) : null;
     },
     exportSource,
     invalidate() {
