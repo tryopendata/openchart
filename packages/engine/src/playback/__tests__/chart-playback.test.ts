@@ -131,7 +131,7 @@ describe('frames', () => {
 
   it('draws no trendline with time', () => {
     const playback = compile();
-    const isTrend = (mark: Mark) => mark.type !== 'point';
+    const isTrend = (mark: Mark) => mark.type !== 'point' && mark.type !== 'textMark';
     expect(playback.base.marks.some(isTrend)).toBe(false);
     expect(playback.marksAt(1).some((entry) => isTrend(entry.mark))).toBe(false);
   });
@@ -219,10 +219,13 @@ describe('text and labels', () => {
   it('labels the playback.labels keys at every frame and no other points', () => {
     const playback = compile(bubbleRows(), { playback: { labels: ['Cydonia'] } });
     for (const t of [0, 0.5, 2]) {
-      const frame = playback.marksAt(t);
-      const labelled = frame.filter((entry) => entry.mark.label?.visible);
-      expect(labelled.map((entry) => entry.key)).toEqual(['Cydonia']);
-      expect(labelled[0].mark.label?.text).toContain('Cydonia');
+      const overlays = playback.overlaysAt(t);
+      expect(overlays.map((entry) => entry.key)).toEqual([
+        'oc-playback-period',
+        'oc-playback-label|Cydonia',
+      ]);
+      const label = overlays[1].mark;
+      expect(label.type === 'textMark' && label.text).toBe('Cydonia');
     }
   });
 

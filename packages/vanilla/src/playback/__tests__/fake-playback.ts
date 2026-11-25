@@ -85,6 +85,7 @@ export function createFakePlayback(options: FakePlaybackOptions = {}): ChartPlay
     keys: basePoints.map((mark) => String(mark.key)),
     warnings: [],
     marksAt,
+    overlaysAt: () => [],
     trailsAt: () => [],
     observedAt: (key, t) => options.observed?.(key, clamp(t)) ?? null,
     describe: (t) => PERIOD_LABELS[Math.round(clamp(t))] ?? '',

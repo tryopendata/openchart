@@ -132,7 +132,12 @@ describe('reading a playback chart', () => {
     const { chart, controller } = mount(timeSpec({ animation: false, data: lateCydonia }));
     controller.seek(0);
     expect(exportedKeys(chart)).toEqual(['Avalon', 'Borea']);
-    expect(chart.layout.marks.map((mark) => mark.key).sort()).toEqual(['Avalon', 'Borea']);
+    expect(
+      chart.layout.marks
+        .filter((mark) => mark.type === 'point')
+        .map((mark) => mark.key)
+        .sort(),
+    ).toEqual(['Avalon', 'Borea']);
     controller.seek(2);
     expect(exportedKeys(chart)).toEqual(['Avalon', 'Borea', 'Cydonia']);
   });

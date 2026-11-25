@@ -32,7 +32,7 @@ function staticMarks(frame: FrameMark[]): Mark[] {
 export function compileTimeChart(spec: ChartSpec, options: CompileOptions): ChartLayout {
   const playback = compileChartPlayback(spec, options);
   const t = options.playbackT ?? playback.periods.length - 1;
-  const overlays = playback.overlaysAt?.(t) ?? [];
+  const overlays = playback.overlaysAt(t);
   const behind = overlays.filter(({ key }) => key === PERIOD_LABEL_KEY);
   const above = overlays.filter(({ key }) => key !== PERIOD_LABEL_KEY);
   const marks = [

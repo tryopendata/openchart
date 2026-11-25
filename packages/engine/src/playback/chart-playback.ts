@@ -74,7 +74,6 @@ function observedValues(
  * Name labels are overlay text marks (see `overlays.ts`), so the frame drawer never swaps a
  * point for its label.
  */
-const NO_POINT_LABELS: ReadonlySet<string> = new Set();
 
 /**
  * Remembers the last frame drawn. The frame writer asks for the marks and the overlays at
@@ -234,7 +233,7 @@ export function compileChartPlayback(spec: ChartSpec, options: CompileOptions): 
   collectPlaybackWarnings({ matrix, channels, timing, time: pivot.time }, warn);
 
   const frame = freezeChartFrame(source, { ...options, onWarn: warn }, matrix);
-  const draw = createFrameDrawer(frame, frame.layout.dimensions.width, NO_POINT_LABELS);
+  const draw = createFrameDrawer(frame, frame.layout.dimensions.width);
   const order = baseKeyOrder(matrix, sampler);
   const marksAt = lastFrameCache((t: number) => drawFrame(pivot, sampler, order, draw, t));
   const periodLabels = formatPeriodLabels(matrix.periods, pivot.time);

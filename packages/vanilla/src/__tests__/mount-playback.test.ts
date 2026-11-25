@@ -106,7 +106,7 @@ describe('mounting a time spec', () => {
     // animation: false opens on the final period.
     const { container, chart } = mount(timeSpec({ animation: false }));
     expect(playback(chart).getState().t).toBe(2);
-    const circles = container.querySelectorAll('[data-key]');
+    const circles = container.querySelectorAll('circle[data-key]');
     expect([...circles].map((el) => el.getAttribute('data-key')).sort()).toEqual([
       'Avalon',
       'Borea',
@@ -118,7 +118,7 @@ describe('mounting a time spec', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { container } = mount(timeSpec(), { renderer: 'canvas' });
     expect(container.querySelector('canvas')).toBeNull();
-    expect(container.querySelectorAll('svg [data-key]')).toHaveLength(3);
+    expect(container.querySelectorAll('svg circle[data-key]')).toHaveLength(3);
     expect(warn.mock.calls.some(([message]) => /canvas/.test(String(message)))).toBe(true);
   });
 

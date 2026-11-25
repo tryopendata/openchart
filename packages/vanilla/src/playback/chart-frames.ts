@@ -55,7 +55,7 @@ export function createChartFrameWriter(svg: SVGElement, playback: ChartPlayback)
   return {
     draw(t) {
       if (!elementsByKey) return;
-      const frame = [...playback.marksAt(t), ...(playback.overlaysAt?.(t) ?? [])];
+      const frame = [...playback.marksAt(t), ...playback.overlaysAt(t)];
       for (const { key, mark, presence } of frame) {
         const element = elementsByKey.get(key);
         if (!element) continue;

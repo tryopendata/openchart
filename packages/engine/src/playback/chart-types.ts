@@ -92,10 +92,9 @@ export interface ChartPlayback {
   /**
    * Text marks drawn over the run at `t`: the period label (key `oc-playback-period`, absent
    * when `playback.period` is false) first, then one name label per `playback.labels` key
-   * (key `oc-playback-label|<key>`) beside its point, with the point's presence. Optional
-   * only so hand-built test doubles can leave it out; `compileChartPlayback` always sets it.
+   * (key `oc-playback-label|<key>`) beside its point, with the point's presence.
    */
-  overlaysAt?(t: number): FrameMark[];
+  overlaysAt(t: number): FrameMark[];
   /** Trails for the keys `playback.trails` names; empty when trails are off. */
   trailsAt(t: number): TrailPath[];
   /** The key's values at the period nearest `t`, or null when the key has none there. */
