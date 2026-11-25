@@ -10,6 +10,8 @@ import Demo from "../../../components/demo/Demo.astro";
 
 A chart with `encoding.time` plays through the values of that field one period at a time, and the top-level `playback` block sets how long the run takes, when it starts and what the reader can control. The race reads the same timing fields, so a `playback` block you write for a [bubble playback](/docs/correlation/bubble-playback/) works on a [race](/docs/change-over-time/race/) too.
 
+Point, circle and bar charts take `time`, including the [population pyramid](/docs/comparison/pyramid/), and so do choropleths, tile maps and symbol layers on a [time-lapse map](/docs/maps/time-lapse/).
+
 <Demo id="change-over-time/playback-on-demand" />
 
 This chart sets `autoplay: false`, so it opens on the final period and waits for Play. `step: 250` gives each period a quarter of a second, `loop: true` restarts the run after the 3-second `holdEnd`, and `period.position` moves the large year label to the upper right.
@@ -29,7 +31,7 @@ This chart sets `autoplay: false`, so it opens on the final period and waits for
 | `labels` | None | Point charts only. Keys whose name stays beside their point for the whole run. |
 | `trails` | `false` | Point charts only. Draw each named key's path so far; `true` draws one for every key. |
 
-The demo's data has 32 periods, one every other year, so the default duration is 22.4 seconds. With `step: 250` the same run takes 7.75 seconds, since there are 31 intervals between 32 periods. On a point chart `period.position: "auto"` centers the label behind the bubbles, and on a bar chart it goes in the upper right.
+The demo's data has 32 periods, one every other year, so the default duration is 22.4 seconds. With `step: 250` the same run takes 7.75 seconds, since there are 31 intervals between 32 periods. With `period.position: "auto"` the label is centered behind the marks on point and bar charts, goes in the upper right on a population pyramid, and takes the corner that covers the least geography on a map.
 
 `gaps: "interpolate"` fills a gap along a straight line between the periods on either side, or along a geometric curve on a log axis. Gaps only fill between two periods where the key has values. Before its first value and after its last, a key is absent: it fades in over the second half of the interval before it appears and fades out over the first half of the interval after it leaves.
 

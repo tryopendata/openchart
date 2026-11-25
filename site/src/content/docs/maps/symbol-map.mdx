@@ -37,6 +37,10 @@ A spec can carry both layers: `data` and the `color` channel color the regions, 
 
 <Demo id="maps/symbol-over-choropleth" />
 
+## Over time
+
+`points.time` plays the points layer through periods, resizing and recoloring each symbol from scales fixed for the whole run. `points.key` is required with it, so each symbol can be followed from one period to the next. The [time-lapse map](/docs/maps/time-lapse/#symbols-over-time) page has an example.
+
 ## Fields that matter
 
 | Field | What it does |
@@ -45,7 +49,8 @@ A spec can carry both layers: `data` and the `color` channel color the regions, 
 | `points.longitude`, `points.latitude` | The fields holding each symbol's coordinates. |
 | `points.size` | A number mapped to circle area. |
 | `points.color` | A field mapped to fill, nominal or quantitative, with its own scale. |
-| `points.key` | A stable id for each symbol, used for events and to match symbols across updates. |
+| `points.key` | A stable id for each symbol, used for events and to match symbols across updates. Required with `points.time`. |
+| `points.time` | The period field the layer plays through. |
 | `points.tooltip` | The fields shown when a reader hovers a symbol. |
 | `geo.features` | The basemap topology, drawn under the symbols. |
 | `legend.position` | Where the legends sit, such as `"bottom-right"`. |
@@ -54,5 +59,6 @@ A spec can carry both layers: `data` and the `color` channel color the regions, 
 
 - [Choropleth](/docs/maps/choropleth/) for coloring the regions themselves.
 - [Geographic labels](/docs/maps/geographic-labels/) for naming the symbols on the map.
+- [Time-lapse map](/docs/maps/time-lapse/) for symbols played through periods.
 - [Bubble](/docs/correlation/bubble/) for sized circles on two numeric axes.
 - [GeoMapSpec reference](/docs/spec/geomap-spec/) lists every map field.

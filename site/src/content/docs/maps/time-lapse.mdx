@@ -1,0 +1,92 @@
+---
+title: Time-lapse map
+description: Play a choropleth, tile map or symbol layer through periods, with one color scale and legend held for the whole run.
+section: maps
+order: 5
+---
+
+import Demo from "../../../components/demo/Demo.astro";
+
+A time-lapse map recolors its regions, or resizes its symbols, one period at a time. Use it to show where a change spread, such as unemployment claims rising across the states in 2020. A [line chart](/docs/change-over-time/line/) compares one state's path with another's more precisely, because it shows every period at once.
+
+<Demo id="maps/time-lapse-choropleth" />
+
+## Add time to a choropleth
+
+A time-lapse choropleth is a [choropleth](/docs/maps/choropleth/) with `encoding.time` naming the period field. Supply one row per region and period. `encoding.key` joins each row to a feature, as it does without time, and it also carries the region from one period to the next.
+
+```ts title="claims-map.ts"
+import states from "us-atlas/states-10m.json";
+
+const spec = {
+  type: "map",
+  geo: { features: states, projection: "albersUsa", idField: "name" },
+  data: rows, // [{ state: "Michigan", code: "MI", week: "2020-04-04", rate: 3.58 }, ...]
+  encoding: {
+    key: { field: "state", type: "nominal" },
+    color: { field: "rate", type: "quantitative", title: "Insured unemployment rate (%)", format: ".1f" },
+    time: { field: "week", type: "temporal" },
+  },
+  playback: { duration: 20000, period: { format: "%b %Y" } },
+};
+```
+
+`encoding.color` must be quantitative, because playback recolors each region by its value in every period. Two rows with the same key and period fail validation and ask you to aggregate them. The `playback` block sets timing and controls, and the [playback page](/docs/change-over-time/playback/) lists every option. `labels` and `trails` draw only on point charts, so a map rejects them.
+
+## One color scale for the whole run
+
+The classes and the legend are computed once over every period, so a color means the same value in January as in July. This map's five classes break at 5, 10, 15 and 20 percent, chosen from the whole year's values, and no break moves while the map plays. A tile map's gradient legend runs from the lowest value of any period to the highest in the same way.
+
+Between two periods each region's value moves in a straight line, and its fill is the class of that value. A region changes color when its value crosses a class break, which can happen partway between two periods. On a tile map the shade changes continuously with the value.
+
+## Regions with no value
+
+A gap between two periods with values is filled in by default, so the region keeps a color through it. `playback.gaps: "drop"` leaves the gap empty, so the region takes the no-data fill for those periods, and `"hold"` repeats the last value.
+
+Before its first value and after its last, a region shows the no-data fill. The fill switches a quarter of the way into the interval after its last value, and three quarters of the way into the interval before its first.
+
+When any region lacks a value in any period, the legend shows its "No data" swatch for the whole run. A region with no rows in any period keeps the no-data fill throughout, as it would on a static map.
+
+## The period label
+
+The large faint label in a corner shows the current period. With `position: "auto"`, the default on maps, it takes the corner where it covers the least geography, trying the lower left first. Alaska and Hawaii fill part of the lower left on a US map, so the label often lands in another corner. The corner is chosen once for the run and fits the widest period text, so the label never moves during playback. `period.format` changes its date format, and `period: false` hides it.
+
+## Tile maps
+
+<Demo id="maps/time-lapse-tile" />
+
+A [tile map](/docs/maps/tile-map/) with time takes `data` as rows, not a record of state codes, and `encoding.state` is the identity: one row per state code and period. `encoding.value` must be quantitative, and `colors` or `encoding.color` is an error, since playback shades each tile by its value. Each tile's printed value updates with its shade.
+
+## Symbols over time
+
+<Demo id="maps/time-lapse-points" />
+
+`points.time` plays a [symbol map](/docs/maps/symbol-map/)'s points layer, and `points.key` is its identity, required once the layer has time. The size scale and size key cover every period, as the color classes do. A point fades in over the second half of the interval before its first value and fades out over the first half of the interval after its last. Russia appears this way in 1988, the first year with GDP data for it.
+
+A map can play both layers. When `encoding.time` and `points.time` are both set, the two layers share one list of periods and one playhead, and the period label and controls follow the choropleth's time field.
+
+## Zoom, focus and hover
+
+Zoom, pan, camera methods such as `zoomTo`, and `geo.focus` keep working while the map plays, and playback keeps running through a zoom. Hovering a region shows its value for the nearest period, titled with that period, such as "Alabama, Jul 4, 2020". A value filled in for a gap is marked "(estimated)", and a region without a value shows "No data".
+
+Pages without JavaScript, `compileGeoMap`, `compileTileMap` and `renderStaticSVG` draw the final period. Pass `t` to `renderStaticSVG` to draw another, counting periods from zero. These maps have one week in two, so `t: 13` is the week ending July 4, 2020.
+
+## Fields that matter
+
+| Field | What it does |
+| --- | --- |
+| `encoding.time` | The period field on a choropleth or tile map: `temporal`, `ordinal` or `quantitative`. |
+| `encoding.key` | Choropleth identity. Joins rows to features and follows each region across periods. |
+| `encoding.color` | Required and quantitative on a choropleth with time. |
+| `encoding.state` | Tile map identity: one row per state code and period. |
+| `encoding.value` | Required and quantitative on a tile map with time. |
+| `points.time`, `points.key` | The points layer's period field and identity. `key` is required with `time`. |
+| `playback.gaps` | `"interpolate"`, `"hold"` or `"drop"` for gaps between two periods with values. |
+| `playback.period` | The period label's `format` and `position`, or `false`. |
+
+## Related
+
+- [Choropleth](/docs/maps/choropleth/), [tile map](/docs/maps/tile-map/) and [symbol map](/docs/maps/symbol-map/): the static forms.
+- [Playback](/docs/change-over-time/playback/): timing, controls, keyboard and the `chart.playback` API.
+- [Encoding channels](/docs/the-spec/encoding/#time): how each map type keeps its identity across periods.
+- [GeoMapSpec reference](/docs/spec/geomap-spec/) and [TileMapSpec reference](/docs/spec/tilemap-spec/) list every map field.

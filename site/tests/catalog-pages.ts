@@ -7,7 +7,7 @@
  * packages (three, 3d-force-graph, three-spritetext) that the site does not install.
  */
 export const catalogPages = {
-  comparison: ["bar", "column", "grouped-stacked", "lollipop", "bar-list", "range"],
+  comparison: ["bar", "column", "grouped-stacked", "lollipop", "bar-list", "range", "pyramid"],
   "change-over-time": [
     "line",
     "area",
@@ -22,7 +22,7 @@ export const catalogPages = {
   distribution: ["histogram", "density", "beeswarm", "tick-strip", "error-bars"],
   correlation: ["scatter", "bubble", "bubble-playback", "heatmap", "trendlines"],
   flow: ["sankey", "graph"],
-  maps: ["choropleth", "symbol-map", "tile-map", "geographic-labels"],
+  maps: ["choropleth", "symbol-map", "tile-map", "geographic-labels", "time-lapse"],
   tables: ["data-table", "column-types", "row-inspection"],
   composition: ["layers", "facets", "dashboard-tiles"],
 } as const satisfies Record<string, readonly string[]>;
