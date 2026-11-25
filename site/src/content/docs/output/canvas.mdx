@@ -23,6 +23,8 @@ createChart(container, spec, { renderer: "canvas" });
 
 React, Vue and Svelte take the same value as the `renderer` prop on `<Chart>`. Only point marks move to the canvas. A line, bar or area chart, and any faceted, layered or sparkline chart, stays SVG, and an explicit `"canvas"` there logs a warning.
 
+A chart with `encoding.time` always draws SVG, whatever its point count, because playback moves each bubble's own element from frame to frame. An explicit `renderer: "canvas"` on one logs a warning once and draws SVG. The engine warns when a period has more than 1,000 points, the count above which `"auto"` would otherwise pick the canvas. See [bubble playback](/docs/correlation/bubble-playback/).
+
 <Demo id="output/canvas-west" />
 
 This chart passes `renderer: "canvas"` as a mount option, and its Code tabs show it as a prop or option in each framework. The option applies at any size, including the 599 points here.
