@@ -708,6 +708,67 @@ test("at 1440x900 no empty band over 120px sits after the wall, the featured fig
   }
 });
 
+test("at 1440x900 every section boundary is one top padding, never two stacked", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  const paddings = await page.evaluate(() =>
+    [...document.querySelectorAll<HTMLElement>("[data-landing-section]")].map((section) => {
+      const style = getComputedStyle(section);
+      return {
+        id: section.id,
+        top: Number.parseFloat(style.paddingTop),
+        bottom: Number.parseFloat(style.paddingBottom),
+      };
+    }),
+  );
+  expect(paddings.length).toBeGreaterThan(1);
+  for (const { id, top, bottom } of paddings) {
+    expect(bottom, `${id} bottom padding`).toBe(0);
+    expect(top, `${id} top padding`).toBeLessThanOrEqual(MAX_EMPTY_BAND_PX);
+  }
+});
+
+/** The featured figures' boxes, by their place in the grid. */
+async function featuredBoxes(page: Page, width: number) {
+  await page.setViewportSize({ width, height: 900 });
+  await page.goto("/");
+  await page.locator("#vocabulary [data-featured]").scrollIntoViewIfNeeded();
+  await settle(page);
+  return page.evaluate(() => {
+    const box = (selector: string) => {
+      const rect = document
+        .querySelector(`#vocabulary [data-featured]${selector}`)
+        ?.getBoundingClientRect();
+      if (!rect) throw new Error(`No featured element matches "${selector}".`);
+      return { top: rect.top, bottom: rect.bottom, width: rect.width };
+    };
+    return {
+      grid: box(""),
+      dominant: box(' [data-place="dominant"]'),
+      side: box(' [data-place="side"]'),
+      full: box(' [data-place="full"]'),
+    };
+  });
+}
+
+test("at three columns the tile map stands beside the symbol map for its whole height", async ({
+  page,
+}) => {
+  const { dominant, side, full } = await featuredBoxes(page, 1000);
+  expect(Math.abs(side.top - dominant.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(side.bottom - dominant.bottom)).toBeLessThanOrEqual(1);
+  expect(full.top).toBeGreaterThanOrEqual(dominant.bottom);
+});
+
+test("at two columns each featured figure takes the full row", async ({ page }) => {
+  const { grid, dominant, side, full } = await featuredBoxes(page, 700);
+  for (const figure of [dominant, side, full]) {
+    expect(Math.abs(figure.width - grid.width)).toBeLessThanOrEqual(1);
+  }
+});
+
 test("at 390px wide nothing scrolls horizontally", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");

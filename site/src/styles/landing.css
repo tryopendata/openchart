@@ -10,10 +10,23 @@
 @reference "./global.css";
 
 @layer components {
-  /* One landing section: the same vertical rhythm everywhere, and room below the
-     header when a link jumps to it. */
+  /* One landing section: the same space above every section's rule, and room
+     below the header when a link jumps to it. A section has no bottom padding:
+     the next one's top padding (or the footer's margin) is the whole gap, so no
+     boundary doubles into an empty band. */
   .landing-section {
-    @apply scroll-mt-16 py-16 sm:py-20 lg:py-28;
+    @apply scroll-mt-16 pt-16 sm:pt-20 lg:pt-28;
+  }
+
+  /* A PublishedFigure under a section head draws its own rule as a plain
+     hairline: the ticked rule belongs to the head. Compound selector: .pub-figure
+     resets margins at the same specificity. */
+  .pub-figure.figure-hairline {
+    @apply mt-10 lg:mt-14;
+  }
+
+  .figure-hairline > .rule-axis {
+    @apply border-line h-0 bg-none;
   }
 
   /* The 12-column page container, aligned with the header's edges. */
@@ -98,4 +111,10 @@
   .pub-figure-caption a {
     @apply text-muted hover:text-ink underline decoration-1 underline-offset-2 transition-colors duration-150;
   }
+}
+
+:root {
+  /* The sections' shared transition curve. Soft and decisive: fast out of the
+     gate, a long settle, no overshoot (close to GSAP's expo.out). */
+  --story-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }

@@ -35,19 +35,4 @@ describe("the featured figures", () => {
       { type: "sankey", points: false, place: "full" },
     ]);
   });
-
-  it("fill every row at two and three columns, so no row ends on an empty cell", () => {
-    // Cells each place takes: [at two columns, at three columns]. The dominant
-    // figure's 2x2 at three columns is four cells; the side figure beside it
-    // spans both rows, two cells.
-    const cells = {
-      dominant: [2, 4],
-      side: [2, 2],
-      full: [2, 3],
-    } as const;
-    const total = (columns: 0 | 1) =>
-      featuredFigures.reduce((sum, figure) => sum + cells[figure.place][columns], 0);
-    expect(total(0) % 2).toBe(0);
-    expect(total(1) % 3).toBe(0);
-  });
 });

@@ -277,13 +277,6 @@
     @apply pt-6;
   }
 
-  /* The page's last section: the footer keeps its own top margin before its
-     rule, so the section's bottom padding would only add an empty band above it.
-     Two classes, to win over .landing-section wherever the bundle orders it. */
-  .landing-section.start-section {
-    @apply pb-0;
-  }
-
   /* Start, after the bench: the facts table and the install command in the last
      eight columns, under the code. */
   .start-close {

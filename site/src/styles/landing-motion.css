@@ -1,7 +1,7 @@
 /*
  * Styles for the motion section (#motion): a full-width chart under one row of
  * controls, with the spec collapsed beneath it. Transitions use `--story-ease`
- * from landing-story.css.
+ * from landing.css.
  */
 @reference "./global.css";
 

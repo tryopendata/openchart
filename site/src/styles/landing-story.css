@@ -1,26 +1,12 @@
 /*
  * Styles for the scroll story (#story): a sticky chart with paragraphs scrolling
- * past it, plus the hairline figure rule and the `--story-ease` curve that the
- * motion and responsive sections share (landing-motion.css,
- * landing-responsive.css). Structure comes from hairline rules and the axis
- * motif (ticks on a rule); color stays in the charts. Transitions use one soft,
- * decisive curve (close to GSAP's expo.out) and never move a chart: the library
- * animates charts itself.
+ * past it. Structure comes from hairline rules and the axis motif (ticks on a
+ * rule); color stays in the charts. Transitions use `--story-ease` (landing.css)
+ * and never move a chart: the library animates charts itself.
  */
 @reference "./global.css";
 
 @layer components {
-  /* One ticked rule per section, above its head: a PublishedFigure under the head
-     draws its own rule as a plain hairline instead. Compound selector: .pub-figure
-     (landing.css) resets margins at the same specificity. */
-  .pub-figure.figure-hairline {
-    @apply mt-10 lg:mt-14;
-  }
-
-  .figure-hairline > .rule-axis {
-    @apply border-line h-0 bg-none;
-  }
-
   /* ---- #story: paragraphs scroll past a sticky chart ---------------------- */
 
   /* Story.astro sets the whole story in a PublishedFigure: its rule, then the
@@ -108,11 +94,6 @@
       @apply min-h-[88vh];
     }
   }
-}
-
-:root {
-  /* Soft and decisive: fast out of the gate, a long settle, no overshoot. */
-  --story-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {

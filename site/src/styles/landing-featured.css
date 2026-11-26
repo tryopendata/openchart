@@ -7,14 +7,6 @@
 @reference "./global.css";
 
 @layer components {
-  /* The featured figures end the vocabulary section with their own captions and
-     links, and the next section opens on its rule after its own top padding, so
-     the section's bottom padding would only double the gap into an empty band.
-     Two classes, to win over .landing-section wherever the bundle orders it. */
-  .landing-section.vocabulary-section {
-    @apply pb-0;
-  }
-
   /* ---- Featured figures: an uneven portfolio grid ------------------------ */
 
   .kinds-grid {
@@ -48,7 +40,7 @@
   }
 
   /* Each figure fills its grid cell: the stage takes --kinds-height (from
-     kinds.ts) as a minimum and grows to the tallest tile in its row, so the
+     featured.ts) as a minimum and grows to the tallest tile in its row, so the
      captions and links line up along every row. */
   .kinds-tile .demo,
   .kinds-tile .demo-figure {
@@ -90,11 +82,6 @@
       @apply sticky left-0 box-border;
       width: 100cqw;
     }
-  }
-
-  /* A table grows to its rows rather than scrolling inside the tile. */
-  .kinds-tile[data-fit-content] .demo-live {
-    @apply h-auto overflow-visible;
   }
 
   /* Plain media rules after the sm: ones: an arbitrary min-[900px] variant sorts

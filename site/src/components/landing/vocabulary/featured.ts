@@ -40,12 +40,6 @@ export type FeaturedFigure = {
    */
   narrowHeight?: number;
   /**
-   * Let the stage grow to its content instead of scrolling inside it, for a
-   * table whose rows stack into cards on a narrow screen. The height is then a
-   * minimum.
-   */
-  fitContent?: boolean;
-  /**
    * Under 640px, lay the figure out at this minimum width (px) and scroll it
    * sideways inside the figure, for a chart whose labelled columns cannot fit a
    * phone. The figure is unchanged from 640px up.

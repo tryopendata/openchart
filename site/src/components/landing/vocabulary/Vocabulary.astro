@@ -62,7 +62,7 @@ const tiles = vocabularyTiles.map((tile, index) => ({
   id={SECTION_ID}
   aria-labelledby="vocabulary-title"
   data-landing-section
-  class="landing-section vocabulary-section"
+  class="landing-section"
 >
   <div class="landing-container">
     <SectionHead id={SECTION_ID} layout="beside">
@@ -97,7 +97,6 @@ const tiles = vocabularyTiles.map((tile, index) => ({
         <div
           class="kinds-tile"
           data-place={figure.place}
-          data-fit-content={figure.fitContent ? "" : undefined}
           style={`--kinds-height: ${figure.height}px; --kinds-height-narrow: ${figure.narrowHeight ?? figure.height}px`}
         >
           {figure.scrollBelow ? (

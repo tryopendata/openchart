@@ -1,7 +1,7 @@
 /*
  * Styles for the responsive section (#responsive): a frame with a draggable
  * edge over dashed breakpoint guides. Transitions use `--story-ease` from
- * landing-story.css.
+ * landing.css.
  */
 @reference "./global.css";
 
