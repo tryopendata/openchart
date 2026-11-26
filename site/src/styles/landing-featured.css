@@ -1,0 +1,123 @@
+/*
+ * Styles for the vocabulary section's featured figures (`.kinds-*`): an uneven
+ * portfolio grid under the wall, a dominant map with one figure beside it and a
+ * full-width row below. Published-graphic framing: a hairline above each
+ * figure, nothing around it.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* ---- Featured figures: an uneven portfolio grid ------------------------ */
+
+  .kinds-grid {
+    @apply mt-10 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:mt-14;
+    --sf-reveal-step: 90ms;
+  }
+
+  .kinds-tile {
+    @apply flex min-w-0 flex-col;
+  }
+
+  /* Two columns (640-899px): the dominant tile and the one side tile each take
+     the full row, so the side tile never sits beside an empty cell. */
+  .kinds-tile[data-place="dominant"],
+  .kinds-tile[data-place="side"] {
+    @apply sm:col-span-2;
+  }
+
+  /* A full tile takes the whole row at every width. */
+  .kinds-tile[data-place="full"] {
+    grid-column: 1 / -1;
+  }
+
+  /* Published-graphic framing: a hairline above, nothing around. */
+  .kinds-tile .demo {
+    @apply border-line-strong my-0 border-x-0 border-t border-b-0 pt-3;
+  }
+
+  .kinds-tile .demo .figure-caption {
+    @apply px-0;
+  }
+
+  /* Each figure fills its grid cell: the stage takes --kinds-height (from
+     featured.ts) as a minimum and grows to the tallest tile in its row, so the
+     captions and links line up along every row. */
+  .kinds-tile .demo,
+  .kinds-tile .demo-figure {
+    @apply flex flex-1 flex-col;
+  }
+
+  .kinds-tile .demo-stage {
+    @apply flex-1;
+    min-height: var(--kinds-height-narrow);
+    height: auto;
+  }
+
+  @media (min-width: 640px) {
+    .kinds-tile .demo-stage {
+      min-height: var(--kinds-height);
+    }
+  }
+
+  /* A tile with `scrollBelow` wraps its figure in a scroller that fills the cell
+     like the figure it holds. */
+  .kinds-scroll {
+    @apply flex min-w-0 flex-1 flex-col;
+  }
+
+  /* Under 640px the figure keeps its minimum width and scrolls sideways; the
+     caption sticks to the start of the scroller at the scroller's own width, so it
+     stays readable at page width. */
+  @media (max-width: 639.98px) {
+    .kinds-scroll {
+      container-type: inline-size;
+      overflow-x: auto;
+    }
+
+    .kinds-scroll > .demo {
+      min-width: var(--kinds-scroll-min);
+    }
+
+    .kinds-scroll .figure-caption {
+      @apply sticky left-0 box-border;
+      width: 100cqw;
+    }
+  }
+
+  /* Plain media rules after the sm: ones: an arbitrary min-[900px] variant sorts
+     before sm: and would lose to it. */
+  @media (min-width: 900px) {
+    .kinds-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .kinds-tile[data-place="dominant"] {
+      @apply row-span-2;
+    }
+
+    /* Beside the dominant tile for the height of both its rows, so its stage
+       stretches to match and no cell in those rows is left empty. */
+    .kinds-tile[data-place="side"] {
+      @apply col-span-1 row-span-2;
+    }
+  }
+
+  .kinds-link {
+    @apply text-ink hover:text-accent mt-3 inline-flex items-center gap-1 self-start text-sm font-medium no-underline transition-colors duration-150 hover:underline;
+  }
+
+  .kinds-link span {
+    @apply inline-block transition-transform duration-150;
+  }
+
+  .kinds-link:hover span,
+  .kinds-link:focus-visible span {
+    @apply translate-x-0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kinds-link span {
+    transition: none;
+  }
+}

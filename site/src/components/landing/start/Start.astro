@@ -1,0 +1,129 @@
+---
+/**
+ * Start: the page's last section, where a reader installs the library. A code
+ * bench with React, Vue, Svelte and Vanilla tabs (the InstallTabs island,
+ * client:visible), each holding the install command and the usage sample the
+ * docs generate for one small spec, beside the chart that spec draws. Below it,
+ * a ruled facts table (bundle and license, each linked to the file that backs
+ * it) and the install command with copy, then links to the docs and GitHub. The
+ * framework tabs share the docs demo tabs' stored choice (`openchart:framework`);
+ * the install command is the shared InstallCommand, whose own script wires its
+ * tabs and Copy.
+ *
+ * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
+ * - `<section id="start" aria-labelledby="start-title" data-landing-section>`
+ *   with one h2, id `start-title` (`landingCopy.headings.start`).
+ * - Framework tabs (`role="tab"` in the "Framework" tablist) named "React",
+ *   "Vue", "Svelte" and "Vanilla", each controlling a `role="tabpanel"`. Each
+ *   panel's install command reads `npm install @opendata-ai/openchart-<framework>`,
+ *   and every panel is in the server-rendered HTML.
+ * - The install command (id `start-install`, "Package manager" tablist) holds
+ *   every `site.install` command in the server-rendered HTML.
+ */
+import { DOCS_HOME, site } from "../../../config";
+import { FRAMEWORK_STORAGE_KEY } from "../../../lib/demo/framework-choice";
+import { highlightCode } from "../../../lib/demo/highlight";
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import InstallCommand from "../../shared/InstallCommand.astro";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
+import SectionHead from "../../shared/SectionHead.astro";
+import { benchSource, benchSpec } from "../frameworks/bench-spec";
+import { frameworkPanels } from "../frameworks/framework-panels";
+import { LANDING_FRAMEWORKS } from "../frameworks/framework-tabs";
+import { INSTALL_TABS_ID, type InstallPanel, InstallTabs } from "../frameworks/InstallTabs";
+import { startFacts } from "./facts";
+import "../../../styles/landing-close.css";
+
+const panels = frameworkPanels(benchSpec);
+const highlighted = await highlightCode(panels.map(({ shown, lang }) => ({ code: shown, lang })));
+const installPanels: InstallPanel[] = panels.map(
+  ({ shown: _shown, lang: _lang, ...panel }, index) => ({
+    ...panel,
+    html: highlighted.html[index] ?? "",
+  }),
+);
+
+/** The SVG's drawing size; CSS scales it to the figure's width. */
+const CHART_SIZE = { width: 480, height: 400 };
+const chartSvgs = staticSvgPair(benchSpec, { idPrefix: "bench-chart", ...CHART_SIZE });
+---
+
+<section id="start" aria-labelledby="start-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="start" layout="feature">
+      Install the package for your framework and hand it the spec. The code below draws the chart
+      beside it, and the docs show the same four versions under every example.
+    </SectionHead>
+    <div class="frameworks-bench">
+      <div class="frameworks-code">
+        <InstallTabs client:visible panels={installPanels} />
+        {/* Shows the stored tab before paint; InstallTabs reads the same choice when it hydrates. */}
+        <script
+          is:inline
+          define:vars={{
+            key: FRAMEWORK_STORAGE_KEY,
+            ids: LANDING_FRAMEWORKS,
+            base: INSTALL_TABS_ID,
+          }}
+        >
+          try {
+            const choice = localStorage.getItem(key);
+            if (ids.includes(choice)) {
+              for (const id of ids) {
+                const panel = document.getElementById(`${base}-${id}`);
+                if (id === choice) panel?.setAttribute("data-default", "");
+                else panel?.removeAttribute("data-default");
+              }
+            }
+          } catch {
+            // Storage blocked: the default tab shows, as it would after hydration.
+          }
+        </script>
+      </div>
+      <PublishedFigure class="frameworks-figure" source={benchSource} note="What each tab renders.">
+        <div class="frameworks-chart" set:html={chartSvgs} />
+      </PublishedFigure>
+    </div>
+    <div class="start-close">
+      <div class="start-table-wrap" data-reveal>
+        <table class="start-table">
+          <caption class="sr-only">
+            OpenChart's bundle and license, each linked to the file that backs it
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col">Topic</th>
+              <th scope="col">What you get</th>
+              <th scope="col">Backed by</th>
+            </tr>
+          </thead>
+          <tbody>
+            {startFacts.map(({ topic, fact, sources }) => (
+              <tr data-motion-part>
+                <th scope="row">{topic}</th>
+                <td>{fact}</td>
+                <td class="start-backed">
+                  {sources.map(({ label, href }) => (
+                    <a href={href}>{label}</a>
+                  ))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="start-install" data-reveal>
+        <InstallCommand id="start-install" commands={site.install} />
+        <p class="start-links" data-motion-part>
+          <a class="btn btn-primary" href={DOCS_HOME}>
+            Read the docs
+          </a>
+          <a class="btn" href={site.repo}>
+            GitHub
+          </a>
+        </p>
+      </div>
+    </div>
+  </div>
+  <style is:inline set:html={highlighted.css}></style>
+</section>

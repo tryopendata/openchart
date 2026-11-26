@@ -202,6 +202,6 @@
    gate on <html> means scripts and motion are on. */
 @media (min-width: 1024px) and (min-height: 700px) and (prefers-reduced-motion: no-preference) {
   :root[data-motion-ready] .scrub {
-    padding-bottom: 250vh;
+    padding-bottom: 200vh;
   }
 }

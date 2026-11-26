@@ -1,16 +1,14 @@
 ---
 /**
- * The landing page: ten sections in the order of the plan's Design section, each
+ * The landing page: eight sections in the order of the plan's Spec section, each
  * a component owned by one lane. Sections sit directly in `<main>` with no wrapper
  * or spacer, so the page is exactly as tall as its sections. The shared rhythm is
  * in landing.css; each section imports its own styles.
  */
 import Agents from "../components/landing/agents/Agents.astro";
-import Closing from "../components/landing/closing/Closing.astro";
-import Frameworks from "../components/landing/frameworks/Frameworks.astro";
 import Hero from "../components/landing/hero/Hero.astro";
-import Kinds from "../components/landing/kinds/Kinds.astro";
 import Responsive from "../components/landing/responsive/Responsive.astro";
+import Start from "../components/landing/start/Start.astro";
 import Motion from "../components/landing/story/Motion.astro";
 import Story from "../components/landing/story/Story.astro";
 import Styles from "../components/landing/styles/Styles.astro";
@@ -22,13 +20,11 @@ import "../styles/landing.css";
 
 <BaseLayout title={site.tagline} path="/">
   <Hero />
-  <Vocabulary />
-  <Styles />
-  <Kinds />
   <Story />
   <Motion />
+  <Styles />
   <Responsive />
+  <Vocabulary />
   <Agents />
-  <Frameworks />
-  <Closing />
+  <Start />
 </BaseLayout>

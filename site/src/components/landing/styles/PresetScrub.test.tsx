@@ -100,7 +100,7 @@ describe("the house-style scrub", () => {
     await waitFor(() => expect(container.querySelector("[data-pinned]")).not.toBeNull());
     expect(window.scrollY).toBe(0);
     await user.click(screen.getByRole("button", { name: "Broadsheet" }));
-    // The middle of the third of five stretches of a 2.5-viewport pin.
+    // The middle of the third of five stretches of a 2-viewport pin.
     expect(window.scrollY).toBeGreaterThan(0);
   });
 

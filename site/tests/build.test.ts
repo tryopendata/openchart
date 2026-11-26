@@ -62,7 +62,8 @@ import { build as esbuild } from "esbuild";
 import { Window } from "happy-dom";
 import { afterEach, describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import { docsAreas, site } from "../src/config";
+import { PIN_VIEWPORTS } from "../src/components/landing/styles/preset-pin";
+import { DOCS_HOME, docsAreas, site } from "../src/config";
 import { statePopulation } from "../src/demos/blog/when-to-use-a-bar-chart-race";
 import { sourceOf } from "../src/demos/source";
 import { LANDING_SECTION_IDS, type LandingSectionId, landingCopy } from "../src/landing/copy";
@@ -783,7 +784,17 @@ describe("the landing page", () => {
   const sections = () => [...home().querySelectorAll("main > section[data-landing-section]")];
   const textOf = (node: Element | null | undefined) => (node?.textContent ?? "").trim();
 
-  it("has one h1 and the ten sections in order, each labelled by its one h2 from copy.ts", () => {
+  it("has one h1 and the eight sections in order, each labelled by its one h2 from copy.ts", () => {
+    expect([...LANDING_SECTION_IDS]).toEqual([
+      "desk",
+      "story",
+      "motion",
+      "styles",
+      "responsive",
+      "vocabulary",
+      "agents",
+      "start",
+    ]);
     expect(home().querySelectorAll("h1").length).toBe(1);
     expect(textOf(home().querySelector("h1"))).toBe(landingCopy.headline);
     expect(sections().map((section) => section.id)).toEqual([...LANDING_SECTION_IDS]);
@@ -850,7 +861,152 @@ describe("the landing page", () => {
   it("is at most 620 KB of HTML", () => {
     expect(statSync(join("dist", HOME)).size).toBeLessThanOrEqual(MAX_LANDING_PAGE_BYTES);
   });
+
+  it("has no kinds, frameworks or closing section, and no built page links to one", () => {
+    for (const id of REMOVED_SECTION_IDS) expect(home().getElementById(id), id).toBeNull();
+    const stale = htmlFiles("dist").flatMap((file) =>
+      [...read("dist", file).matchAll(/\bhref="([^"]*)"/g)]
+        .map(([, href = ""]) => href)
+        .filter((href) => REMOVED_SECTION_IDS.includes(landingFragment(file, href) ?? ""))
+        .map((href) => `${file}: ${href}`),
+    );
+    expect(stale).toEqual([]);
+  });
+
+  it("#vocabulary holds the wall and its filter, then a sourced, linked symbol map, tile map and sankey", () => {
+    const vocabulary = home().querySelector("#vocabulary");
+    const filterSlot = vocabulary?.querySelector(".wall-filter-slot");
+    const wall = vocabulary?.querySelector(".wall-grid");
+    const featured = vocabulary?.querySelector("[data-featured]");
+    if (!filterSlot || !wall || !featured) {
+      throw new Error("#vocabulary is missing its filter slot, its wall or its featured figures.");
+    }
+    expect(islandNames("dist", HOME)).toContain("VocabularyWall");
+    expect(wall.querySelectorAll("[data-vocabulary-tile]").length).toBe(24);
+    expect(filterSlot.compareDocumentPosition(wall) & FOLLOWS).toBeTruthy();
+    expect(wall.compareDocumentPosition(featured) & FOLLOWS).toBeTruthy();
+    const figures = [...featured.querySelectorAll(".kinds-tile")].map((tile) => ({
+      demo: tile.querySelector("[data-demo]")?.getAttribute("data-demo"),
+      sourced: /Source: \S/.test(textOf(tile.querySelector("figcaption"))),
+      link: tile.querySelector("a.kinds-link")?.getAttribute("href"),
+    }));
+    expect(figures).toEqual([
+      { demo: "landing/featured-map", sourced: true, link: "/docs/maps/symbol-map/" },
+      { demo: "maps/tile-basic", sourced: true, link: "/docs/maps/tile-map/" },
+      { demo: "flow/sankey-basic", sourced: true, link: "/docs/flow/sankey/" },
+    ]);
+    for (const demo of ["comparison/barlist-basic", "tables/basic"]) {
+      expect(home().querySelector(`[data-demo="${demo}"]`), demo).toBeNull();
+    }
+  });
+
+  it("#start holds the framework tabs and the bench chart, the bundle and license facts, the install command and the docs and GitHub links", () => {
+    const start = home().querySelector("#start");
+    const bench = start?.querySelector(".frameworks-code");
+    const install = start?.querySelector("[data-install-command]");
+    if (!start || !bench || !install) {
+      throw new Error("#start is missing its framework bench or its install command.");
+    }
+    expect([...bench.querySelectorAll('[role="tab"]')].map(textOf)).toEqual([
+      "React",
+      "Vue",
+      "Svelte",
+      "Vanilla",
+    ]);
+    const panels = [...bench.querySelectorAll('[role="tabpanel"]')];
+    expect(panels.map((panel) => textOf(panel.querySelector(".install-tab-command code")))).toEqual(
+      ["react", "vue", "svelte", "vanilla"].map(
+        (name) => `$ npm install @opendata-ai/openchart-${name}`,
+      ),
+    );
+    for (const panel of panels) {
+      expect(textOf(panel.querySelector("pre code")), panel.id).toMatch(/@opendata-ai\/openchart-/);
+    }
+    expect(start.querySelectorAll(".frameworks-chart svg").length).toBe(2);
+    expect([...start.querySelectorAll("table tbody th")].map(textOf)).toEqual([
+      "Bundle",
+      "License",
+    ]);
+    expect([...install.querySelectorAll('[role="tab"]')].map(textOf)).toEqual([
+      "npm",
+      "bun",
+      "pnpm",
+    ]);
+    expect([...install.querySelectorAll('[role="tabpanel"]')].map((panel) => panel.id)).toEqual([
+      "start-install-npm",
+      "start-install-bun",
+      "start-install-pnpm",
+    ]);
+    const installText = textOf(install);
+    for (const { command } of site.install) expect(installText).toContain(command);
+    const links = [...start.querySelectorAll("a[href]")].map((link) => link.getAttribute("href"));
+    expect(links).toContain(DOCS_HOME);
+    expect(links).toContain(site.repo);
+  });
+
+  it("pins the house styles for two viewport heights and reserves the same in its CSS", () => {
+    expect(PIN_VIEWPORTS).toBe(2);
+    const reserves = [...ownAssets(HOME)]
+      .filter((path) => path.endsWith(".css"))
+      .flatMap((path) => [...read("dist", path).matchAll(/\.scrub\{padding-bottom:(\d+)vh\}/g)])
+      .map(([, vh]) => Number(vh));
+    expect(reserves).toEqual([PIN_VIEWPORTS * 100]);
+  });
+
+  it("draws the featured symbol map's states in the dark theme apart from the page background", () => {
+    const fills = [
+      ...home().querySelectorAll(
+        '[data-demo="landing/featured-map"] svg[data-theme="dark"] path.oc-map-feature',
+      ),
+    ].map((path) => path.getAttribute("fill") ?? "");
+    expect(fills.length).toBeGreaterThan(0);
+    const canvas = /\.dark\s*\{[^}]*--color-canvas:\s*(#[0-9a-f]{6})/i.exec(
+      read(".", "src/styles/global.css"),
+    )?.[1];
+    if (!canvas)
+      throw new Error("src/styles/global.css sets no --color-canvas in its .dark block.");
+    for (const fill of new Set(fills)) {
+      expect(contrastRatio(fill, canvas), `${fill} on ${canvas}`).toBeGreaterThanOrEqual(
+        MIN_LAND_CONTRAST,
+      );
+    }
+  });
 });
+
+/** Section ids the landing page dropped when it merged its sections; nothing may point at them. */
+const REMOVED_SECTION_IDS = ["kinds", "frameworks", "closing"];
+
+/** `Node.DOCUMENT_POSITION_FOLLOWING`: the other node comes after this one. */
+const FOLLOWS = 4;
+
+/** How far the dark symbol map's land must stand off the page background. */
+const MIN_LAND_CONTRAST = 1.25;
+
+/**
+ * The fragment a link on a built page names on the landing page, or undefined
+ * when it points elsewhere. A bare `#x` counts only on the landing page itself.
+ */
+function landingFragment(file: string, href: string): string | undefined {
+  const [path = "", hash] = href.replace(site.url.replace(/\/$/, ""), "").split("#");
+  if (hash === undefined) return undefined;
+  const onHome = path === "/" || (path === "" && file === "index.html");
+  return onHome ? hash : undefined;
+}
+
+/** WCAG relative luminance of a `#rrggbb` color. */
+function luminance(hex: string): number {
+  const channels = [1, 3, 5].map((start) => Number.parseInt(hex.slice(start, start + 2), 16) / 255);
+  const [red = 0, green = 0, blue = 0] = channels.map((value) =>
+    value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+}
+
+/** WCAG contrast ratio between two `#rrggbb` colors, lighter over darker. */
+function contrastRatio(a: string, b: string): number {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
+}
 
 /**
  * The landing page's HTML cap. It was 587 KB once the hero's spec lines were

@@ -20,7 +20,7 @@
 | `src/lib/demo/static-svg.ts` | Build-time static SVGs, without the attributes only a live chart reads |
 | `src/lib/markdown.ts` | Docs Markdown conventions as Sätteri hast plugins plus one Shiki transformer |
 | `src/lib/og.ts` | The social card layout and its fonts |
-| `src/components/landing/` | The ten landing sections, one directory per section with its islands |
+| `src/components/landing/` | The landing sections, one directory per section with its islands |
 | `src/landing/` | Landing copy (`copy.ts`, the headline and every section heading) and each section's data |
 | `src/scripts/motion/` | `withMotion`, the landing page's only way into GSAP |
 | `src/scripts/site.ts` | Theme toggle, code copy buttons, copy page and the TOC highlight |

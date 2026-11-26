@@ -14,7 +14,7 @@
 @layer components {
   /* The hero opens close to the header and ends near the fold at 1440x900. */
   .landing-section.hero {
-    @apply pt-8 pb-12 sm:pt-10 lg:pb-14;
+    @apply pt-8 sm:pt-10;
   }
 
   /* minmax(0, 1fr) tracks: the spec lines and the chart never widen the page. */
