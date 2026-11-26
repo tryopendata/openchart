@@ -4,7 +4,8 @@
  * ticked `.rule-axis` from global.css. Spacing is padding inside each section,
  * never margin between them, so the page's height is the sum of its sections.
  * Section-specific styles live in the lanes' own files (landing-hero.css,
- * landing-wall.css, landing-story.css, landing-close.css).
+ * landing-wall.css, landing-story.css, landing-motion.css,
+ * landing-responsive.css, landing-featured.css, landing-close.css).
  */
 @reference "./global.css";
 

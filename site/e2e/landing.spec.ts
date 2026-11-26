@@ -7,6 +7,7 @@
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { agentSession } from "../src/landing/agents";
+import { LANDING_SECTION_IDS } from "../src/landing/copy";
 import { pageViolations } from "./axe";
 import { sidewaysOverflow } from "./layout";
 
@@ -283,7 +284,7 @@ test.describe("with reduced motion", () => {
         ).length,
       };
     });
-    expect(layout.count).toBe(10);
+    expect(layout.count).toBe(LANDING_SECTION_IDS.length);
     expect(layout.direct).toBe(true);
     expect(layout.fixed).toBe(0);
     expect(Math.abs(layout.main - layout.sum)).toBeLessThanOrEqual(layout.count);
@@ -318,6 +319,23 @@ test("the vocabulary wall filters to one intent, and every tile left links to a 
   }
 });
 
+/**
+ * The longest stretch of scroll, in px, over which an element stayed within 2px
+ * of the same place on screen: how long a pin held it.
+ */
+function longestHold(samples: { scroll: number; nameAt: number }[]): number {
+  let longest = 0;
+  let start = 0;
+  for (let index = 1; index < samples.length; index += 1) {
+    const first = samples[start];
+    const current = samples[index];
+    if (!first || !current) continue;
+    if (Math.abs(current.nameAt - first.nameAt) >= 2) start = index;
+    else longest = Math.max(longest, current.scroll - first.scroll);
+  }
+  return longest;
+}
+
 test("the preset scrub moves through essay, wire, broadsheet and terminal, then lets go", async ({
   page,
   isMobile,
@@ -347,12 +365,23 @@ test("the preset scrub moves through essay, wire, broadsheet and terminal, then 
   const nameY = async () => (await name.boundingBox())?.y ?? Number.NaN;
 
   const seen: string[] = [];
+  const samples: { scroll: number; nameAt: number }[] = [];
   for (let y = top - height; y <= top + 4 * height; y += height / 10) {
     await scrollTo(page, y);
     const preset = await presetShown();
     if (preset && seen.at(-1) !== preset) seen.push(preset);
+    samples.push({ scroll: y, nameAt: await nameY() });
   }
   expect(seen).toEqual([...PRESETS]);
+  // The pin holds while the name stays put on screen: two viewport heights
+  // (PIN_VIEWPORTS), give or take the one-tenth-viewport sampling step.
+  expect(longestHold(samples) / height, "viewports pinned").toBeGreaterThanOrEqual(1.85);
+  expect(longestHold(samples) / height, "viewports pinned").toBeLessThanOrEqual(2.05);
+  // The same distance is reserved below the block in CSS, so nothing moves when the pin starts.
+  const reserved = await section
+    .locator(".scrub")
+    .evaluate((scrub) => Number.parseFloat(getComputedStyle(scrub).paddingBottom) / innerHeight);
+  expect(reserved, "viewports reserved").toBeCloseTo(2, 2);
 
   await scrollTo(page, top + height * 0.5);
   const pinnedAt = await nameY();
@@ -580,34 +609,35 @@ test("the agent session plays to a chart and shows the validator's error at the 
   ).toHaveCount(1);
 });
 
-test("the hero and closing install commands switch package managers independently", async ({
+test("the hero and start install commands switch package managers independently", async ({
   page,
 }) => {
   await page.goto("/");
-  const hero = page.locator("#desk");
-  const closing = page.locator("#closing");
-  const managers = (section: Locator) => section.getByRole("tablist", { name: "Package manager" });
+  // Each section's install command is its own widget; #start also holds the framework tabs.
+  const hero = page.locator("#desk [data-install-command]");
+  const start = page.locator("#start [data-install-command]");
+  const managers = (widget: Locator) => widget.getByRole("tablist", { name: "Package manager" });
 
-  await closing.scrollIntoViewIfNeeded();
-  await managers(closing).getByRole("tab", { name: "bun" }).click();
-  await expect(closing.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
-  await expect(
-    hero.getByRole("tabpanel").filter({ hasText: "@opendata-ai/openchart-react" }),
-  ).toContainText("npm install @opendata-ai/openchart-react");
+  await start.scrollIntoViewIfNeeded();
+  await managers(start).getByRole("tab", { name: "bun" }).click();
+  await expect(start.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
+  await expect(hero.getByRole("tabpanel")).toContainText(
+    "npm install @opendata-ai/openchart-react",
+  );
 
   await hero.scrollIntoViewIfNeeded();
   await managers(hero).getByRole("tab", { name: "pnpm" }).click();
-  await expect(
-    hero.getByRole("tabpanel").filter({ hasText: "@opendata-ai/openchart-react" }),
-  ).toContainText("pnpm add @opendata-ai/openchart-react");
-  await expect(closing.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
+  await expect(hero.getByRole("tabpanel")).toContainText("pnpm add @opendata-ai/openchart-react");
+  await expect(start.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
 });
 
 test("framework tabs switch the install and usage code and share the choice with docs demos", async ({
   page,
 }) => {
   await page.goto("/");
-  let frameworks = await hydrated(page.locator("#frameworks"));
+  // The framework bench only: #start also holds the package-manager tabs.
+  const bench = (section: Locator) => section.locator(".frameworks-code");
+  let frameworks = bench(await hydrated(page.locator("#start")));
   const panelText = async () =>
     ((await frameworks.getByRole("tabpanel").textContent()) ?? "").replace(/npm install \S+/, "");
 
@@ -637,7 +667,7 @@ test("framework tabs switch the install and usage code and share the choice with
   await expect(demo.locator('[data-demo-panel="vue"]')).toBeVisible();
   await demo.locator('[data-demo-tab="svelte"]').click();
   await page.goto("/");
-  frameworks = await hydrated(page.locator("#frameworks"));
+  frameworks = bench(await hydrated(page.locator("#start")));
   await expect(frameworks.getByRole("tab", { name: "Svelte", exact: true })).toHaveAttribute(
     "aria-selected",
     "true",
@@ -645,6 +675,37 @@ test("framework tabs switch the install and usage code and share the choice with
   await expect(frameworks.getByRole("tabpanel")).toContainText(
     "npm install @opendata-ai/openchart-svelte",
   );
+});
+
+/** The tallest gap a section may leave between its last content and the next rule. */
+const MAX_EMPTY_BAND_PX = 120;
+
+test("at 1440x900 no empty band over 120px sits after the wall, the featured figures or the start section", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.evaluate(() => document.fonts.ready);
+  await page.locator("#vocabulary").scrollIntoViewIfNeeded();
+  await page.locator("footer").scrollIntoViewIfNeeded();
+  await settle(page);
+  const bands = await page.evaluate(() => {
+    const box = (selector: string) => document.querySelector(selector)?.getBoundingClientRect();
+    const gap = (above: string, below: string) =>
+      (box(below)?.top ?? Number.NaN) - (box(above)?.bottom ?? Number.NaN);
+    return {
+      "wall to featured figures": gap("#vocabulary .wall-grid", "#vocabulary [data-featured]"),
+      "featured figures to the agents rule": gap(
+        "#vocabulary [data-featured]",
+        "#agents .landing-rule",
+      ),
+      "start to the footer rule": gap("#start .start-close", "footer .rule-axis"),
+    };
+  });
+  for (const [where, height] of Object.entries(bands)) {
+    expect(height, where).toBeGreaterThanOrEqual(0);
+    expect(height, where).toBeLessThanOrEqual(MAX_EMPTY_BAND_PX);
+  }
 });
 
 test("at 390px wide nothing scrolls horizontally", async ({ page }) => {

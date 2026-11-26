@@ -1,7 +1,7 @@
 /**
- * The rows of the landing page's closing facts table. Each fact restates what a
- * docs page or a file in the repository says and links to it, so a reader can
- * check it. Numbers carry a comment naming the file they come from.
+ * The rows of the start section's facts table: the bundle and the license. Each
+ * fact restates what a docs page or a file in the repository says and links to
+ * it, so a reader can check it. Numbers carry a comment naming the file they come from.
  */
 import { site } from "../../../config";
 
@@ -14,17 +14,8 @@ export type Fact = { topic: string; fact: string; sources: FactSource[] };
 /** A repository file on GitHub, for facts no docs page covers. */
 const blob = (path: string) => ({ label: path, href: `${site.repo}/blob/main/${path}` });
 
-export const closingFacts: Fact[] = [
-  {
-    topic: "Accessibility",
-    fact: 'Live charts get generated alt text, a visually hidden data table and arrow-key navigation, with no configuration, and each bar, slice and point carries a descriptive label. Static SVG carries role="img" and the same alt text.',
-    sources: [{ label: "Accessibility", href: "/docs/output/accessibility/" }],
-  },
-  {
-    topic: "Export",
-    fact: "Charts export SVG, PNG and CSV. Tables export CSV with the current sort and search applied. GIF export replays the entrance animation.",
-    sources: [{ label: "Export API", href: "/docs/api/export/" }],
-  },
+/** The facts table's rows, in order. */
+export const startFacts: Fact[] = [
   {
     topic: "Bundle",
     fact: "ESM-only packages built on d3 modules. The 3D graph renderer and the GIF encoder are optional peer dependencies, installed only if you use them, and the GIF encoder loads only when a GIF is exported. Each wrapper takes its framework as a peer.",

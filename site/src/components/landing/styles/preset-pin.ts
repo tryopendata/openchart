@@ -12,7 +12,7 @@ import { stopAt } from "./scrub-progress";
 /** Where the pinned block fits: wide enough for the chart beside its notes, tall enough to hold it. */
 export const PIN_MEDIA = "(min-width: 1024px) and (min-height: 700px)";
 /** How long the pin holds, in viewport heights. landing-wall.css reserves the same. */
-export const PIN_VIEWPORTS = 2.5;
+export const PIN_VIEWPORTS = 2;
 
 /** What the pin reports to the island: the pin's scroll range (null once released) and the current stop. */
 export type PinCallbacks = {

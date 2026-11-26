@@ -1,7 +1,7 @@
 /**
  * The content of the landing framework tabs, built at build time: one panel per
  * wrapper with its install command, a file name and the code the docs demo tabs
- * generate for the same spec. Frameworks.astro highlights it and hands it to the
+ * generate for the same spec. Start.astro highlights it and hands it to the
  * InstallTabs island.
  */
 import type { VizSpec } from "@opendata-ai/openchart-core";

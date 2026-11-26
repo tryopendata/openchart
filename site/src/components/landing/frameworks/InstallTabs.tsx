@@ -5,7 +5,7 @@
  * links without JavaScript. The selection is the docs demo tabs' stored choice
  * (`openchart:framework`), written on every pick.
  *
- * The stored choice is shown before hydration: Frameworks.astro's inline script
+ * The stored choice is shown before hydration: Start.astro's inline script
  * moves the panel's `data-default` to it before paint, and this island's first
  * render reads the same choice, so hydration finds matching markup and the
  * section never swaps from React to the stored tab as it scrolls in.

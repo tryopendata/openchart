@@ -1,0 +1,84 @@
+/*
+ * Styles for the responsive section (#responsive): a frame with a draggable
+ * edge over dashed breakpoint guides. Transitions use `--story-ease` from
+ * landing-story.css.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* ---- #responsive: a frame with a draggable edge ------------------------- */
+
+  .resize-readout {
+    @apply m-0 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm;
+  }
+
+  .resize-width {
+    @apply text-ink font-medium;
+  }
+
+  .resize-breakpoint {
+    @apply text-accent font-medium;
+  }
+
+  .resize-hint {
+    @apply text-muted text-[13px] sm:ml-auto;
+  }
+
+  .resize-track {
+    @apply relative mt-2 pt-6;
+  }
+
+  /* Dashed guides at the breakpoints; the frame covers them until it is narrower. */
+  .resize-ruler {
+    @apply pointer-events-none absolute inset-0;
+  }
+
+  .resize-mark {
+    @apply text-muted border-line absolute top-0 bottom-0 border-l border-dashed pl-1.5 text-[11px] leading-none tabular-nums;
+  }
+
+  /* content-box: the width the island sets is the chart's own box, inside the border. */
+  .resize-frame {
+    @apply border-line-strong bg-canvas relative box-content max-w-[calc(100%-2px)] border;
+    transition: width 520ms var(--story-ease);
+  }
+
+  .resize-frame[data-dragging] {
+    transition: none;
+  }
+
+  .resize-chart {
+    @apply relative h-[420px] sm:h-[460px];
+  }
+
+  .resize-handle {
+    @apply absolute top-0 -right-[9px] bottom-0 flex w-[17px] cursor-ew-resize touch-none items-center justify-center outline-none;
+  }
+
+  .resize-handle::before {
+    @apply bg-canvas border-line-strong h-14 w-[7px] rounded-xs border content-[''];
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      height 300ms var(--story-ease);
+  }
+
+  .resize-handle:hover::before,
+  .resize-handle:focus-visible::before,
+  .resize-frame[data-dragging] .resize-handle::before {
+    @apply bg-accent border-accent h-20;
+  }
+
+  /* The focus ring goes on the grip, not the full-height hit area. */
+  .resize-handle:focus-visible::before {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .resize-frame,
+  .resize-handle::before {
+    transition: none;
+  }
+}

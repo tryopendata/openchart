@@ -1,0 +1,94 @@
+/*
+ * Styles for the motion section (#motion): a full-width chart under one row of
+ * controls, with the spec collapsed beneath it. Transitions use `--story-ease`
+ * from landing-story.css.
+ */
+@reference "./global.css";
+
+@layer components {
+  /* ---- #motion: a full-width chart under one row of controls ------------- */
+
+  /* The controls read as a toolbar above the graphic: plain words, no code. */
+  .motion-controls {
+    @apply border-line flex flex-wrap items-center gap-x-8 gap-y-3 border-b pb-4;
+  }
+
+  .motion-buttons {
+    @apply flex flex-wrap gap-3;
+  }
+
+  .motion-bench-layout .btn:disabled {
+    @apply text-muted border-line cursor-not-allowed;
+  }
+
+  .motion-choice {
+    @apply m-0 flex min-w-0 items-center gap-4 border-0 p-0;
+  }
+
+  .motion-legend {
+    @apply text-ink-2 float-left mr-1 p-0 text-sm font-medium;
+  }
+
+  .motion-option {
+    @apply text-ink-2 hover:text-ink inline-flex cursor-pointer items-center gap-1.5 text-sm transition-colors duration-150;
+  }
+
+  .motion-option input {
+    accent-color: var(--color-accent);
+  }
+
+  .motion-option:has(input:checked) {
+    @apply text-ink font-medium;
+  }
+
+  .motion-choice:disabled .motion-option {
+    @apply text-muted cursor-not-allowed;
+  }
+
+  .motion-note {
+    @apply text-muted m-0 text-sm tabular-nums sm:ml-auto;
+  }
+
+  .motion-reason {
+    @apply text-muted m-0 mt-3 text-sm;
+  }
+
+  .motion-chart {
+    @apply relative mt-6 h-[380px] sm:h-[460px];
+  }
+
+  .motion-reduced {
+    @apply text-muted m-0 mt-4 max-w-[60ch] text-sm leading-relaxed;
+  }
+
+  /* The spec is the second story: collapsed until the reader asks for it. */
+  .motion-spec {
+    @apply border-line mt-4 border-t pt-3;
+  }
+
+  .motion-spec summary {
+    @apply text-ink-2 hover:text-ink cursor-pointer text-sm font-medium transition-colors duration-150;
+  }
+
+  .motion-excerpt {
+    @apply text-ink-2 m-0 mt-3 font-mono text-[13px] leading-relaxed;
+  }
+
+  .motion-line {
+    @apply block border-l-2 border-transparent pl-3;
+    transition:
+      border-color 500ms var(--story-ease),
+      background-color 500ms var(--story-ease),
+      color 500ms var(--story-ease);
+  }
+
+  .motion-line[data-changed] {
+    @apply border-accent bg-panel text-ink;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-line {
+    transition: none;
+  }
+}

@@ -1,7 +1,7 @@
 /*
- * Styles for the agents, frameworks and closing sections (#agents, #frameworks,
- * #closing). Three shapes: a two-column transcript that ends in a chart, a tabbed
- * code bench beside the chart it draws, and a ruled facts table. Rules, type and
+ * Styles for the agents and start sections (#agents, #start). Two shapes: a
+ * two-column transcript that ends in a chart, and a tabbed code bench beside the
+ * chart it draws, followed by a ruled facts table and the install command. Rules, type and
  * the one accent do the work; color comes only from the charts.
  */
 @reference "./global.css";
@@ -209,7 +209,7 @@
     @apply min-w-0 [overflow-wrap:anywhere];
   }
 
-  /* Frameworks: the bench in seven columns, the chart beside it in five. */
+  /* Start: the bench in seven columns, the chart beside it in five. */
 
   .frameworks-bench {
     @apply mt-12 grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
@@ -277,71 +277,71 @@
     @apply pt-6;
   }
 
-  /* Closing: the heading in four columns, the table and install lines in eight. */
-  .closing-grid {
-    @apply grid gap-y-10 lg:grid-cols-12 lg:gap-x-8;
+  /* The page's last section: the footer keeps its own top margin before its
+     rule, so the section's bottom padding would only add an empty band above it.
+     Two classes, to win over .landing-section wherever the bundle orders it. */
+  .landing-section.start-section {
+    @apply pb-0;
   }
 
-  .closing-head {
-    @apply lg:col-span-4;
+  /* Start, after the bench: the facts table and the install command in the last
+     eight columns, under the code. */
+  .start-close {
+    @apply mt-16 grid gap-y-10 lg:mt-20 lg:grid-cols-12 lg:gap-x-8;
   }
 
-  .closing-table-wrap,
-  .closing-install {
+  .start-table-wrap,
+  .start-install {
     @apply min-w-0 lg:col-span-8 lg:col-start-5;
   }
 
-  .closing-table-wrap {
-    @apply lg:row-start-1;
-  }
-
-  .closing-table {
+  .start-table {
     @apply border-line-strong w-full border-collapse border-t-2 border-b text-left;
   }
 
-  .closing-table thead th {
+  .start-table thead th {
     @apply border-line-strong text-muted border-b py-2 pr-6 font-mono text-xs font-normal;
   }
 
-  .closing-table tbody tr + tr {
+  .start-table tbody tr + tr {
     @apply border-line border-t;
   }
 
-  .closing-table tbody th {
+  .start-table tbody th {
     @apply text-ink w-36 py-4 pr-6 align-top text-[15px] font-semibold;
   }
 
-  .closing-table td {
+  .start-table td {
     @apply text-ink-2 py-4 pr-6 align-top text-[15px] leading-relaxed;
   }
 
-  .closing-table td.closing-backed {
+  .start-table td.start-backed {
     @apply pr-0 font-mono text-[12.5px] whitespace-nowrap;
   }
 
-  .closing-backed a {
+  .start-backed a {
     @apply text-accent block;
     transition: color 150ms ease-out;
   }
 
   /* On a phone the facts table stacks: topic, fact, then the files behind it. */
   @media (width < 40rem) {
-    .closing-table thead {
+    .start-table thead {
       @apply sr-only;
     }
 
-    .closing-table tbody tr {
+    .start-table tbody tr {
       @apply grid gap-1 py-4;
     }
 
-    .closing-table tbody th,
-    .closing-table td,
-    .closing-table td.closing-backed {
+    .start-table tbody th,
+    .start-table td,
+    .start-table td.start-backed {
       @apply w-auto p-0;
     }
   }
 
-  .closing-links {
+  .start-links {
     @apply mt-8 flex flex-wrap gap-3;
   }
 
