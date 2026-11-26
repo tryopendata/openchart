@@ -885,10 +885,10 @@ describe("the landing page", () => {
     expect(wall.querySelectorAll("[data-vocabulary-tile]").length).toBe(24);
     expect(filterSlot.compareDocumentPosition(wall) & FOLLOWS).toBeTruthy();
     expect(wall.compareDocumentPosition(featured) & FOLLOWS).toBeTruthy();
-    const figures = [...featured.querySelectorAll(".kinds-tile")].map((tile) => ({
+    const figures = [...featured.querySelectorAll("[data-featured-figure]")].map((tile) => ({
       demo: tile.querySelector("[data-demo]")?.getAttribute("data-demo"),
       sourced: /Source: \S/.test(textOf(tile.querySelector("figcaption"))),
-      link: tile.querySelector("a.kinds-link")?.getAttribute("href"),
+      link: tile.querySelector("a[data-featured-link]")?.getAttribute("href"),
     }));
     expect(figures).toEqual([
       { demo: "landing/featured-map", sourced: true, link: "/docs/maps/symbol-map/" },
@@ -902,7 +902,7 @@ describe("the landing page", () => {
 
   it("#start holds the framework tabs and the bench chart, the bundle and license facts, the install command and the docs and GitHub links", () => {
     const start = home().querySelector("#start");
-    const bench = start?.querySelector(".frameworks-code");
+    const bench = start?.querySelector("[data-framework-bench]");
     const install = start?.querySelector("[data-install-command]");
     if (!start || !bench || !install) {
       throw new Error("#start is missing its framework bench or its install command.");
@@ -922,7 +922,7 @@ describe("the landing page", () => {
     for (const panel of panels) {
       expect(textOf(panel.querySelector("pre code")), panel.id).toMatch(/@opendata-ai\/openchart-/);
     }
-    expect(start.querySelectorAll(".frameworks-chart svg").length).toBe(2);
+    expect(start.querySelectorAll("[data-framework-bench] figure svg").length).toBe(2);
     expect([...start.querySelectorAll("table tbody th")].map(textOf)).toEqual([
       "Bundle",
       "License",

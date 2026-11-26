@@ -1,6 +1,6 @@
 /*
  * Styles for the motion section (#motion): a full-width chart under one row of
- * controls, with the spec collapsed beneath it. Transitions use `--story-ease`
+ * controls, with the spec collapsed beneath it. Transitions use `--landing-ease`
  * from landing.css.
  */
 @reference "./global.css";
@@ -77,9 +77,9 @@
   .motion-line {
     @apply block border-l-2 border-transparent pl-3;
     transition:
-      border-color 500ms var(--story-ease),
-      background-color 500ms var(--story-ease),
-      color 500ms var(--story-ease);
+      border-color 500ms var(--landing-ease),
+      background-color 500ms var(--landing-ease),
+      color 500ms var(--landing-ease);
   }
 
   .motion-line[data-changed] {

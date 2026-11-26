@@ -1,7 +1,7 @@
 /*
  * The install command (InstallCommand.astro): manager tabs above, a ruled line
  * with Copy. Imported by the component, so every page that shows one (the
- * landing hero and closing section, the blog's end-of-post CTA) gets the same
+ * landing hero and start section, the blog's end-of-post CTA) gets the same
  * styles. The command wraps, so a phone shows all of it without a scroller.
  */
 @reference "./global.css";

@@ -4,8 +4,9 @@
  * ticked `.rule-axis` from global.css. Spacing is padding inside each section,
  * never margin between them, so the page's height is the sum of its sections.
  * Section-specific styles live in the lanes' own files (landing-hero.css,
- * landing-wall.css, landing-story.css, landing-motion.css,
- * landing-responsive.css, landing-featured.css, landing-close.css).
+ * landing-wall.css, landing-featured.css, landing-styles.css, landing-story.css,
+ * landing-motion.css, landing-responsive.css, landing-agents.css,
+ * landing-start.css).
  */
 @reference "./global.css";
 
@@ -116,5 +117,5 @@
 :root {
   /* The sections' shared transition curve. Soft and decisive: fast out of the
      gate, a long settle, no overshoot (close to GSAP's expo.out). */
-  --story-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --landing-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }

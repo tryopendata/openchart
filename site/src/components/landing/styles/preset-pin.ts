@@ -3,7 +3,7 @@
  * fits (PIN_MEDIA) the scrub holds the block centred in the viewport for
  * PIN_VIEWPORTS heights, reports which stop the scroll is on, and scrubs the
  * progress rule. The scroll distance is reserved in CSS under the same media
- * query (landing-wall.css, `.scrub`), so the pin adds no spacer and nothing
+ * query (landing-styles.css, `.scrub`), so the pin adds no spacer and nothing
  * below it moves when it starts. Elsewhere there is no pin: the stops stay buttons.
  */
 import type { MotionTools } from "../../../scripts/motion";
@@ -11,7 +11,7 @@ import { stopAt } from "./scrub-progress";
 
 /** Where the pinned block fits: wide enough for the chart beside its notes, tall enough to hold it. */
 export const PIN_MEDIA = "(min-width: 1024px) and (min-height: 700px)";
-/** How long the pin holds, in viewport heights. landing-wall.css reserves the same. */
+/** How long the pin holds, in viewport heights. landing-styles.css reserves the same. */
 export const PIN_VIEWPORTS = 2;
 
 /** What the pin reports to the island: the pin's scroll range (null once released) and the current stop. */

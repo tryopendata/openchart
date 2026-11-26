@@ -636,7 +636,7 @@ test("framework tabs switch the install and usage code and share the choice with
 }) => {
   await page.goto("/");
   // The framework bench only: #start also holds the package-manager tabs.
-  const bench = (section: Locator) => section.locator(".frameworks-code");
+  const bench = (section: Locator) => section.locator("[data-framework-bench]");
   let frameworks = bench(await hydrated(page.locator("#start")));
   const panelText = async () =>
     ((await frameworks.getByRole("tabpanel").textContent()) ?? "").replace(/npm install \S+/, "");
