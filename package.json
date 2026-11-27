@@ -44,7 +44,8 @@
     "capture:design": "node scripts/capture-design-baseline.mjs",
     "test:parity:capture": "node scripts/capture-v8-parity.mjs",
     "check:boundaries": "node scripts/check-product-boundary.mjs",
-    "check:library-bundle": "node scripts/check-library-bundle.mjs"
+    "check:library-bundle": "node scripts/check-library-bundle.mjs",
+    "check:tree-shaking": "node scripts/check-tree-shaking.mjs"
   },
   "overrides": {
     "strip-ansi": "6.0.1",

@@ -15,15 +15,19 @@ import { timeFormat, utcFormat } from 'd3-time-format';
 // Module-level caching assumes the d3-format/d3-time-format default locale;
 // consumer `formatDefaultLocale()` calls are unsupported (verified: no
 // callers of formatDefaultLocale exist in this codebase).
-const FORMAT_INTEGER = d3Format(',');
-const FORMAT_TINY = d3Format('.2~r');
-const FORMAT_DECIMAL = d3Format(',.2f');
-const FORMAT_ABBREV_MANTISSA = d3Format('.1~f');
-const FORMAT_PERCENT_FRACTION = d3Format('.1~%');
-const FORMAT_PERCENT_RAW = d3Format(',.1~f');
-const FORMAT_CURRENCY_INTEGER = d3Format('$,');
-const FORMAT_CURRENCY_DECIMAL = d3Format('$,.2f');
-const FORMAT_STEP_FRACTION = [d3Format('.0~f'), d3Format('.1~f'), d3Format('.2~f')] as const;
+const FORMAT_INTEGER = /* @__PURE__ */ d3Format(',');
+const FORMAT_TINY = /* @__PURE__ */ d3Format('.2~r');
+const FORMAT_DECIMAL = /* @__PURE__ */ d3Format(',.2f');
+const FORMAT_ABBREV_MANTISSA = /* @__PURE__ */ d3Format('.1~f');
+const FORMAT_PERCENT_FRACTION = /* @__PURE__ */ d3Format('.1~%');
+const FORMAT_PERCENT_RAW = /* @__PURE__ */ d3Format(',.1~f');
+const FORMAT_CURRENCY_INTEGER = /* @__PURE__ */ d3Format('$,');
+const FORMAT_CURRENCY_DECIMAL = /* @__PURE__ */ d3Format('$,.2f');
+const FORMAT_STEP_FRACTION = [
+  /* @__PURE__ */ d3Format('.0~f'),
+  /* @__PURE__ */ d3Format('.1~f'),
+  /* @__PURE__ */ d3Format('.2~f'),
+] as const;
 const FORMAT_STEP_PRECISION = [
   d3Format(',.0~f'),
   d3Format(',.1~f'),
@@ -170,7 +174,7 @@ export function buildD3Formatter(formatStr: string | undefined): ((v: number) =>
   }
 
   try {
-    const fmt = d3Format(formatStr);
+    const fmt = /* @__PURE__ */ d3Format(formatStr);
     // Replace SI prefix "G" (giga) with "B" (billion) for financial readability
     if (formatStr.includes('s')) {
       return (v: number) => fmt(v).replace(/G$/, 'B');
@@ -181,7 +185,7 @@ export function buildD3Formatter(formatStr: string | undefined): ((v: number) =>
     const m = formatStr.match(D3_FORMAT_SUFFIX_RE);
     if (m) {
       try {
-        const fmt = d3Format(m[1]);
+        const fmt = /* @__PURE__ */ d3Format(m[1]);
         const suffix = m[2];
         return (v: number) => fmt(v) + suffix;
       } catch {
