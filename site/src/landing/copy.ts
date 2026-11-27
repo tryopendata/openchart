@@ -1,6 +1,6 @@
 /**
  * The landing page's words that more than one file needs: the headline, the lede,
- * the short lede and the eight section headings. Each section component takes its h2 from here, and
+ * the short lede and the nine section headings. Each section component takes its h2 from here, and
  * the build test checks the page against it, so a heading changes in one place.
  */
 
@@ -11,6 +11,7 @@ export const LANDING_SECTION_IDS = [
   "motion",
   "styles",
   "responsive",
+  "publish",
   "vocabulary",
   "agents",
   "start",
@@ -43,6 +44,7 @@ export const landingCopy: LandingCopy = {
     motion: "When the numbers change, the chart moves with them",
     styles: "One chart, set in four house styles",
     responsive: "The same graphic, from a phone to a full-width spread",
+    publish: "Export it for the page, the social post and the screen reader",
     vocabulary: "Twenty-four charts, and the maps and flows beside them",
     agents: "A coding agent can draw the chart, and the validator catches its mistakes",
     start: "Install it for React, Vue, Svelte or plain JavaScript",

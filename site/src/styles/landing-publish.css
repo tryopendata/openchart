@@ -1,0 +1,5 @@
+/*
+ * Styles for the publish section (#publish): a chart set at article width in
+ * body copy, what a screen reader reads beside it, and the export buttons.
+ */
+@reference "./global.css";

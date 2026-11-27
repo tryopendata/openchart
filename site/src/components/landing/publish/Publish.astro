@@ -1,0 +1,28 @@
+---
+/**
+ * Publish: the chart where it ends up, set at article width in body copy, with
+ * what a screen reader reads beside it and working exports under it.
+ *
+ * Contract (e2e/landing-publish.spec.ts and tests/build.test.ts rely on it):
+ * - `<section id="publish" aria-labelledby="publish-title" data-landing-section>`
+ *   with one h2, id `publish-title` (`landingCopy.headings.publish`).
+ * - `[data-publish-article]` holds the article's paragraphs as direct children,
+ *   at least one before and one after the figure.
+ * - `[data-publish-chart]` holds the chart, static SVG in the server HTML, in a
+ *   column no wider than 680px.
+ * - `[data-publish-screen-reader]` holds `[data-publish-alt]` (the generated alt
+ *   text) and a `<table>` with a caption and a header row.
+ * - A `role="group"` named "Export this chart" holds buttons SVG, PNG, CSV and
+ *   GIF, disabled in the server HTML; a `role="status"` line reports each export.
+ * - An exported GIF shows as `<img data-publish-gif>` with a "Download GIF" link
+ *   and a "Back to the live chart" button.
+ */
+import SectionHead from "../../shared/SectionHead.astro";
+import "../../../styles/landing-publish.css";
+---
+
+<section id="publish" aria-labelledby="publish-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="publish" />
+  </div>
+</section>
