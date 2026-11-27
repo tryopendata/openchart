@@ -1,6 +1,6 @@
 ---
 /**
- * The site header: wordmark and version, the main links (Docs, `site.nav`, then
+ * The site header: the animated mark, wordmark and version, the main links (Docs, `site.nav`, then
  * `site.social`), the search control and the theme toggle, over one hairline
  * rule. The toggle stays hidden until site.ts wires it, the search trigger until
  * search.ts does. To fit a 360px screen: under 640px the social links hide (the
@@ -9,7 +9,7 @@
  */
 import Search from "../components/search/Search.astro";
 import { site } from "../config";
-import BrandMark from "./BrandMark.astro";
+import BrandMarkAnimated from "./BrandMarkAnimated.astro";
 
 interface Props {
   /** The current route, to mark the section the reader is in. */
@@ -31,7 +31,7 @@ const isCurrent = (href: string) => href.startsWith("/") && path.startsWith(href
       aria-label={`${site.name} home`}
       class="text-ink flex shrink-0 items-center gap-2 no-underline"
     >
-      <BrandMark class="size-5" />
+      <BrandMarkAnimated class="size-5" />
       <span class="text-[17px] font-bold tracking-tight max-[480px]:sr-only">{site.name}</span>
     </a>
     {site.version && (

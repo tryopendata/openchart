@@ -34,6 +34,7 @@ versions (`-black`, `-white`) wherever color isn't available.
 | `svg/openchart-stacked.svg`         | Square-ish spaces. `-dark` variant.                                                          |
 | `svg/openchart-mark.svg`            | Mark alone at 32px and up. `-dark`, `-black`, `-white` variants.                             |
 | `svg/openchart-mark-small.svg`      | Mark below 32px. Drawn on a 16px grid so every edge lands on a whole pixel. `-dark` variant. |
+| `svg/openchart-mark-animated.svg`   | The mark dropping in and bouncing into place, once. `-dark` variant. See Animated mark.      |
 | `svg/openchart-wordmark.svg`        | Wordmark alone. `-white` variant.                                                            |
 | `favicon.svg`                       | Browser tab icon; switches to the dark hues with the system theme.                           |
 | `favicon.ico`                       | 16, 32 and 48px. 16 and 32 use the small mark.                                               |
@@ -59,6 +60,18 @@ beside the site name. Its four hex values repeat the light column above.
 Leave clear space around the logo equal to one cell of the mark on every side. Use the
 small mark below 32px. Don't recolor a single shape, reorder the cells, rotate the mark,
 add effects, or set "OpenChart" in another typeface beside it.
+
+## Animated mark
+
+`source/bouncing-mark.mjs` solves a small bounce for each shape (gravity, a share of
+speed lost at every impact, drift and spin that die out the same way) and writes it as
+CSS keyframes inside the SVG, so the file plays without script, once, and ends as the
+plain mark. It stays still under `prefers-reduced-motion`. The shapes fall in from above
+the artboard: inline the SVG to let them show outside its box, since an `<img>` clips
+them to it. Its class and keyframe names start with `ocb` and are global, so inline it
+once per page. For the site header the build also writes the small cut's motion to
+`src/styles/brand-mark-motion.css`, which `src/layouts/BrandMarkAnimated.astro` pairs
+with the shapes. Tune the motion in the `SHAPES` table and the constants above it.
 
 ## Wordmark
 
