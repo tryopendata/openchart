@@ -10,13 +10,14 @@
  * unaffected: each mouse event is hit-tested afresh.
  *
  * This relays the touch events from the detached node to `document`, where the
- * library's listeners pick them up as if they had bubbled. It does nothing while
- * the node is still in the page. Remove it once the library keeps the label's
- * text nodes during a drag preview.
+ * library's listeners pick them up as if they had bubbled. It follows one
+ * single-finger touch at a time and does nothing while the node is still in the
+ * page. Remove it once the library keeps the label's text nodes during a drag
+ * preview.
  */
 
-/** The callout's text, whose children the drag preview replaces. */
-const LABEL_SELECTOR = ".oc-annotation-label";
+/** The callout's text, whose children the drag preview replaces. Not the target line's label. */
+const LABEL_SELECTOR = ".oc-annotation-text .oc-annotation-label";
 const FOLLOW_EVENTS = ["touchmove", "touchend", "touchcancel"] as const;
 
 /** A copy of `event` that can be dispatched again. */
@@ -30,25 +31,36 @@ function copyTouchEvent(event: TouchEvent): TouchEvent {
   });
 }
 
-/** Follows one touch that started on a callout label until it ends. */
-function relayTouch(start: TouchEvent): void {
-  const origin = start.target;
-  if (!(origin instanceof Element) || !origin.closest(LABEL_SELECTOR)) return;
-  const relay = (event: Event) => {
-    const touch = event as TouchEvent;
-    if (touch.type !== "touchmove") stopRelaying();
-    if (origin.isConnected) return;
-    if (touch.cancelable) touch.preventDefault();
-    document.dispatchEvent(copyTouchEvent(touch));
-  };
-  const stopRelaying = () => {
-    for (const type of FOLLOW_EVENTS) origin.removeEventListener(type, relay);
-  };
-  for (const type of FOLLOW_EVENTS) origin.addEventListener(type, relay, { passive: false });
-}
-
-/** Relays touches that start on a callout inside `root`; returns the teardown. */
+/** Relays touches that start on the callout inside `root`; returns the teardown. */
 export function relayDetachedTouches(root: HTMLElement): () => void {
-  root.addEventListener("touchstart", relayTouch, { capture: true, passive: true });
-  return () => root.removeEventListener("touchstart", relayTouch, { capture: true });
+  let following: { origin: Element; stop: () => void } | null = null;
+
+  const follow = (origin: Element) => {
+    const relay = (event: Event) => {
+      const touch = event as TouchEvent;
+      if (touch.type !== "touchmove") stop();
+      if (origin.isConnected) return;
+      if (touch.cancelable) touch.preventDefault();
+      document.dispatchEvent(copyTouchEvent(touch));
+    };
+    const stop = () => {
+      for (const type of FOLLOW_EVENTS) origin.removeEventListener(type, relay);
+      if (following?.origin === origin) following = null;
+    };
+    for (const type of FOLLOW_EVENTS) origin.addEventListener(type, relay, { passive: false });
+    following = { origin, stop };
+  };
+
+  const onTouchStart = (event: TouchEvent) => {
+    // The library drags with one finger only; a second finger is not a new drag to follow.
+    if (following || event.touches.length !== 1) return;
+    const origin = event.target;
+    if (origin instanceof Element && origin.closest(LABEL_SELECTOR)) follow(origin);
+  };
+
+  root.addEventListener("touchstart", onTouchStart, { capture: true, passive: true });
+  return () => {
+    root.removeEventListener("touchstart", onTouchStart, { capture: true });
+    following?.stop();
+  };
 }

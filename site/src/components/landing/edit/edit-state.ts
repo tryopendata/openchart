@@ -39,9 +39,15 @@ function withoutCalloutOffset(spec: ChartSpec): string {
   return JSON.stringify({ ...spec, annotations });
 }
 
+/** A pixel count as the spec should hold it: whole, and never -0. */
+const wholePixels = (value: number) => Math.round(value) || 0;
+
 /**
  * The callout's new offset when the transaction only moves it, and null for
  * anything else (a delete, an add, a text edit, a change to another element).
+ * The library reports a move to fractions of a pixel (`dy: 38.0007`); the
+ * offset comes back in whole pixels, so the state, the spec the chart draws
+ * and the readout all hold the same numbers.
  */
 export function acceptedOffset(spec: ChartSpec, transaction: EditTransaction): Offset | null {
   if (transaction.ops.length === 0) return null;
@@ -49,5 +55,6 @@ export function acceptedOffset(spec: ChartSpec, transaction: EditTransaction): O
   if (!result.ok) return null;
   const next = calloutOffset(result.spec);
   if (!next) return null;
-  return withoutCalloutOffset(result.spec) === withoutCalloutOffset(spec) ? next : null;
+  if (withoutCalloutOffset(result.spec) !== withoutCalloutOffset(spec)) return null;
+  return { dx: wholePixels(next.dx), dy: wholePixels(next.dy) };
 }

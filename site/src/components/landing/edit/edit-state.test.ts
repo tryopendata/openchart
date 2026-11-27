@@ -26,9 +26,15 @@ function move(offset: { dx: number; dy: number }, anchor = "right"): EditOp[] {
 const tx = (...ops: EditOp[]): EditTransaction => ({ ops });
 
 describe("acceptedOffset", () => {
-  it("accepts a mouse drag of the callout and returns its new offset", () => {
+  it("accepts a mouse drag of the callout and returns its new offset in whole pixels", () => {
     const drag = tx(...move({ dx: 132, dy: 38.0007286012 }));
-    expect(acceptedOffset(editSpec, drag)).toEqual({ dx: 132, dy: 38.0007286012 });
+    expect(acceptedOffset(editSpec, drag)).toEqual({ dx: 132, dy: 38 });
+  });
+
+  it("rounds a fractional move the way the readout prints it, never to -0", () => {
+    const drag = tx(...move({ dx: -40.5, dy: -0.3 }));
+    expect(acceptedOffset(editSpec, drag)).toEqual({ dx: -40, dy: 0 });
+    expect(Object.is(acceptedOffset(editSpec, drag)?.dy, -0)).toBe(false);
   });
 
   it("accepts a nudge from a callout already moved", () => {

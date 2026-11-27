@@ -6,7 +6,10 @@
  * ink. Under 1024px the CSS hides everything but that offset line, which sits
  * under the chart with Reset beside it. Either way the offset line is the one
  * `[data-edit-readout]` element and the only live region, so a screen reader
- * hears the move and nothing else.
+ * hears the reader's move and nothing else; it is silent while the callout
+ * moves by itself. Reset and the how-to are in the server HTML holding their
+ * space, and the CSS shows them once the island is live (`data-live`), since
+ * neither does anything before.
  */
 import type { CSSProperties } from "react";
 import { type Offset, offsetLineParts } from "./callout-offset";
@@ -17,12 +20,15 @@ export type EditReadoutProps = {
   offset: Offset;
   /** True once the reader has moved the callout from where the spec put it; Reset is off otherwise. */
   resettable: boolean;
-  /** True while the callout moves by itself, so a screen reader is not read every frame. */
+  /** True while the callout moves by itself; the offset line is not announced then. */
   busy: boolean;
   onReset: () => void;
 };
 
 const excerpt = calloutExcerpt(editSpec);
+/** How to move the callout. The chart is one Tab stop, and arriving on it selects the callout. */
+const HOW_TO =
+  "Drag the callout, or tab to the chart and move it with the arrow keys. Only the callout moves; the rest of the chart stays as written.";
 
 /** A line's nesting depth, for the indent the CSS draws. */
 const depthStyle = (depth: number) => ({ "--depth": depth }) as CSSProperties;
@@ -34,8 +40,7 @@ function OffsetLine({ offset, busy, depth }: { offset: Offset; busy: boolean; de
       className="edit-spec-line edit-spec-offset"
       style={depthStyle(depth)}
       data-edit-readout
-      aria-live="polite"
-      aria-busy={busy}
+      aria-live={busy ? "off" : "polite"}
     >
       {offsetLineParts(offset).map((part, index) =>
         part.number ? (
@@ -78,6 +83,7 @@ export function EditReadout({ offset, resettable, busy, onReset }: EditReadoutPr
       <button type="button" className="btn edit-reset" disabled={!resettable} onClick={onReset}>
         Reset
       </button>
+      <p className="edit-how-to">{HOW_TO}</p>
     </div>
   );
 }
