@@ -12,8 +12,8 @@
  * the entrance.
  *
  * Server and pre-hydration render: every paragraph in full ink and the static
- * SVG of the finished chart (children), with a full rail for readers without
- * JavaScript.
+ * SVG of the finished chart (children). The rail is full for readers without
+ * scripting and empty until the island measures it for everyone else.
  * Story.astro sets the whole story in a PublishedFigure, which carries the source.
  */
 import type { ChartSpec } from "@opendata-ai/openchart-core";
@@ -90,14 +90,29 @@ async function mountStory(request: MountRequest): Promise<StoryParts | null> {
   return { story, driver };
 }
 
-/** Tracks how much of the steps list has passed the viewport trigger line. */
+/**
+ * Tracks how far the rail has filled. A step becomes current when its top
+ * crosses the trigger line, and its tick sits at its middle, so the fill runs
+ * half a step ahead of the line: its tip reaches each tick as that step turns
+ * current, and the rail is full while the last step is being read.
+ */
 function trackRailProgress(steps: HTMLOListElement, trigger: number): () => void {
   let frame: number | undefined;
+  let written = "";
 
   function measureRail() {
     frame = undefined;
-    const progress = railProgress(steps.getBoundingClientRect(), window.innerHeight * trigger);
-    steps.style.setProperty("--story-progress", String(progress));
+    const box = steps.getBoundingClientRect();
+    const lead = (steps.lastElementChild?.getBoundingClientRect().height ?? 0) / 2;
+    const progress = railProgress(
+      { top: box.top - lead, height: box.height },
+      window.innerHeight * trigger,
+    );
+    // The property inherits, so an unchanged value must not restyle the list.
+    const value = progress.toFixed(4);
+    if (value === written) return;
+    written = value;
+    steps.style.setProperty("--story-progress", value);
   }
 
   function scheduleMeasure() {

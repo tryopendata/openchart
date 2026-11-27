@@ -40,8 +40,15 @@
 
   .story-steps::before {
     @apply bg-accent pointer-events-none absolute inset-y-0 left-0 z-1 w-[2px] content-[''];
-    transform: scaleY(var(--story-progress, 1));
+    transform: scaleY(var(--story-progress, 0));
     transform-origin: top;
+  }
+
+  /* Without scripting nothing measures the rail, so it shows full. */
+  @media (scripting: none) {
+    .story-steps::before {
+      transform: none;
+    }
   }
 
   /* Each step hangs from a vertical axis rule by a tick; the current one's
@@ -85,8 +92,9 @@
   @media (min-width: 1024px) {
     .story-panel {
       @apply col-span-8 col-start-5 row-start-1 self-start border-0 py-0;
-      --story-stage-height: min(620px, 100vh - 8rem);
-      top: calc((100vh - var(--story-stage-height)) / 2);
+      /* svh: sticky offsets resolve against the visible viewport on tablets. */
+      --story-stage-height: min(620px, 100svh - 8rem);
+      top: calc((100svh - var(--story-stage-height)) / 2);
     }
 
     .story-stage {
@@ -99,6 +107,17 @@
 
     .story-step {
       @apply min-h-[88vh];
+    }
+  }
+
+  /* Four columns at this width hold about 24 characters of the larger size. */
+  @media (min-width: 1024px) and (width < 1280px) {
+    .story-step {
+      @apply pl-6;
+    }
+
+    .story-prose {
+      @apply text-[1.125rem];
     }
   }
 }
