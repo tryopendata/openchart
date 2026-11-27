@@ -795,7 +795,7 @@ function resolveNodeValueFormatter(
 // Tooltip builder
 // ---------------------------------------------------------------------------
 
-const defaultFmt = defaultNumberFormatter();
+const defaultFmt = /* @__PURE__ */ defaultNumberFormatter();
 
 function formatFlowValue(value: number, formatter?: NumberFormatter | null): string {
   if (formatter) return formatter(value);

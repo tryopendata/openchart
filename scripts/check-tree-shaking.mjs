@@ -89,72 +89,89 @@ function forceSideEffects(pkg) {
   };
 }
 
-async function residue(pkg, specifier) {
-  const result = await build({
-    stdin: { contents: `import '${specifier}';`, resolveDir: resolve('packages', pkg) },
-    bundle: true,
-    format: 'esm',
-    platform: 'browser',
-    write: false,
-    metafile: true,
-    logLevel: 'error',
-    external: EXTERNAL,
-    plugins: [forceSideEffects(pkg)],
-  });
-  const output = Object.values(result.metafile.outputs)[0];
-  const byPackage = {};
-  for (const [input, { bytesInOutput }] of Object.entries(output.inputs)) {
-    const key = packageOf(input);
-    byPackage[key] = (byPackage[key] ?? 0) + bytesInOutput;
-  }
-  return { own: byPackage[pkg] ?? 0, byPackage, text: result.outputFiles[0].text };
-}
+/**
+ * Leave dynamic `import()` targets out of the bundle. They load on demand
+ * (GIF export), so they are not part of what an entry costs up front.
+ */
+const lazyImportsExternal = {
+  name: 'lazy-imports-external',
+  setup(b) {
+    b.onResolve({ filter: /.*/ }, (args) =>
+      args.kind === 'dynamic-import' ? { path: args.path, external: true } : undefined,
+    );
+  },
+};
+
+const BUNDLE = {
+  bundle: true,
+  format: 'esm',
+  platform: 'browser',
+  write: false,
+  metafile: true,
+  logLevel: 'error',
+  external: EXTERNAL,
+};
 
 /** The sections of an unminified bundle that came from one package's dist. */
 function ownSections(text, pkg) {
   const out = [];
   let keep = false;
   for (const line of text.split('\n')) {
-    if (line.startsWith('// ')) keep = line.includes(`packages/${pkg}/dist/`) || line.startsWith('// dist/');
-    if (keep) out.push(line.length > 160 ? `${line.slice(0, 160)}…` : line);
+    if (line.startsWith('// ')) keep = line.includes(`packages/${pkg}/dist/`);
+    else if (keep) out.push(line);
   }
   return out.join('\n');
 }
 
-async function singleImport({ pkg, specifier, name }) {
+/**
+ * Own code that survives a bare import. Import statements for externals
+ * (`import { forwardRef } from "react"`) are left out: they cost nothing.
+ */
+async function residue(pkg, specifier) {
   const result = await build({
-    stdin: {
-      contents: `import { ${name} } from '${specifier}'; console.log(${name});`,
-      resolveDir: resolve('packages', pkg),
-    },
-    bundle: true,
-    minify: true,
-    format: 'esm',
-    platform: 'browser',
-    write: false,
-    logLevel: 'error',
-    external: EXTERNAL,
+    ...BUNDLE,
+    stdin: { contents: `import '${specifier}';`, resolveDir: resolve('packages', pkg) },
+    plugins: [lazyImportsExternal, forceSideEffects(pkg)],
   });
-  const bytes = result.outputFiles[0].contents;
-  return { bytes: bytes.length, gzipBytes: gzipSync(bytes).length };
+  const pulled = {};
+  const output = Object.values(result.metafile.outputs)[0];
+  for (const [input, { bytesInOutput }] of Object.entries(output.inputs)) {
+    const owner = packageOf(input);
+    if (owner !== pkg) pulled[owner] = (pulled[owner] ?? 0) + bytesInOutput;
+  }
+  const code = ownSections(result.outputFiles[0].text, pkg)
+    .replace(/^import\s[^;]*;$/gm, '')
+    .replace(/\n{2,}/g, '\n')
+    .trim();
+  return { own: Buffer.byteLength(code), pulled, code };
 }
 
-async function survivors({ pkg, specifier, name }, identifiers) {
-  if (identifiers.length === 0) return [];
+/** Bundle one named import the way a consumer's bundler would. */
+async function singleImport({ pkg, specifier, name }, minify) {
   const result = await build({
+    ...BUNDLE,
+    minify,
     stdin: {
       contents: `import { ${name} } from '${specifier}'; console.log(${name});`,
       resolveDir: resolve('packages', pkg),
     },
-    bundle: true,
-    format: 'esm',
-    platform: 'browser',
-    write: false,
-    logLevel: 'error',
-    external: EXTERNAL,
+    plugins: [lazyImportsExternal],
   });
-  const text = result.outputFiles[0].text;
-  return identifiers.filter((id) => new RegExp(`\\b(?:function|var|const|class) ${id}\\b`).test(text));
+  return result.outputFiles[0];
+}
+
+async function measure(budget) {
+  const { contents } = await singleImport(budget, true);
+  return { bytes: contents.length, gzipBytes: gzipSync(contents).length };
+}
+
+/** Which of `identifiers` are still declared in the bundle for this import. */
+async function survivors(budget, identifiers) {
+  if (identifiers.length === 0) return [];
+  const { text } = await singleImport(budget, false);
+  return identifiers.filter((id) =>
+    new RegExp(`\\b(?:function|var|const|class) ${id}\\b`).test(text),
+  );
 }
 
 const args = process.argv.slice(2);
@@ -166,9 +183,9 @@ const failures = [];
 console.log(`Residue of a bare import (budget ${RESIDUE_BUDGET} bytes of own code per entry)`);
 for (const [pkg, specifier] of RESIDUE_ENTRIES) {
   if (only && pkg !== only) continue;
-  const { own, byPackage, text } = await residue(pkg, specifier);
-  const others = Object.entries(byPackage)
-    .filter(([key, bytes]) => key !== pkg && bytes > 512)
+  const { own, pulled, code } = await residue(pkg, specifier);
+  const others = Object.entries(pulled)
+    .filter(([, bytes]) => bytes > 512)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([key, bytes]) => `${key} ${kb(bytes)}`)
@@ -178,13 +195,13 @@ for (const [pkg, specifier] of RESIDUE_ENTRIES) {
     `  ${ok ? 'ok  ' : 'FAIL'} ${specifier.padEnd(40)} own ${String(own).padStart(8)} bytes${others ? `  (pulls in: ${others})` : ''}`,
   );
   if (!ok) failures.push(`${specifier}: ${own} bytes of ${pkg} survive a bare import`);
-  if (show) console.log(ownSections(text, pkg));
+  if (show && code) console.log(code.replace(/^(.{160}).+$/gm, '$1…'));
 }
 
 if (!only) {
   console.log('\nSingle named import, minified');
   for (const budget of IMPORT_BUDGETS) {
-    const { bytes, gzipBytes } = await singleImport(budget);
+    const { bytes, gzipBytes } = await measure(budget);
     const leaked = await survivors(budget, budget.forbid ?? []);
     const ok = bytes <= budget.maxBytes && leaked.length === 0;
     console.log(

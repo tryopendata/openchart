@@ -34,7 +34,7 @@ export interface SankeyProps {
   style?: string | CSSProperties;
 }
 
-export const Sankey = defineComponent({
+export const Sankey = /* @__PURE__ */ defineComponent({
   name: 'Sankey',
   props: {
     spec: {

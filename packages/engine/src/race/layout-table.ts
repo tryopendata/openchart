@@ -25,7 +25,7 @@ const COMPACT_WIDTH = 520;
 const COMPACT_CHANGE = '↕';
 const CHIP_WIDTH_AND_GAP = 14;
 const EMPTY = '—';
-const formatShare = format('.1%');
+const formatShare = /* @__PURE__ */ format('.1%');
 // Quartiles alone can all land on whole numbers and miss the formatter's decimal digits.
 const VALUE_WIDTH_SAMPLES = [0.25, 0.5, 0.75, Math.SQRT1_2];
 

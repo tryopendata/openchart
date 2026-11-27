@@ -7,7 +7,7 @@ export function createIdScope(prefix = ''): IdScope {
   let counter = 0;
   return { prefix, next: (kind) => `${prefix ? `${prefix}-` : ''}${kind}-${counter++}` };
 }
-export const pageIdScope = createIdScope();
+export const pageIdScope = /* @__PURE__ */ createIdScope();
 /** Compatibility entry point for one release; new renderers use their context. */
 export function nextSvgId(kind: string): string {
   return pageIdScope.next(kind);

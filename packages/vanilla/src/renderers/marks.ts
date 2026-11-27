@@ -84,8 +84,6 @@ export type MarkRenderer<T extends Mark> = (
   ctx: RenderContext,
 ) => SVGElement;
 
-const markRenderers: Record<string, MarkRenderer<Mark>> = {};
-
 /**
  * Register a mark renderer for a specific mark type.
  * Built-in renderers are registered below for all chart types.
@@ -492,15 +490,16 @@ function renderTickMark(
   return line;
 }
 
-// Register built-in renderers
-registerMarkRenderer('line', renderLineMark as MarkRenderer<Mark>);
-registerMarkRenderer('area', renderAreaMark as MarkRenderer<Mark>);
-registerMarkRenderer('rect', renderRectMark as MarkRenderer<Mark>);
-registerMarkRenderer('arc', renderArcMark as MarkRenderer<Mark>);
-registerMarkRenderer('point', renderPointMark as MarkRenderer<Mark>);
-registerMarkRenderer('textMark', renderTextMark as MarkRenderer<Mark>);
-registerMarkRenderer('rule', renderRuleMark as MarkRenderer<Mark>);
-registerMarkRenderer('tick', renderTickMark as MarkRenderer<Mark>);
+const markRenderers: Record<string, MarkRenderer<Mark>> = {
+  line: renderLineMark as MarkRenderer<Mark>,
+  area: renderAreaMark as MarkRenderer<Mark>,
+  rect: renderRectMark as MarkRenderer<Mark>,
+  arc: renderArcMark as MarkRenderer<Mark>,
+  point: renderPointMark as MarkRenderer<Mark>,
+  textMark: renderTextMark as MarkRenderer<Mark>,
+  rule: renderRuleMark as MarkRenderer<Mark>,
+  tick: renderTickMark as MarkRenderer<Mark>,
+};
 
 /** Mark provenance belongs to the geometry, never the label wrapper. */
 function stampMarkMetadata(mark: Mark, el: SVGElement, ctx: RenderContext): void {

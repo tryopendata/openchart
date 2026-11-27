@@ -34,7 +34,7 @@ export interface RaceHandle {
 }
 
 /** Render an interactive race chart. */
-export const Race = forwardRef<RaceHandle, RaceProps>(function Race(
+export const Race = /* @__PURE__ */ forwardRef<RaceHandle, RaceProps>(function Race(
   { spec, theme, darkMode, className, style, autoResize, watermark, onWarn, onPeriod },
   ref,
 ) {

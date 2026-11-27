@@ -36,7 +36,7 @@ export interface BarListProps {
   style?: string | CSSProperties;
 }
 
-export const BarList = defineComponent({
+export const BarList = /* @__PURE__ */ defineComponent({
   name: 'BarList',
   props: {
     spec: {

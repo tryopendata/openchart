@@ -29,10 +29,10 @@ const FORMAT_STEP_FRACTION = [
   /* @__PURE__ */ d3Format('.2~f'),
 ] as const;
 const FORMAT_STEP_PRECISION = [
-  d3Format(',.0~f'),
-  d3Format(',.1~f'),
-  d3Format(',.2~f'),
-  d3Format(',.3~f'),
+  /* @__PURE__ */ d3Format(',.0~f'),
+  /* @__PURE__ */ d3Format(',.1~f'),
+  /* @__PURE__ */ d3Format(',.2~f'),
+  /* @__PURE__ */ d3Format(',.3~f'),
 ] as const;
 
 // ---------------------------------------------------------------------------

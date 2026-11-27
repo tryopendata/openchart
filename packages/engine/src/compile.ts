@@ -25,11 +25,6 @@ import type {
   TileMapLayout,
 } from '@opendata-ai/openchart-core';
 import { isRaceSpec } from '@opendata-ai/openchart-core';
-import { assertMarkOptions } from './compiler/mark-options';
-// Side-effect import: registers all built-in chart renderers with the
-// registry on module load. Tests that clear the registry can import
-// `registerBuiltinRenderers` from `./charts/builtin` to restore defaults.
-import './charts/builtin';
 import { compileBarList as compileBarListImpl } from './barlist/compile-barlist';
 import { compileChartInternal, resolveCompileTheme } from './compile/chart';
 import { compileLayer as compileLayerImpl } from './compile/layer';
@@ -37,6 +32,7 @@ import { applySpecSize } from './compile/prepare';
 import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { compileTimeChart } from './compile-chart-time';
 import { compile as compileSpec } from './compiler/index';
+import { assertMarkOptions } from './compiler/mark-options';
 import type { NormalizedTableSpec } from './compiler/types';
 import { noteCapacityDiagnostic } from './design/diagnostics';
 import { compileGeoMap as compileGeoMapImpl } from './geo/compile-geo-map';

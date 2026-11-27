@@ -9,10 +9,12 @@ import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
 import { type ComputedRef, computed, type InjectionKey, inject, type Ref } from 'vue';
 
 /** Injection key for the theme config ref. */
-export const VizThemeKey: InjectionKey<Ref<ThemeConfig | undefined>> = Symbol('VizTheme');
+export const VizThemeKey: InjectionKey<Ref<ThemeConfig | undefined>> =
+  /* @__PURE__ */ Symbol('VizTheme');
 
 /** Injection key for the dark mode ref. */
-export const VizDarkModeKey: InjectionKey<Ref<DarkMode | undefined>> = Symbol('VizDarkMode');
+export const VizDarkModeKey: InjectionKey<Ref<DarkMode | undefined>> =
+  /* @__PURE__ */ Symbol('VizDarkMode');
 
 /**
  * Read the current theme from the nearest VizThemeProvider.

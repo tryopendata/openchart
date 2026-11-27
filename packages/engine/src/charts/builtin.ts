@@ -1,14 +1,5 @@
 /**
- * Built-in chart renderer registration.
- *
- * Each chart type (line, bar, column, scatter, pie, etc.) has a renderer that
- * produces marks from a normalized spec. This module wires them into the
- * registry. Importing it is a side effect: the built-ins register as soon as
- * it's loaded.
- *
- * Tests that call `clearRenderers()` can call `registerBuiltinRenderers()` to
- * restore the default set rather than leaving the registry empty for later
- * tests in the same process.
+ * Built-in chart renderers. The registry installs them on the first lookup.
  */
 
 import { barRenderer } from './bar';
@@ -24,7 +15,7 @@ import { parliamentRenderer } from './parliament';
 import { donutRenderer, pieRenderer } from './pie';
 import { rangeRenderer } from './range';
 import { rectRenderer } from './rect';
-import { type ChartRenderer, registerChartRenderer } from './registry';
+import type { ChartRenderer } from './registry';
 import { ruleRenderer } from './rule';
 import { scatterRenderer } from './scatter';
 import { textRenderer } from './text';
@@ -43,7 +34,7 @@ import { waffleRenderer } from './waffle';
 // For 'bar', orientation is resolved at compile time to dispatch to the right
 // renderer. We register both barRenderer and columnRenderer; the compile
 // function picks based on orientation.
-const builtinRenderers: Record<string, ChartRenderer> = {
+export const builtinRenderers: Record<string, ChartRenderer> = {
   errorbar: errorbarRenderer,
   line: lineRenderer,
   area: areaRenderer,
@@ -72,16 +63,3 @@ const builtinRenderers: Record<string, ChartRenderer> = {
   calendar: calendarRenderer, // weeks x weekdays daily heatmap (no positional scales)
   parliament: parliamentRenderer, // hemicycle seat dots (no positional scales)
 };
-
-/**
- * Register all built-in chart renderers. Called once on module load; also
- * exported so tests that clear the registry can restore the defaults.
- */
-export function registerBuiltinRenderers(): void {
-  for (const [type, renderer] of Object.entries(builtinRenderers)) {
-    registerChartRenderer(type, renderer);
-  }
-}
-
-// Side effect: register on first import.
-registerBuiltinRenderers();

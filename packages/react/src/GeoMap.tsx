@@ -65,7 +65,7 @@ export interface GeoMapHandle {
   readonly instance: GeoMapInstance | null;
 }
 
-export const GeoMap = forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
+export const GeoMap = /* @__PURE__ */ forwardRef<GeoMapHandle, GeoMapProps>(function GeoMap(
   {
     spec,
     reader,

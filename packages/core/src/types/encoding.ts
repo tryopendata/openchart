@@ -79,7 +79,7 @@ function optional(...types: FieldType[]): ChannelRule {
  * - parliament: no positional axes; theta (aliased to y) is the seat count
  *   (quantitative), color the party
  */
-export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
+export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = /* @__PURE__ */ (() => ({
   errorbar: {
     x: required('quantitative', 'nominal', 'ordinal', 'temporal'),
     y: required('quantitative', 'nominal', 'ordinal', 'temporal'),
@@ -310,7 +310,7 @@ export const MARK_ENCODING_RULES: Record<MarkType, EncodingRule> = {
     description: optional(),
     detail: optional('nominal'),
   },
-};
+}))();
 
 // ---------------------------------------------------------------------------
 // Graph encoding rules

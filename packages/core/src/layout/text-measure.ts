@@ -295,16 +295,19 @@ const RESOLVED_TABLE_700_DEFAULT: ResolvedTable = {
   scale: 1.0,
 };
 
-const RESOLVED_TABLE_CACHE = new Map<number, ResolvedTable>();
-for (const [weightStr, scale] of Object.entries(WEIGHT_ADJUSTMENT)) {
-  const weight = Number(weightStr);
-  RESOLVED_TABLE_CACHE.set(
-    weight,
-    weight >= 650
-      ? { table: CHAR_WIDTHS_700, avg: AVG_CHAR_WIDTH_700, scale }
-      : { table: CHAR_WIDTHS_400, avg: AVG_CHAR_WIDTH_400, scale },
-  );
-}
+const RESOLVED_TABLE_CACHE = /* @__PURE__ */ (() => {
+  const cache = new Map<number, ResolvedTable>();
+  for (const [weightStr, scale] of Object.entries(WEIGHT_ADJUSTMENT)) {
+    const weight = Number(weightStr);
+    cache.set(
+      weight,
+      weight >= 650
+        ? { table: CHAR_WIDTHS_700, avg: AVG_CHAR_WIDTH_700, scale }
+        : { table: CHAR_WIDTHS_400, avg: AVG_CHAR_WIDTH_400, scale },
+    );
+  }
+  return cache;
+})();
 
 function resolveTable(fontWeight: number): ResolvedTable {
   const cached = RESOLVED_TABLE_CACHE.get(fontWeight);

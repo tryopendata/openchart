@@ -63,7 +63,7 @@ export function generateAriaLabels(marks: Mark[]): Map<string, string> {
   return labels;
 }
 
-const ariaNumberFormatter = defaultNumberFormatter();
+const ariaNumberFormatter = /* @__PURE__ */ defaultNumberFormatter();
 
 function formatValue(value: unknown): string {
   if (value == null) return 'N/A';

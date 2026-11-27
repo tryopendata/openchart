@@ -67,7 +67,7 @@ export interface TileMapHandle {
  * as SVG inside a wrapper div. Spec changes trigger re-renders via the
  * vanilla adapter's update() method.
  */
-export const TileMap = forwardRef<TileMapHandle, TileMapProps>(function TileMap(
+export const TileMap = /* @__PURE__ */ forwardRef<TileMapHandle, TileMapProps>(function TileMap(
   { spec, theme: themeProp, darkMode, onTileClick, onTileHover, className, style },
   ref,
 ) {

@@ -37,7 +37,7 @@ export interface DataTableProps {
   page?: number;
 }
 
-export const DataTable = defineComponent({
+export const DataTable = /* @__PURE__ */ defineComponent({
   name: 'DataTable',
   props: {
     spec: {

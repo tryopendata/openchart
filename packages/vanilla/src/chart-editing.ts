@@ -34,13 +34,13 @@ import type { GestureEdit } from './interactions/gesture-edit';
 import type { MountOptions } from './mount-types';
 import { createTextEditOverlay, createTextEditOverlayAtPosition } from './text-edit-overlay';
 
-const EDITABLE_HOVER_CSS = `
+const EDITABLE_HOVER_CSS = /* @__PURE__ */ (() => `
 .oc-editable-hover {
   outline: 1.5px solid ${cssTokenDefault('--oc-editable-hover', 'light')};
   outline-offset: 2px;
   border-radius: 2px;
 }
-`;
+`)();
 
 function makeEditable(svg: SVGElement): void {
   svg.setAttribute('tabindex', '0');

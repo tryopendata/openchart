@@ -29,10 +29,7 @@
   "files": [
     "dist"
   ],
-  "sideEffects": [
-    "./src/charts/builtin.ts",
-    "./dist/index.js"
-  ],
+  "sideEffects": false,
   "keywords": [
     "chart",
     "visualization",
@@ -55,6 +52,7 @@
     "d3-scale": "^4.0.0",
     "d3-shape": "^3.2.0",
     "d3-time": "^3.1.0",
+    "d3-time-format": "^4.1.0",
     "d3-geo": "^3.1.0",
     "topojson-client": "^3.1.0"
   },

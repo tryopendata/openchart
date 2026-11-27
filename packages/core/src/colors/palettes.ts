@@ -180,13 +180,13 @@ export const SEQUENTIAL_TEAL: SequentialPalette = {
 } as const;
 
 /** All sequential palettes keyed by name. */
-export const SEQUENTIAL_PALETTES: Record<string, string[]> = {
+export const SEQUENTIAL_PALETTES: Record<string, string[]> = /* @__PURE__ */ (() => ({
   blue: [...SEQUENTIAL_BLUE.stops],
   green: [...SEQUENTIAL_GREEN.stops],
   orange: [...SEQUENTIAL_ORANGE.stops],
   purple: [...SEQUENTIAL_PURPLE.stops],
   teal: [...SEQUENTIAL_TEAL.stops],
-};
+}))();
 
 // ---------------------------------------------------------------------------
 // Diverging
@@ -225,10 +225,10 @@ export const DIVERGING_BROWN_TEAL: DivergingPalette = {
 } as const;
 
 /** All diverging palettes keyed by name. */
-export const DIVERGING_PALETTES: Record<string, string[]> = {
+export const DIVERGING_PALETTES: Record<string, string[]> = /* @__PURE__ */ (() => ({
   redBlue: [...DIVERGING_RED_BLUE.stops],
   brownTeal: [...DIVERGING_BROWN_TEAL.stops],
-};
+}))();
 
 // ---------------------------------------------------------------------------
 // Scheme name resolution (spec-level `scale: { scheme }` support)
@@ -270,9 +270,9 @@ export function resolveSchemeName(name: string): string[] | undefined {
 }
 
 /** Scheme names accepted by `scale: { scheme }`, for validation messages. */
-export const SUPPORTED_SCHEME_NAMES: readonly string[] = [
+export const SUPPORTED_SCHEME_NAMES: readonly string[] = /* @__PURE__ */ (() => [
   ...Object.keys(SEQUENTIAL_PALETTES),
   ...Object.keys(DIVERGING_PALETTES),
   'categorical',
   ...Object.keys(VL_SCHEME_ALIASES),
-];
+])();

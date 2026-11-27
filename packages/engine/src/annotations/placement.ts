@@ -255,18 +255,19 @@ interface DirectionDef {
     | 'bottom-right';
 }
 
-const D = Math.SQRT1_2;
-
-const DIRECTIONS: DirectionDef[] = [
-  { ux: 0, uy: -1, textAnchor: 'start', attach: 'bottom-center' }, // N
-  { ux: D, uy: -D, textAnchor: 'start', attach: 'bottom-left' }, // NE
-  { ux: 1, uy: 0, textAnchor: 'start', attach: 'left-middle' }, // E
-  { ux: D, uy: D, textAnchor: 'start', attach: 'top-left' }, // SE
-  { ux: 0, uy: 1, textAnchor: 'start', attach: 'top-center' }, // S
-  { ux: -D, uy: D, textAnchor: 'end', attach: 'top-right' }, // SW
-  { ux: -1, uy: 0, textAnchor: 'end', attach: 'right-middle' }, // W
-  { ux: -D, uy: -D, textAnchor: 'end', attach: 'bottom-right' }, // NW
-];
+const DIRECTIONS: DirectionDef[] = /* @__PURE__ */ (() => {
+  const D = Math.SQRT1_2;
+  return [
+    { ux: 0, uy: -1, textAnchor: 'start', attach: 'bottom-center' }, // N
+    { ux: D, uy: -D, textAnchor: 'start', attach: 'bottom-left' }, // NE
+    { ux: 1, uy: 0, textAnchor: 'start', attach: 'left-middle' }, // E
+    { ux: D, uy: D, textAnchor: 'start', attach: 'top-left' }, // SE
+    { ux: 0, uy: 1, textAnchor: 'start', attach: 'top-center' }, // S
+    { ux: -D, uy: D, textAnchor: 'end', attach: 'top-right' }, // SW
+    { ux: -1, uy: 0, textAnchor: 'end', attach: 'right-middle' }, // W
+    { ux: -D, uy: -D, textAnchor: 'end', attach: 'bottom-right' }, // NW
+  ];
+})();
 
 // Preferred direction orderings: away from data vertically, right over left
 const LOWER_HALF_ORDER = [1, 0, 7, 2, 3, 4, 5, 6]; // NE, N, NW, E, SE, S, SW, W

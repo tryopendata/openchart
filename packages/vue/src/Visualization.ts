@@ -33,7 +33,7 @@ export interface VisualizationProps {
   style?: string | CSSProperties;
 }
 
-export const Visualization = defineComponent({
+export const Visualization = /* @__PURE__ */ defineComponent({
   name: 'Visualization',
   props: {
     spec: {

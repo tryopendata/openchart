@@ -46,7 +46,10 @@ import type {
 } from './types';
 import { MAX_3D_NODES } from './types';
 
-const graphNumberFormatter = defaultNumberFormatter({ allIntegers: false, surface: 'chart' });
+const graphNumberFormatter = /* @__PURE__ */ defaultNumberFormatter({
+  allIntegers: false,
+  surface: 'chart',
+});
 
 /**
  * Layer node overrides lowest-precedence first, skipping keys whose value is

@@ -141,7 +141,7 @@ export const broadsheet: ThemeConfig = {
  * `seriesStrategy: 'accent-neutral'` keeps one cyan accent against neutral
  * siblings, the register a monitoring UI wants.
  */
-export const terminal: ThemeConfig = {
+export const terminal: ThemeConfig = /* @__PURE__ */ (() => ({
   colors: {
     categorical: [...CATEGORICAL_PALETTE_DARK],
     categoricalFill: [...CATEGORICAL_FILL_PALETTE_DARK],
@@ -175,7 +175,7 @@ export const terminal: ThemeConfig = {
   },
   borderRadius: 4,
   seriesStrategy: 'accent-neutral',
-};
+}))();
 
 /** @deprecated v9 adopts clarity typography by default. Set its remaining colors explicitly; removed in v10. */
 export const clarity: ThemeConfig = {

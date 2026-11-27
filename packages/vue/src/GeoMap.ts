@@ -48,7 +48,7 @@ export interface GeoMapProps {
   style?: string | CSSProperties;
 }
 
-export const GeoMap = defineComponent({
+export const GeoMap = /* @__PURE__ */ defineComponent({
   name: 'GeoMap',
   props: {
     reader: { type: [Boolean, Object] as PropType<false | GeoReaderOptions>, default: undefined },

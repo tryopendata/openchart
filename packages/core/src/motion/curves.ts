@@ -231,12 +231,15 @@ function buildCurve(name: string, input: CurveInput): Curve {
   return { stops, evenlySpaced, monotone, envelope };
 }
 
-const CURVES: Readonly<Record<CurveName, Curve>> = Object.fromEntries(
-  Object.entries(CURVE_INPUTS).map(([name, input]) => [name, buildCurve(name, input)]),
-) as Record<CurveName, Curve>;
+const CURVES: Readonly<Record<CurveName, Curve>> = /* @__PURE__ */ (() =>
+  Object.fromEntries(
+    Object.entries(CURVE_INPUTS).map(([name, input]) => [name, buildCurve(name, input)]),
+  ) as Record<CurveName, Curve>)();
 
 /** Names of every registered curve, in registry order. */
-export const CURVE_NAMES: readonly CurveName[] = Object.keys(CURVE_INPUTS) as CurveName[];
+export const CURVE_NAMES: readonly CurveName[] = /* @__PURE__ */ Object.keys(
+  CURVE_INPUTS,
+) as CurveName[];
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;

@@ -80,166 +80,167 @@ const scale = (value: number): KeyframeValue => ({ type: 'scale', value });
 const css = (value: string): KeyframeValue => ({ type: 'css', css: value });
 
 /** Every @keyframes in styles/keyframes.css, in emission order. */
-export const KEYFRAMES = {
-  'oc-enter-bar': {
-    comment:
-      'Bar entrance: clip-path reveal from the baseline (vertical columns), no fade:\na value mark is solid from its first frame. Grows bottom-to-top unless the\nrenderer stamps --oc-bar-from (a negative column grows top-to-bottom).',
-    stops: [
-      { offset: 0, values: { 'clip-path': css('inset(var(--oc-bar-from, 100% 0 0 0))') } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
-    ],
-  },
-  'oc-enter-bar-h': {
-    comment:
-      'Bar entrance: clip-path reveal from the baseline (horizontal bars), no fade.\nGrows left-to-right unless --oc-bar-from is stamped (negative bars).',
-    stops: [
-      { offset: 0, values: { 'clip-path': css('inset(var(--oc-bar-from, 0 100% 0 0))') } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
-    ],
-  },
-  'oc-enter-stack': {
-    comment:
-      'Stack entrance: one clip over the whole stack, no fade. Grows bottom-to-top\nfrom --oc-stack-from, which the renderer stamps when the baseline is not the\nbottom edge, so the clip starts collapsed on the baseline and grows both\nways from it.',
-    stops: [
-      { offset: 0, values: { 'clip-path': css('inset(var(--oc-stack-from, 100% 0 0 0))') } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
-    ],
-  },
-  'oc-enter-stack-h': {
-    comment:
-      'Horizontal stack entrance: grows left-to-right, or both ways from the\nbaseline when --oc-stack-from is stamped.',
-    stops: [
-      { offset: 0, values: { 'clip-path': css('inset(var(--oc-stack-from, 0 100% 0 0))') } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
-    ],
-  },
-  'oc-enter-line': {
-    comment:
-      'Line/area entrance: clip-path reveal left-to-right + fade in.\nLines draw in following reading direction with a soft lead-in.',
-    stops: [
-      { offset: 0, values: { 'clip-path': inset(0, 100, 0, 0), opacity: num(0) } },
-      { offset: 0.15, values: { opacity: num(1) } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
-    ],
-  },
-  'oc-enter-point': {
-    comment: 'Point/arc entrance: scale up + fade in from center',
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: scale(0.3) } },
-      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
-    ],
-  },
-  'oc-enter-map-fill': {
-    comment:
-      'Map feature entrance: fade in while transitioning fill from a neutral base\nto the data-driven color stored in --oc-feature-fill. The target opacity is\n--oc-feature-target-opacity (default 1) so features under a focus dim\nanimate straight to their dimmed rest opacity instead of hitting 1 and then\nsnapping down when the dim is applied post-animation.\nNon-interpolable fills (the url(#pattern) hatch on no-data features) do not\ntransition: the browser holds the neutral and flips to the pattern when the\neased progress passes 50%, so those features fade in rather than\ncross-fade.',
-    stops: [
-      { offset: 0, values: { fill: css('var(--oc-secondary)'), opacity: num(0) } },
-      {
-        offset: 1,
-        values: {
-          fill: css('var(--oc-feature-fill)'),
-          opacity: css('var(--oc-feature-target-opacity, 1)'),
+export const KEYFRAMES = /* @__PURE__ */ (() =>
+  ({
+    'oc-enter-bar': {
+      comment:
+        'Bar entrance: clip-path reveal from the baseline (vertical columns), no fade:\na value mark is solid from its first frame. Grows bottom-to-top unless the\nrenderer stamps --oc-bar-from (a negative column grows top-to-bottom).',
+      stops: [
+        { offset: 0, values: { 'clip-path': css('inset(var(--oc-bar-from, 100% 0 0 0))') } },
+        { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
+      ],
+    },
+    'oc-enter-bar-h': {
+      comment:
+        'Bar entrance: clip-path reveal from the baseline (horizontal bars), no fade.\nGrows left-to-right unless --oc-bar-from is stamped (negative bars).',
+      stops: [
+        { offset: 0, values: { 'clip-path': css('inset(var(--oc-bar-from, 0 100% 0 0))') } },
+        { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
+      ],
+    },
+    'oc-enter-stack': {
+      comment:
+        'Stack entrance: one clip over the whole stack, no fade. Grows bottom-to-top\nfrom --oc-stack-from, which the renderer stamps when the baseline is not the\nbottom edge, so the clip starts collapsed on the baseline and grows both\nways from it.',
+      stops: [
+        { offset: 0, values: { 'clip-path': css('inset(var(--oc-stack-from, 100% 0 0 0))') } },
+        { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
+      ],
+    },
+    'oc-enter-stack-h': {
+      comment:
+        'Horizontal stack entrance: grows left-to-right, or both ways from the\nbaseline when --oc-stack-from is stamped.',
+      stops: [
+        { offset: 0, values: { 'clip-path': css('inset(var(--oc-stack-from, 0 100% 0 0))') } },
+        { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
+      ],
+    },
+    'oc-enter-line': {
+      comment:
+        'Line/area entrance: clip-path reveal left-to-right + fade in.\nLines draw in following reading direction with a soft lead-in.',
+      stops: [
+        { offset: 0, values: { 'clip-path': inset(0, 100, 0, 0), opacity: num(0) } },
+        { offset: 0.15, values: { opacity: num(1) } },
+        { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0), opacity: num(1) } },
+      ],
+    },
+    'oc-enter-point': {
+      comment: 'Point/arc entrance: scale up + fade in from center',
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: scale(0.3) } },
+        { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+      ],
+    },
+    'oc-enter-map-fill': {
+      comment:
+        'Map feature entrance: fade in while transitioning fill from a neutral base\nto the data-driven color stored in --oc-feature-fill. The target opacity is\n--oc-feature-target-opacity (default 1) so features under a focus dim\nanimate straight to their dimmed rest opacity instead of hitting 1 and then\nsnapping down when the dim is applied post-animation.\nNon-interpolable fills (the url(#pattern) hatch on no-data features) do not\ntransition: the browser holds the neutral and flips to the pattern when the\neased progress passes 50%, so those features fade in rather than\ncross-fade.',
+      stops: [
+        { offset: 0, values: { fill: css('var(--oc-secondary)'), opacity: num(0) } },
+        {
+          offset: 1,
+          values: {
+            fill: css('var(--oc-feature-fill)'),
+            opacity: css('var(--oc-feature-target-opacity, 1)'),
+          },
         },
-      },
-    ],
-  },
-  'oc-enter-map-point': {
-    comment:
-      "Map point pop-in: gentle scale from 0.75 + fade. Uses transform-origin to\nscale from the circle's own center (cx/cy) rather than the SVG origin.",
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: scale(0.75) } },
-      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
-    ],
-  },
-  'oc-enter-pop': {
-    comment:
-      'Line point pop: fade in while scaling up from 0.4. The renderer stamps an\ninline px transform-origin at the point centre, so it grows in place\n(and in GIF frames, which carry no animation CSS).',
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: scale(0.4) } },
-      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
-    ],
-  },
-  'oc-enter-cell': {
-    comment:
-      'Grid cell pop: fade in while scaling up from 0.85 about the cell centre\n(inline px transform-origin stamped by the renderer).',
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: scale(0.85) } },
-      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
-    ],
-  },
-  'oc-enter-arc': {
-    comment:
-      "Slice growth: fade in while scaling up from 0.94. The slice path is drawn\naround its group's local origin (the group carries translate(cx, cy)), so\nthe default transform-origin of 0 0 is the pie centre.",
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: scale(0.94) } },
-      { offset: 1, values: { opacity: num(1), transform: scale(1) } },
-    ],
-  },
-  'oc-enter-fade-only': {
-    comment:
-      'Pure opacity fade (no transform). Safe for elements with existing transforms\nlike arc groups that use translate() for positioning.',
-    stops: [
-      { offset: 0, values: { opacity: num(0) } },
-      { offset: 1, values: { opacity: num(1) } },
-    ],
-  },
-  'oc-enter-fade': {
-    comment: 'Fade + subtle slide up (table chrome)',
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: translateY(4) } },
-      { offset: 1, values: { opacity: num(1), transform: translateY(0) } },
-    ],
-  },
-  'oc-enter-rise': {
-    comment: 'Text rise: 0.6em up to rest. Its opacity runs as a separate quick fade.',
-    stops: [
-      { offset: 0, values: { transform: translateY(0.6, 'em') } },
-      { offset: 1, values: { transform: translateY(0) } },
-    ],
-  },
-  'oc-enter-slide': {
-    comment: 'Row slide: 4px up to rest. Its opacity runs as a separate quick fade.',
-    stops: [
-      { offset: 0, values: { transform: translateY(4) } },
-      { offset: 1, values: { transform: translateY(0) } },
-    ],
-  },
-  'oc-table-enter-row': {
-    comment:
-      'Table row entrance: slide up only, no opacity (cells fade independently\nto avoid opacity compounding between row and cell animations)',
-    stops: [
-      { offset: 0, values: { transform: translateY(6) } },
-      { offset: 1, values: { transform: translateY(0) } },
-    ],
-  },
-  'oc-table-enter-bar-fill': {
-    comment:
-      'Table bar fill entrance: clip-path grow only, no opacity\n(preserves resting opacity: 0.15 from table.css)',
-    stops: [
-      { offset: 0, values: { 'clip-path': inset(0, 100, 0, 0) } },
-      { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
-    ],
-  },
-  'oc-pulse': {
-    comment:
-      'Live-tile pulse: the terminator dot of a sparkline swells once when new\ndata lands, so a glance at a wall of tiles catches which one just moved.\n`r` is animated as a presentation attribute (SVG geometry properties are\nanimatable in CSS); the fallback is simply no swell.',
-    stops: [
-      { offset: 0, values: { r: css('var(--oc-pulse-r, 4px)'), 'fill-opacity': num(1) } },
-      {
-        offset: 0.45,
-        values: { r: css('calc(var(--oc-pulse-r, 4px) * 1.8)'), 'fill-opacity': num(0.5) },
-      },
-      { offset: 1, values: { r: css('var(--oc-pulse-r, 4px)'), 'fill-opacity': num(1) } },
-    ],
-  },
-  'oc-tooltip-in': {
-    comment: 'Tooltip entrance',
-    stops: [
-      { offset: 0, values: { opacity: num(0), transform: translateY(2) } },
-      { offset: 1, values: { opacity: num(1), transform: translateY(0) } },
-    ],
-  },
-} as const satisfies Record<string, KeyframeDef>;
+      ],
+    },
+    'oc-enter-map-point': {
+      comment:
+        "Map point pop-in: gentle scale from 0.75 + fade. Uses transform-origin to\nscale from the circle's own center (cx/cy) rather than the SVG origin.",
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: scale(0.75) } },
+        { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+      ],
+    },
+    'oc-enter-pop': {
+      comment:
+        'Line point pop: fade in while scaling up from 0.4. The renderer stamps an\ninline px transform-origin at the point centre, so it grows in place\n(and in GIF frames, which carry no animation CSS).',
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: scale(0.4) } },
+        { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+      ],
+    },
+    'oc-enter-cell': {
+      comment:
+        'Grid cell pop: fade in while scaling up from 0.85 about the cell centre\n(inline px transform-origin stamped by the renderer).',
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: scale(0.85) } },
+        { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+      ],
+    },
+    'oc-enter-arc': {
+      comment:
+        "Slice growth: fade in while scaling up from 0.94. The slice path is drawn\naround its group's local origin (the group carries translate(cx, cy)), so\nthe default transform-origin of 0 0 is the pie centre.",
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: scale(0.94) } },
+        { offset: 1, values: { opacity: num(1), transform: scale(1) } },
+      ],
+    },
+    'oc-enter-fade-only': {
+      comment:
+        'Pure opacity fade (no transform). Safe for elements with existing transforms\nlike arc groups that use translate() for positioning.',
+      stops: [
+        { offset: 0, values: { opacity: num(0) } },
+        { offset: 1, values: { opacity: num(1) } },
+      ],
+    },
+    'oc-enter-fade': {
+      comment: 'Fade + subtle slide up (table chrome)',
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: translateY(4) } },
+        { offset: 1, values: { opacity: num(1), transform: translateY(0) } },
+      ],
+    },
+    'oc-enter-rise': {
+      comment: 'Text rise: 0.6em up to rest. Its opacity runs as a separate quick fade.',
+      stops: [
+        { offset: 0, values: { transform: translateY(0.6, 'em') } },
+        { offset: 1, values: { transform: translateY(0) } },
+      ],
+    },
+    'oc-enter-slide': {
+      comment: 'Row slide: 4px up to rest. Its opacity runs as a separate quick fade.',
+      stops: [
+        { offset: 0, values: { transform: translateY(4) } },
+        { offset: 1, values: { transform: translateY(0) } },
+      ],
+    },
+    'oc-table-enter-row': {
+      comment:
+        'Table row entrance: slide up only, no opacity (cells fade independently\nto avoid opacity compounding between row and cell animations)',
+      stops: [
+        { offset: 0, values: { transform: translateY(6) } },
+        { offset: 1, values: { transform: translateY(0) } },
+      ],
+    },
+    'oc-table-enter-bar-fill': {
+      comment:
+        'Table bar fill entrance: clip-path grow only, no opacity\n(preserves resting opacity: 0.15 from table.css)',
+      stops: [
+        { offset: 0, values: { 'clip-path': inset(0, 100, 0, 0) } },
+        { offset: 1, values: { 'clip-path': inset(0, 0, 0, 0) } },
+      ],
+    },
+    'oc-pulse': {
+      comment:
+        'Live-tile pulse: the terminator dot of a sparkline swells once when new\ndata lands, so a glance at a wall of tiles catches which one just moved.\n`r` is animated as a presentation attribute (SVG geometry properties are\nanimatable in CSS); the fallback is simply no swell.',
+      stops: [
+        { offset: 0, values: { r: css('var(--oc-pulse-r, 4px)'), 'fill-opacity': num(1) } },
+        {
+          offset: 0.45,
+          values: { r: css('calc(var(--oc-pulse-r, 4px) * 1.8)'), 'fill-opacity': num(0.5) },
+        },
+        { offset: 1, values: { r: css('var(--oc-pulse-r, 4px)'), 'fill-opacity': num(1) } },
+      ],
+    },
+    'oc-tooltip-in': {
+      comment: 'Tooltip entrance',
+      stops: [
+        { offset: 0, values: { opacity: num(0), transform: translateY(2) } },
+        { offset: 1, values: { opacity: num(1), transform: translateY(0) } },
+      ],
+    },
+  }) as const satisfies Record<string, KeyframeDef>)();
 
 export type KeyframeName = keyof typeof KEYFRAMES;
 
@@ -515,7 +516,7 @@ const when = (of: EntranceRole, progress: number): DelayAnchor => ({
   of,
 });
 
-const ROLE_DEFS: readonly EntranceRoleDef[] = [
+const ROLE_DEFS: readonly EntranceRoleDef[] = /* @__PURE__ */ (() => [
   {
     name: 'bar',
     scope: 'chart',
@@ -956,7 +957,7 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = [
     duration: base(0.5),
     delay: { stagger: 'none' },
   },
-];
+])();
 
 /**
  * Names that would collide with a custom property the renderers already stamp
@@ -986,14 +987,15 @@ export function roleVars(role: EntranceRole): { delay: string; duration: string;
 const NON_OPACITY: KeyframeProperty[] = ['clip-path', 'transform', 'fill', 'r', 'fill-opacity'];
 
 /** Every entrance role, in CSS emission order (order matters for the cascade). */
-export const ENTRANCE_ROLES: readonly EntranceRoleRow[] = ROLE_DEFS.map((def) => ({
+export const ENTRANCE_ROLES: readonly EntranceRoleRow[] = /* @__PURE__ */ ROLE_DEFS.map((def) => ({
   ...def,
   geometryFraction: settleOffset(def.keyframe, NON_OPACITY),
   opacityFraction: settleOffset(def.keyframe, ['opacity']),
   vars: roleVars(def.name),
 }));
 
-const ROLE_BY_NAME = new Map(ENTRANCE_ROLES.map((row) => [row.name, row]));
+const ROLE_BY_NAME = /* @__PURE__ */ (() =>
+  new Map(ENTRANCE_ROLES.map((row) => [row.name, row])))();
 
 export function entranceRole(role: EntranceRole): EntranceRoleRow {
   const row = ROLE_BY_NAME.get(role);

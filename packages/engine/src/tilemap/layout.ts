@@ -74,7 +74,9 @@ export const US_STATE_TILES: ReadonlyArray<{ state: string; col: number; row: nu
   { state: 'FL', col: 7, row: 7 },
 ];
 
-export const STATE_CODE_SET = new Set(US_STATE_TILES.map((t) => t.state));
+export const STATE_CODE_SET = /* @__PURE__ */ new Set(
+  /* @__PURE__ */ US_STATE_TILES.map((t) => t.state),
+);
 
 export const STATE_NAMES: Readonly<Record<string, string>> = {
   AL: 'Alabama',

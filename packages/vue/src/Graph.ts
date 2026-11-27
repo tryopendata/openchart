@@ -53,7 +53,7 @@ function tooltipOn(tooltip: GraphTooltipProp | undefined): boolean {
   return tooltip !== false;
 }
 
-export const Graph = defineComponent({
+export const Graph = /* @__PURE__ */ defineComponent({
   name: 'Graph',
   props: {
     spec: {

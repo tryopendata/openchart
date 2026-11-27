@@ -15,7 +15,7 @@ export interface VizThemeProviderProps {
   darkMode?: DarkMode;
 }
 
-export const VizThemeProvider = defineComponent({
+export const VizThemeProvider = /* @__PURE__ */ defineComponent({
   name: 'VizThemeProvider',
   props: {
     theme: {

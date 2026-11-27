@@ -65,6 +65,10 @@ afterEach(() => {
 });
 
 describe('<Chart />', () => {
+  it('resolves to Chart in React DevTools', () => {
+    expect(Reflect.get(Chart, 'displayName') ?? Reflect.get(Chart, 'render').name).toBe('Chart');
+  });
+
   it('renders an SVG element', async () => {
     const { container } = await renderChart({ spec: lineSpec });
     const svg = container.querySelector('svg');

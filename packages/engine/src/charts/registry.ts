@@ -17,6 +17,7 @@ import type {
 import type { NormalizedChartSpec } from '../compiler/types';
 import type { ResolvedScales } from '../layout/scales';
 import type { BarLabelPlan } from './bar/label-plan';
+import { builtinRenderers } from './builtin';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,6 +47,7 @@ export type ChartRenderer = (
 // ---------------------------------------------------------------------------
 
 const renderers = new Map<string, ChartRenderer>();
+let builtinsInstalled = false;
 
 /**
  * Register a chart renderer for a specific chart type.
@@ -58,24 +60,33 @@ export function registerChartRenderer(type: string, renderer: ChartRenderer): vo
 }
 
 /**
- * Get the registered chart renderer for a type.
+ * Get the registered chart renderer for a type, installing missing built-ins on the first lookup.
  *
  * @param type - Chart type string.
  * @returns The renderer, or undefined if no renderer is registered.
  */
 export function getChartRenderer(type: string): ChartRenderer | undefined {
+  if (!builtinsInstalled) {
+    builtinsInstalled = true;
+    for (const [builtinType, renderer] of Object.entries(builtinRenderers)) {
+      if (!renderers.has(builtinType)) renderers.set(builtinType, renderer);
+    }
+  }
   return renderers.get(type);
 }
 
 /**
- * Clear all registered renderers. Useful for testing.
- *
- * Note: the built-in renderers (line, bar, column, ...) register as a
- * side-effect of importing `./builtin`. Once cleared, they do not come
- * back on their own — subsequent `compileChart(...)` calls will return
- * empty marks. Tests that call `clearRenderers()` should follow up with
- * `registerBuiltinRenderers()` from `./builtin` to restore the defaults.
+ * Clear all registered renderers and skip lazy installation on later lookups.
  */
 export function clearRenderers(): void {
   renderers.clear();
+  builtinsInstalled = true;
+}
+
+/** Restore all built-in renderers, overwriting any registrations for their types. */
+export function registerBuiltinRenderers(): void {
+  for (const [type, renderer] of Object.entries(builtinRenderers)) {
+    renderers.set(type, renderer);
+  }
+  builtinsInstalled = true;
 }

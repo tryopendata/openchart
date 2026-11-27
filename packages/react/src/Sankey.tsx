@@ -59,7 +59,7 @@ export interface SankeyHandle {
  * as SVG inside a wrapper div. Spec changes trigger re-renders via the
  * vanilla adapter's update() method.
  */
-export const Sankey = forwardRef<SankeyHandle, SankeyProps>(function Sankey(
+export const Sankey = /* @__PURE__ */ forwardRef<SankeyHandle, SankeyProps>(function Sankey(
   {
     spec,
     theme: themeProp,

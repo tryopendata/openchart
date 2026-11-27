@@ -63,7 +63,7 @@ export interface ChartProps {
   style?: string | CSSProperties;
 }
 
-export const Chart = defineComponent({
+export const Chart = /* @__PURE__ */ defineComponent({
   name: 'Chart',
   props: {
     reader: {

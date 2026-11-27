@@ -8,7 +8,7 @@ import type { EndpointLabelContent, NumberFormatter } from '@opendata-ai/opencha
 import { defaultNumberFormatter } from '@opendata-ai/openchart-core';
 import { finiteNumber } from '../data/finite-number';
 
-const defaultFmt = defaultNumberFormatter();
+const defaultFmt = /* @__PURE__ */ defaultNumberFormatter();
 
 /**
  * Format a value for an endpoint label. When a pre-built formatter is

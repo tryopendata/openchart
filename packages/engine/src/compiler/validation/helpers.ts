@@ -146,10 +146,8 @@ export function checkSchemeUnused(
 }
 
 /** Palette names the map compile path actually supports (sequential only). */
-export const MAP_PALETTE_NAMES = Object.keys({
-  ...SEQUENTIAL_PALETTES,
-  ...DIVERGING_PALETTES,
-}).join(', ');
+export const MAP_PALETTE_NAMES = /* @__PURE__ */ (() =>
+  Object.keys({ ...SEQUENTIAL_PALETTES, ...DIVERGING_PALETTES }).join(', '))();
 
 /**
  * Map color channels resolve scale.scheme against SEQUENTIAL_PALETTES with a

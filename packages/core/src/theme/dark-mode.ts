@@ -17,15 +17,6 @@ import type { ResolvedTheme } from '../types/theme';
 import { DEFAULT_THEME } from './defaults';
 
 // ---------------------------------------------------------------------------
-// Dark mode background
-// ---------------------------------------------------------------------------
-
-/** Default dark mode background color (zinc-based canvas). */
-const DARK_BG = ACHROMATIC_RAMP.bg;
-/** Default dark mode text color. */
-const DARK_TEXT = ACHROMATIC_RAMP.fg;
-
-// ---------------------------------------------------------------------------
 // Color adaptation
 // ---------------------------------------------------------------------------
 
@@ -126,7 +117,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
     ? pairs['colors.background'].dark
     : alreadyDark
       ? inputBg
-      : DARK_BG;
+      : ACHROMATIC_RAMP.bg;
   const darkMuted = ACHROMATIC_RAMP.fgMuted;
 
   // Per the "sensible defaults, full override" convention (see spec-grammar),
@@ -140,7 +131,7 @@ export function adaptTheme(theme: ResolvedTheme): ResolvedTheme {
 
   const darkText = pairs?.['colors.text']
     ? pairs['colors.text'].dark
-    : overridden(theme.colors.text, light.text, DARK_TEXT);
+    : overridden(theme.colors.text, light.text, ACHROMATIC_RAMP.fg);
   const darkGridline = pairs?.['colors.gridline']
     ? pairs['colors.gridline'].dark
     : overridden(theme.colors.gridline, light.gridline, 'rgba(255,255,255,0.06)');

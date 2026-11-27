@@ -1,9 +1,13 @@
 import type { LayoutStrategy, Mark, Rect } from '@opendata-ai/openchart-core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { NormalizedChartSpec } from '../../compiler/types';
 import type { ResolvedScales } from '../../layout/scales';
-import { registerBuiltinRenderers } from '../builtin';
-import { clearRenderers, getChartRenderer, registerChartRenderer } from '../registry';
+import {
+  clearRenderers,
+  getChartRenderer,
+  registerBuiltinRenderers,
+  registerChartRenderer,
+} from '../registry';
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -39,12 +43,35 @@ function stubRenderer(
 
 describe('chart renderer registry', () => {
   afterEach(() => {
-    // Clear test-registered renderers AND restore the built-in set. The
-    // built-ins register as a module side-effect of importing `compile.ts`,
-    // so once cleared they don't come back on their own — leaving later
-    // tests in this suite with an empty registry.
     clearRenderers();
     registerBuiltinRenderers();
+  });
+
+  it('returns the built-in line renderer on the first lookup', async () => {
+    vi.resetModules();
+    const registry = await import('../registry');
+    const { lineRenderer } = await import('../line');
+
+    expect(registry.getChartRenderer('line')).toBe(lineRenderer);
+  });
+
+  it('preserves a custom renderer registered before the first lookup', async () => {
+    vi.resetModules();
+    const registry = await import('../registry');
+
+    registry.registerChartRenderer('line', stubRenderer);
+
+    expect(registry.getChartRenderer('line')).toBe(stubRenderer);
+    expect(registry.getChartRenderer('bar')).toBeTypeOf('function');
+  });
+
+  it('keeps built-ins cleared when the registry is cleared before the first lookup', async () => {
+    vi.resetModules();
+    const registry = await import('../registry');
+
+    registry.clearRenderers();
+
+    expect(registry.getChartRenderer('line')).toBeUndefined();
   });
 
   it('returns undefined for an unregistered chart type', () => {

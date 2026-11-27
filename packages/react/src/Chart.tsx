@@ -401,7 +401,11 @@ function ChartInner(
  *
  * Without a type parameter, behaves identically to before — no migration needed.
  */
-export const Chart = forwardRef(ChartInner) as {
+export const Chart = /* @__PURE__ */ (() => {
+  const component = forwardRef(ChartInner);
+  component.displayName = 'Chart';
+  return component;
+})() as {
   <TData extends DataRow = DataRow>(
     props: SliceChartProps<TData> & { ref?: React.Ref<ChartHandle> },
   ): React.ReactElement | null;
@@ -409,5 +413,3 @@ export const Chart = forwardRef(ChartInner) as {
     props: ObservationChartProps<TData> & { ref?: React.Ref<ChartHandle> },
   ): React.ReactElement | null;
 };
-// Restore display name lost by the forwardRef + cast pattern
-(Chart as React.FC).displayName = 'Chart';

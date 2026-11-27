@@ -264,9 +264,27 @@ export const staticFactory: ElementFactory = {
   html: (tag) => new StaticElement(tag, 'http://www.w3.org/1999/xhtml') as unknown as HTMLElement,
   text: (data) => new StaticText(data) as unknown as Text,
 };
-export const GEOMETRY_ATTRIBUTES = new Set(
-  'x y x1 y1 x2 y2 width height r rx ry cx cy dx dy d points transform viewBox'.split(' '),
-);
+export const GEOMETRY_ATTRIBUTES = new Set([
+  'x',
+  'y',
+  'x1',
+  'y1',
+  'x2',
+  'y2',
+  'width',
+  'height',
+  'r',
+  'rx',
+  'ry',
+  'cx',
+  'cy',
+  'dx',
+  'dy',
+  'd',
+  'points',
+  'transform',
+  'viewBox',
+]);
 const NUMBER_TOKEN = /[-+]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][-+]?\d+)?/g;
 // Lengths with a unit (`dy="0.35em"`) are typographic offsets, not user-unit geometry.
 const UNIT_SUFFIX = /^(?:%|em|ex|ch|rem|px|pt|pc|cm|mm|in|vw|vh|vmin|vmax)/;

@@ -7,9 +7,6 @@
 import type { DataRow, Mark, MeasureTextFn } from '@opendata-ai/openchart-core';
 import type { FrameMark, FrozenChartFrame } from '../../playback/chart-types';
 import type { FrameSampler } from '../../playback/frame-sampler';
-// Side-effect import: playback is an entry point of its own (the mounts call it without
-// going through compileChart), so it registers the built-in renderers it draws with.
-import '../builtin';
 import { resolveRendererKey } from '../post-process';
 import { type ChartRenderer, getChartRenderer } from '../registry';
 

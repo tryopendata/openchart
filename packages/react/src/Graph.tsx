@@ -107,7 +107,7 @@ function legendStructural(legend: GraphLegendProp | undefined): string {
  * return <Graph ref={ref} spec={spec} />;
  * ```
  */
-export const Graph = forwardRef<GraphHandle, GraphProps>(function Graph(
+export const Graph = /* @__PURE__ */ forwardRef<GraphHandle, GraphProps>(function Graph(
   {
     spec,
     theme: themeProp,

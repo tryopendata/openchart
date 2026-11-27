@@ -35,7 +35,7 @@ export const CSS_TOKEN_ROOT_SELECTORS: readonly string[] = [
  *               muted -> subtle -> faint progression away from primary.
  */
 
-export const CSS_TOKENS: readonly CssTokenDef[] = [
+export const CSS_TOKENS: readonly CssTokenDef[] = /* @__PURE__ */ (() => [
   {
     name: '--oc-font-family',
     light:
@@ -314,9 +314,9 @@ export const CSS_TOKENS: readonly CssTokenDef[] = [
   },
   { name: '--oc-tooltip-text', light: '#09090b', dark: '#f7f8f8' },
   { name: '--oc-legend-text', light: '#3f3f46', dark: '#d0d6e0' },
-];
+])();
 
-const TOKEN_MAP = new Map(CSS_TOKENS.map((t) => [t.name, t]));
+const TOKEN_MAP = /* @__PURE__ */ (() => new Map(CSS_TOKENS.map((t) => [t.name, t])))();
 
 export function cssTokenDefault(name: string, mode: 'light' | 'dark'): string {
   const token = TOKEN_MAP.get(name);

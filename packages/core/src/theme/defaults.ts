@@ -33,7 +33,7 @@ const FONT_SIZES = {
 /**
  * The default theme. All fields are required and fully specified.
  */
-export const DEFAULT_THEME: ThemeBase = {
+export const DEFAULT_THEME: ThemeBase = /* @__PURE__ */ (() => ({
   colors: {
     categorical: [...CATEGORICAL_PALETTE],
     categoricalFill: [...CATEGORICAL_FILL_PALETTE],
@@ -138,4 +138,4 @@ export const DEFAULT_THEME: ThemeBase = {
   /** No editorial rule by default; the `broadsheet` preset sets one. */
   rule: null,
   seriesStrategy: 'palette',
-};
+}))();

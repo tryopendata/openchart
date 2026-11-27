@@ -33,7 +33,7 @@ export interface RaceProps {
 }
 
 /** Render an interactive race chart. */
-export const Race = defineComponent({
+export const Race = /* @__PURE__ */ defineComponent({
   name: 'Race',
   props: {
     spec: { type: Object as PropType<RaceSpec>, required: true },

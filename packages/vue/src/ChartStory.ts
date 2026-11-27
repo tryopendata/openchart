@@ -63,7 +63,7 @@ const panelStyle: CSSProperties = {
   justifyContent: 'center',
 };
 
-export const ChartStory = defineComponent({
+export const ChartStory = /* @__PURE__ */ defineComponent({
   name: 'ChartStory',
   props: {
     spec: {

@@ -93,7 +93,7 @@ export const OFFSET_STRATEGIES: readonly OffsetStrategy[] = [
  * Extended offset strategies with additional vertical spread for dense
  * multi-series endpoints (e.g. 5+ line series converging at similar y-values).
  */
-export const EXTENDED_OFFSET_STRATEGIES: readonly OffsetStrategy[] = [
+export const EXTENDED_OFFSET_STRATEGIES: readonly OffsetStrategy[] = /* @__PURE__ */ (() => [
   ...OFFSET_STRATEGIES,
   { dx: 0, dy: -2.4 }, // further above
   { dx: 0, dy: 2.4 }, // further below
@@ -101,7 +101,7 @@ export const EXTENDED_OFFSET_STRATEGIES: readonly OffsetStrategy[] = [
   { dx: 0, dy: 3.6 }, // even further below
   { dx: 1.1, dy: -2.4 }, // upper-right far
   { dx: 1.1, dy: 2.4 }, // lower-right far
-];
+])();
 
 // ---------------------------------------------------------------------------
 // Public API

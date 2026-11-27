@@ -9,8 +9,8 @@
 import type { DarkMode, ThemeConfig } from '@opendata-ai/openchart-core';
 import { createContext, type ReactNode, useContext } from 'react';
 
-const VizThemeContext = createContext<ThemeConfig | undefined>(undefined);
-const VizDarkModeContext = createContext<DarkMode | undefined>(undefined);
+const VizThemeContext = /* @__PURE__ */ createContext<ThemeConfig | undefined>(undefined);
+const VizDarkModeContext = /* @__PURE__ */ createContext<DarkMode | undefined>(undefined);
 
 /** Read the current theme from the nearest VizThemeProvider. */
 export function useVizTheme(): ThemeConfig | undefined {

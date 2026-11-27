@@ -44,7 +44,7 @@ export interface BarListHandle {
   readonly instance: BarListInstance | null;
 }
 
-export const BarList = forwardRef<BarListHandle, BarListProps>(function BarList(
+export const BarList = /* @__PURE__ */ forwardRef<BarListHandle, BarListProps>(function BarList(
   { spec, theme: themeProp, darkMode, onRowClick, onRowHover, className, style },
   ref,
 ) {

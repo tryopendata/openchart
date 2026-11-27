@@ -41,7 +41,7 @@ export interface TileMapProps {
   style?: string | CSSProperties;
 }
 
-export const TileMap = defineComponent({
+export const TileMap = /* @__PURE__ */ defineComponent({
   name: 'TileMap',
   props: {
     spec: {
