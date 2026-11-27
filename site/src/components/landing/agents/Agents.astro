@@ -20,7 +20,7 @@ import { CopyCommand } from "@steamfield/ui/react/copy";
 import { site } from "../../../config";
 import { AGENT_SPEC_FILE, agentSession, agentSkillLines } from "../../../landing/agents";
 import { allPages } from "../../../lib/collection";
-import { staticSvgPair } from "../../../lib/demo/static-svg";
+import { staticSvgSet } from "../../../lib/demo/static-svg";
 import { llmsIndex } from "../../../lib/docs";
 import SectionHead from "../../shared/SectionHead.astro";
 import { AgentSession } from "./AgentSession";
@@ -33,19 +33,14 @@ const script = buildSessionScript(agentSession, { llms, llmsUrl, file: AGENT_SPE
 
 /**
  * Two drawing sizes, so a phone gets the chart's own compact layout instead of the
- * wide one scaled down; landing-agents.css shows one per viewport and sizes the stage
- * to match. Each comes in both themes.
+ * wide one scaled down; demo.css shows one per viewport and landing-agents.css sizes
+ * the stage to match. Each comes in both themes.
  */
-const CHART_SIZES = {
-  wide: { width: 720, height: 420 },
-  narrow: { width: 360, height: 340 },
-};
-const chartSvgs = Object.entries(CHART_SIZES)
-  .map(([size, box]) => {
-    const svgs = staticSvgPair(agentSession.fixedSpec, { idPrefix: `agent-chart-${size}`, ...box });
-    return `<div class="agent-chart-${size}">${svgs ?? ""}</div>`;
-  })
-  .join("");
+const chartSvgs =
+  staticSvgSet(agentSession.fixedSpec, [
+    { ranges: ["phone"], width: 360, height: 340, idPrefix: "agent-chart-narrow" },
+    { ranges: ["tablet", "lg", "xl"], width: 720, height: 420, idPrefix: "agent-chart-wide" },
+  ]) ?? "";
 
 const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.json`;
 ---

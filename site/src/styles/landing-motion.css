@@ -23,29 +23,6 @@
     bottom: var(--playback-controls);
   }
 
-  /* One still per range of widths; hiding the wrapper hides both themes in it. */
-  .motion-playback-size {
-    display: none;
-  }
-
-  .motion-playback-size[data-size="phone"] {
-    @variant max-sm {
-      display: contents;
-    }
-  }
-
-  .motion-playback-size[data-size="medium"] {
-    @media (min-width: 640px) and (width < 1024px) {
-      display: contents;
-    }
-  }
-
-  .motion-playback-size[data-size="wide"] {
-    @variant lg {
-      display: contents;
-    }
-  }
-
   /* The controls read as a toolbar above the graphic: plain words, no code. */
   .motion-controls {
     @apply border-line flex flex-wrap items-center gap-x-8 gap-y-3 border-b pb-4;

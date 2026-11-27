@@ -55,9 +55,41 @@
     @apply mt-3 border-t border-line;
   }
 
-  /* A demo with a phone height carries two static pairs: the wide layout, and one laid
-     out at phone size for the taller phone stage. Each set shows only at its own size;
-     hiding the wrapper hides both themes inside it whatever their own rules say. */
+  /* A chart drawn at several sizes (staticSvgSet in lib/demo/static-svg.ts): each child of
+     the set names the viewport ranges it covers in `data-static-size`, and only the child
+     for the current range shows. Hiding a child hides both themes inside it whatever their
+     own rules say; the wrappers take no box, so the SVGs fill the stage as a lone pair does. */
+  .demo-static-set,
+  .demo-static-set > [data-static-size] {
+    display: contents;
+  }
+
+  @media (width < 640px) {
+    .demo-static-set > [data-static-size]:not([data-static-size~="phone"]) {
+      display: none;
+    }
+  }
+
+  @media (640px <= width < 1024px) {
+    .demo-static-set > [data-static-size]:not([data-static-size~="tablet"]) {
+      display: none;
+    }
+  }
+
+  @media (1024px <= width < 1280px) {
+    .demo-static-set > [data-static-size]:not([data-static-size~="lg"]) {
+      display: none;
+    }
+  }
+
+  @media (width >= 1280px) {
+    .demo-static-set > [data-static-size]:not([data-static-size~="xl"]) {
+      display: none;
+    }
+  }
+
+  /* Docs and blog figures (lib/demo/figure.ts) still mark each set itself "wide" or
+     "phone"; these two rules serve them until figure.ts moves to staticSvgSet. */
   .demo-static-set[data-static-size="wide"] {
     display: contents;
 
@@ -86,6 +118,23 @@
   .demo-live {
     height: 100%;
     overflow: auto;
+  }
+
+  /* A landing figure's "this is a still" line (StillNote.tsx): in the server HTML but shown
+     only without scripting or once the island marks it failed, so a chart that loads keeps
+     its layout. */
+  .still-note {
+    @apply text-muted m-0 hidden pt-3 text-sm leading-snug;
+  }
+
+  .still-note[data-still-note="failed"] {
+    @apply block;
+  }
+
+  @media (scripting: none) {
+    .still-note {
+      @apply block;
+    }
   }
 
   .demo-error {

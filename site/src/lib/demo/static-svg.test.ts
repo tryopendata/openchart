@@ -8,7 +8,7 @@ import { fixtureBar } from "../../demos/fixtures/bar";
 import { fixtureTable } from "../../demos/fixtures/table";
 import { chartTheme } from "./chart-theme";
 import { measureRaceText } from "./race-text";
-import { staticSvg } from "./static-svg";
+import { StaticSetError, staticSvg, staticSvgSet } from "./static-svg";
 
 const SIZE = { width: 720, height: 320 };
 const salesRace: RaceSpec = {
@@ -219,5 +219,56 @@ describe("staticSvg", () => {
     expect(light.length).toBeGreaterThan(0);
     const all = [...light, ...dark, ...other];
     expect(new Set(all).size).toBe(all.length);
+  });
+});
+
+describe("staticSvgSet", () => {
+  const phone = { ranges: ["phone"], width: 360, height: 300, idPrefix: "s-phone" } as const;
+  const wide = { ranges: ["tablet", "lg", "xl"], ...SIZE, idPrefix: "s-wide" } as const;
+
+  function readSet(markup: string | null) {
+    const doc = new new Window().DOMParser().parseFromString(markup ?? "", "text/html");
+    const set = doc.querySelector("body > .demo-static-set");
+    if (!set) throw new Error("Expected one .demo-static-set at the top of the markup.");
+    return set;
+  }
+
+  it("wraps one light and dark pair per drawing, each child naming the ranges it covers", () => {
+    const set = readSet(staticSvgSet(fixtureBar.spec, [phone, wide]));
+    const children = [...set.children];
+    expect(children.map((child) => child.getAttribute("data-static-size"))).toEqual([
+      "phone",
+      "tablet lg xl",
+    ]);
+    for (const [child, prefix] of [
+      [children[0], "s-phone"],
+      [children[1], "s-wide"],
+    ] as const) {
+      const svgs = [...(child?.children ?? [])];
+      expect(svgs.map((svg) => svg.getAttribute("data-theme"))).toEqual(["light", "dark"]);
+      expect(svgs.every((svg) => svg.classList.contains("demo-static"))).toBe(true);
+      expect(child?.innerHTML).toContain(`${prefix}-l`);
+    }
+    expect(children[0]?.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 360 300");
+    expect(children[1]?.querySelector("svg")?.getAttribute("viewBox")).toBe("0 0 720 320");
+  });
+
+  it("returns null for a spec with no static renderer", () => {
+    expect(staticSvgSet(fixtureTable.spec, [phone, wide])).toBeNull();
+  });
+
+  it.each([
+    { name: "a range no drawing names", drawings: [wide], range: "phone", count: 0 },
+    {
+      name: "a range two drawings name",
+      drawings: [phone, wide, { ...phone, ranges: ["xl"], idPrefix: "s-xl" }],
+      range: "xl",
+      count: 2,
+    },
+  ] as const)("refuses $name", ({ drawings, range, count }) => {
+    expect(() => staticSvgSet(fixtureBar.spec, drawings)).toThrow(StaticSetError);
+    expect(() => staticSvgSet(fixtureBar.spec, drawings)).toThrow(
+      `range "${range}" is named by ${count} drawings`,
+    );
   });
 });

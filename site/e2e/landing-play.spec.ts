@@ -3,11 +3,14 @@
  * and its controls work. Runs on the desktop and mobile projects.
  */
 import { expect, type Page, test } from "@playwright/test";
+import { LIVE_UNAVAILABLE_TEXT, NO_SCRIPT_TEXT } from "../src/components/shared/StillNote";
 import { sidewaysOverflow } from "./layout";
 
 const section = (page: Page) => page.locator("#motion");
 const figure = (page: Page) => section(page).locator("[data-playback-figure]");
 const readout = (page: Page) => figure(page).locator('[class$="-readout"]');
+/** The line that corrects the lede when the playback stays a still. */
+const stillNote = (page: Page) => section(page).locator("[data-still-note]");
 const toggle = (page: Page) => figure(page).getByRole("button", { name: /^(Play|Pause)$/ });
 
 test("the playback figure comes before the payroll bench", async ({ page }) => {
@@ -102,4 +105,38 @@ test("the still names its year and countries and never renders smaller than the 
     const scale = await tick.evaluate((element: SVGTextElement) => element.getScreenCTM()?.a ?? 0);
     expect(scale, `still text scale at ${width}px`).toBeGreaterThanOrEqual(0.95);
   }
+});
+
+test("when the playback's data does not load, the still stays and a line says so", async ({
+  page,
+}) => {
+  const loadFailed = page.waitForEvent("console", (message) =>
+    message.text().includes("playback chart could not be loaded"),
+  );
+  await page.route(/\/_astro\/playback\.[^/]+\.js$/, (route) => route.abort());
+  await page.goto("/");
+  await figure(page).scrollIntoViewIfNeeded();
+  await loadFailed;
+  await expect(stillNote(page)).toBeVisible();
+  await expect(stillNote(page)).toHaveText(LIVE_UNAVAILABLE_TEXT);
+  await expect(figure(page).locator("svg.demo-static:visible")).toHaveCount(1);
+  await expect(toggle(page)).toHaveCount(0);
+});
+
+test("once the playback is live the still line stays hidden", async ({ page }) => {
+  await page.goto("/");
+  await figure(page).scrollIntoViewIfNeeded();
+  await expect(toggle(page)).toBeVisible();
+  await expect(stillNote(page)).toBeHidden();
+});
+
+test("without JavaScript a line under the playback says it is a still", async ({
+  browser,
+}, testInfo) => {
+  const context = await browser.newContext({ ...testInfo.project.use, javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/");
+  await expect(stillNote(page)).toBeVisible();
+  await expect(stillNote(page)).toHaveText(NO_SCRIPT_TEXT);
+  await context.close();
 });

@@ -6,6 +6,7 @@
  */
 import { validateSpec } from "@opendata-ai/openchart-engine";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { LIVE_UNAVAILABLE_TEXT, NO_SCRIPT_TEXT } from "../src/components/shared/StillNote";
 import { agentSession } from "../src/landing/agents";
 import { LANDING_SECTION_IDS } from "../src/landing/copy";
 import { pageViolations } from "./axe";
@@ -564,6 +565,47 @@ test.describe("resize frame", () => {
    * moves the other (the 2020 low) to a numbered note under the plot.
    */
   const compactNote = (page: Page) => liveChart(page).locator("text.oc-footnotes");
+  /** The line that corrects the lede when the chart stays a still. */
+  const stillNote = (page: Page) => section(page).locator("[data-still-note]");
+
+  test("without the chart library the frame keeps its still and a line says so", async ({
+    page,
+  }) => {
+    const libraryFailed = page.waitForEvent("console", (message) =>
+      message.text().includes("chart library could not be loaded"),
+    );
+    await page.route(/\/_astro\/chunk-[^/]+\.js$/, (route) => route.abort());
+    await page.goto("/");
+    await hydrated(section(page));
+    await libraryFailed;
+    await expect(stillNote(page)).toBeVisible();
+    await expect(stillNote(page)).toHaveText(LIVE_UNAVAILABLE_TEXT);
+    await expect(section(page).locator("[data-resize-frame] svg.demo-static:visible")).toHaveCount(
+      1,
+    );
+    await expect(liveChart(page)).toHaveCount(0);
+  });
+
+  test("once the chart is live the still line stays hidden", async ({ page }) => {
+    await page.goto("/");
+    await hydrated(section(page));
+    await expect(liveChart(page)).toBeVisible();
+    await expect(stillNote(page)).toBeHidden();
+  });
+
+  test("without JavaScript a line under the frame says it is a still", async ({
+    browser,
+  }, testInfo) => {
+    const context = await browser.newContext({
+      ...testInfo.project.use,
+      javaScriptEnabled: false,
+    });
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(stillNote(page)).toBeVisible();
+    await expect(stillNote(page)).toHaveText(NO_SCRIPT_TEXT);
+    await context.close();
+  });
 
   /** At a starting width of 400px or more the live chart shows both callouts inline. */
   async function expectNotCompactYet(page: Page, start: number) {

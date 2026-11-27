@@ -12,6 +12,7 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { startOffset } from "../src/components/landing/edit/edit-spec";
 import { offsetLine } from "../src/components/landing/edit/edit-state";
+import { LIVE_UNAVAILABLE_TEXT, NO_SCRIPT_TEXT } from "../src/components/shared/StillNote";
 import { landingCopy } from "../src/landing/copy";
 
 const START_LINE = offsetLine(startOffset);
@@ -26,6 +27,8 @@ const callout = (page: Page) => liveChart(page).locator(".oc-annotation-text");
 const calloutLabel = (page: Page) => callout(page).locator(".oc-annotation-label");
 const readout = (page: Page) => section(page).locator("[data-edit-readout]");
 const resetButton = (page: Page) => section(page).getByRole("button", { name: "Reset" });
+/** The line that corrects the lede when the chart stays a still. */
+const stillNote = (page: Page) => section(page).locator("[data-still-note]");
 /** The library's text editor, which the section never lets open. */
 const editor = (page: Page) => section(page).locator("textarea");
 
@@ -249,6 +252,27 @@ test.describe("handling the chart", () => {
     await expect(section(page).locator("[data-edit-chart] svg.demo-static:visible")).toHaveCount(1);
     await expect(liveChart(page)).toHaveCount(0);
     await expect(resetButton(page)).toBeHidden();
+    await expect(stillNote(page)).toBeVisible();
+    await expect(stillNote(page)).toHaveText(LIVE_UNAVAILABLE_TEXT);
+  });
+
+  test("without the chart library the chart stays static and says so", async ({ page }) => {
+    const libraryFailed = page.waitForEvent("console", (message) =>
+      message.text().includes("chart library could not be loaded"),
+    );
+    await page.route(/\/_astro\/chunk-[^/]+\.js$/, (route) => route.abort());
+    await page.goto("/");
+    await figure(page).evaluate((element) => element.scrollIntoView({ block: "center" }));
+    await libraryFailed;
+    await expect(stillNote(page)).toBeVisible();
+    await expect(stillNote(page)).toHaveText(LIVE_UNAVAILABLE_TEXT);
+    await expect(section(page).locator("[data-edit-chart] svg.demo-static:visible")).toHaveCount(1);
+    await expect(liveChart(page)).toHaveCount(0);
+  });
+
+  test("once the chart is live the still line stays hidden", async ({ page }) => {
+    await goLive(page);
+    await expect(stillNote(page)).toBeHidden();
   });
 
   test("with reduced motion the callout never moves by itself", async ({ page }) => {
@@ -369,6 +393,17 @@ test.describe("the spec column beside the plot", () => {
       .poll(async () => Math.abs((await columnAbovePlot(page)) - gap))
       .toBeLessThan(ALIGNED_PX);
   });
+});
+
+test("without JavaScript a line under the chart says it is a still", async ({
+  browser,
+}, testInfo) => {
+  const context = await browser.newContext({ ...testInfo.project.use, javaScriptEnabled: false });
+  const page = await context.newPage();
+  await page.goto("/");
+  await expect(stillNote(page)).toBeVisible();
+  await expect(stillNote(page)).toHaveText(NO_SCRIPT_TEXT);
+  await context.close();
 });
 
 test("Reset and the how-to wait for the live chart without moving anything when they appear", async ({

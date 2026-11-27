@@ -29,6 +29,8 @@ export type StaticSvgOptions = {
 type StaticSpec = Parameters<typeof renderStaticSVG>[0];
 
 const STATIC_CLASS = DEMO_CLASS.static;
+/** The wrapper demo.css switches drawings inside, by their `data-static-size`. */
+const STATIC_SET_CLASS = "demo-static-set";
 /**
  * Geometry decimal places. The SVG is 720 units wide and scales to the stage,
  * so a tenth of a unit never shows, and the library's default of 3 adds weight.
@@ -101,4 +103,56 @@ export function staticSvgPair(
     });
   const light = render(false);
   return light === null ? null : `${light}${render(true) ?? ""}`;
+}
+
+/**
+ * A viewport width range a static drawing can be shown in, as demo.css names
+ * them: `phone` under 640px, `tablet` 640 to 1023, `lg` 1024 to 1279 and `xl`
+ * from 1280.
+ */
+export type StaticRange = "phone" | "tablet" | "lg" | "xl";
+
+const STATIC_RANGES: readonly StaticRange[] = ["phone", "tablet", "lg", "xl"];
+
+/** One drawing in a static set: the size it is laid out at and the ranges it is shown in. */
+export type StaticDrawing = Omit<StaticSvgOptions, "dark"> & {
+  ranges: readonly StaticRange[];
+};
+
+/** A static set whose drawings leave a range without a drawing, or give it two that would overlap. */
+export class StaticSetError extends Error {
+  override name = "StaticSetError";
+}
+
+/** Throws unless the drawings between them name every range exactly once, so one drawing shows at any width. */
+function checkRangesCovered(drawings: readonly StaticDrawing[]): void {
+  const named = drawings.flatMap((drawing) => drawing.ranges);
+  for (const range of STATIC_RANGES) {
+    const count = named.filter((name) => name === range).length;
+    if (count !== 1) {
+      const prefixes = drawings.map((drawing) => drawing.idPrefix).join(", ");
+      throw new StaticSetError(
+        `Static set ${prefixes}: range "${range}" is named by ${count} drawings; ` +
+          `each of ${STATIC_RANGES.join(", ")} must be named by exactly one.`,
+      );
+    }
+  }
+}
+
+/**
+ * The spec drawn at several sizes, each as a light and dark pair
+ * (`staticSvgPair`), in one `.demo-static-set` whose children carry
+ * `data-static-size` with the ranges they cover; demo.css shows only the child
+ * for the viewport's range. Null when the spec type has no static renderer.
+ * Throws when the drawings do not name every range exactly once.
+ */
+export function staticSvgSet(spec: VizSpec, drawings: readonly StaticDrawing[]): string | null {
+  checkRangesCovered(drawings);
+  const children: string[] = [];
+  for (const { ranges, ...options } of drawings) {
+    const pair = staticSvgPair(spec, options);
+    if (pair === null) return null;
+    children.push(`<div data-static-size="${ranges.join(" ")}">${pair}</div>`);
+  }
+  return `<div class="${STATIC_SET_CLASS}">${children.join("")}</div>`;
 }

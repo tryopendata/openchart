@@ -22,7 +22,7 @@
  * table's caption and the "and N more rows" line are this page's own. The
  * figure's note says the chart in the page source is static SVG.
  */
-import { staticSvgPair } from "../../../lib/demo/static-svg";
+import { staticSvgSet } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { PublishDesk } from "./PublishDesk";
@@ -44,16 +44,10 @@ const reader = screenReaderContent(publishSpec);
 const numeric = numericColumns(publishSpec);
 const shownRows = reader.rows.slice(0, SHOWN_ROWS);
 const moreRows = reader.rows.length - shownRows.length;
-const wideStatics = staticSvgPair(publishSpec, {
-  width: WIDE_WIDTH,
-  height: STAGE_HEIGHT,
-  idPrefix: "publish",
-});
-const phoneStatics = staticSvgPair(publishSpec, {
-  width: PHONE_WIDTH,
-  height: STAGE_HEIGHT,
-  idPrefix: "publish-phone",
-});
+const statics = staticSvgSet(publishSpec, [
+  { ranges: ["phone"], width: PHONE_WIDTH, height: STAGE_HEIGHT, idPrefix: "publish-phone" },
+  { ranges: ["tablet", "lg", "xl"], width: WIDE_WIDTH, height: STAGE_HEIGHT, idPrefix: "publish" },
+]);
 ---
 
 <section id="publish" aria-labelledby="publish-title" data-landing-section class="landing-section">
@@ -71,12 +65,7 @@ const phoneStatics = staticSvgPair(publishSpec, {
         </p>
         <PublishedFigure class="publish-figure" source={publishSource} note={STATIC_NOTE}>
           <PublishDesk client:visible altText={reader.altText}>
-            <div class="demo-static-set" data-static-size="wide">
-              <Fragment set:html={wideStatics} />
-            </div>
-            <div class="demo-static-set" data-static-size="phone">
-              <Fragment set:html={phoneStatics} />
-            </div>
+            <Fragment set:html={statics} />
           </PublishDesk>
         </PublishedFigure>
         <p>
