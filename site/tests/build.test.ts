@@ -784,9 +784,10 @@ describe("the landing page", () => {
   const sections = () => [...home().querySelectorAll("main > section[data-landing-section]")];
   const textOf = (node: Element | null | undefined) => (node?.textContent ?? "").trim();
 
-  it("has one h1 and the nine sections in order, each labelled by its one h2 from copy.ts", () => {
+  it("has one h1 and the ten sections in order, each labelled by its one h2 from copy.ts", () => {
     expect([...LANDING_SECTION_IDS]).toEqual([
       "desk",
+      "edit",
       "story",
       "motion",
       "styles",

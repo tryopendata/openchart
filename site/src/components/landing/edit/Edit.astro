@@ -1,0 +1,22 @@
+---
+/**
+ * Edit: one chart whose callout the reader can drag, with the spec line the
+ * drag rewrites under it. The page's second section, after the hero.
+ *
+ * Contract (e2e/landing-edit.spec.ts and tests/build.test.ts rely on it):
+ * - `<section id="edit" aria-labelledby="edit-title" data-landing-section>` with
+ *   one h2, id `edit-title` (`landingCopy.headings.edit`).
+ * - `[data-edit-chart]` holds the chart, static SVG in the server HTML.
+ * - `[data-edit-readout]` holds the spec line with the callout's live offset.
+ * - A "Reset" button, disabled while the callout is where the spec put it.
+ * - The figure has a `<figcaption>` with a "Source: …" line.
+ */
+import SectionHead from "../../shared/SectionHead.astro";
+import "../../../styles/landing-edit.css";
+---
+
+<section id="edit" aria-labelledby="edit-title" data-landing-section class="landing-section">
+  <div class="landing-container">
+    <SectionHead id="edit" />
+  </div>
+</section>
