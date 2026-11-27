@@ -62,7 +62,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     id: "terminal",
     label: "Terminal",
     preset: "terminal",
-    description: "One cyan series against grey ones on a dark background, in light and dark mode.",
+    description: "One cyan series against grey ones on a dark background.",
     theme: terminal,
     dark: false,
   },
