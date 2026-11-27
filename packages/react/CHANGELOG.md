@@ -1,5 +1,20 @@
 # Changelog
 
+## [9.2.2](https://github.com/tryopendata/openchart/compare/core-v9.2.1...core-v9.2.2) (2026-11-27)
+
+Importing one visualization type now ships only that type. A React app that imports `Sankey` gets 178 kB minified (60 kB gzip) of OpenChart, down from 1,237 kB (413 kB gzip); the same holds for tables, bar lists, races, graphs and maps, in every package. See the [bundle size guide](https://openchart.steamfield.io/docs/get-started/bundle-size/) for what each import costs.
+
+### Fixed
+
+- Every package entry is now free of import-time side effects. Chart renderers used to register themselves when the engine loaded, and many module-level constants were built by calls a bundler could not prove pure, so any import kept nearly the whole library. `@opendata-ai/openchart-engine` now declares `"sideEffects": false`.
+- `compileSankey`, `compileTableLayout`, `compileGraph`, `compileBarList`, `compileTileMap`, `compileGeoMap` and the race compile each validate through their own type's rules. They used to share one validator that referenced every type.
+- `@opendata-ai/openchart-engine` now lists `d3-time-format` as a dependency. It was bundled into the engine's build, so an app that also used it shipped two copies.
+
+### Behaviour changes
+
+- A spec of the wrong type passed to a typed compile function (a chart spec given to `compileSankey`, say) always throws that function's wrong-type message. If the spec was also invalid for its own type, it used to report those validation errors instead.
+- The typed compile functions and the mounts built on them read `spec.type` only. A Sankey, table, graph, bar list or map spec with a stray `mark` or `layer` key is compiled as its declared type.
+
 ## [9.2.1](https://github.com/tryopendata/openchart/compare/core-v9.2.0...core-v9.2.1) (2026-11-25)
 
 ### Fixed
