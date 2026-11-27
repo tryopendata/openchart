@@ -70,6 +70,13 @@ for (const scheme of ["light", "dark"] as const) {
     await page.goto("/");
     await expect(page.locator("html")).toHaveClass(new RegExp(`\\b${scheme}\\b`));
     await scrollThrough(page);
+    // The playback is still running after the scroll; axe names nodes by their
+    // attributes, so a bubble that moves between the scan and the lookup is never found.
+    const pause = page.locator("#motion [data-playback-figure]").getByRole("button", {
+      name: "Pause",
+    });
+    // Clicked in the page, so the scroll position the scan runs at does not move.
+    if ((await pause.count()) > 0) await pause.evaluate((button: HTMLElement) => button.click());
     expect(await pageViolations(page)).toEqual([]);
     expect(errors).toEqual([]);
   });
