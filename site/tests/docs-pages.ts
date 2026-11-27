@@ -20,6 +20,7 @@ export const docsPages = {
     { slug: "getting-started", title: "Getting started", minDemos: 1, lane: "c" },
     { slug: "frameworks", title: "Frameworks", minDemos: 1, lane: "c" },
     { slug: "static-rendering", title: "Static rendering", minDemos: 1, lane: "c" },
+    { slug: "bundle-size", title: "Bundle size", minDemos: 0, lane: "c" },
   ],
   agents: [
     { slug: "generating-specs", title: "Generating specs", minDemos: 0, lane: "c" },

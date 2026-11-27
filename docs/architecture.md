@@ -171,20 +171,25 @@ React, Vue, and Svelte all wrap the same vanilla adapter. The framework packages
 
 ## Chart registry pattern
 
-Chart modules export their renderers; `engine/src/charts/builtin.ts` collects them in the `builtinRenderers` map. Its `registerBuiltinRenderers()` function registers that map when the module is first imported. Tests can call the same function to restore built-ins after clearing the registry.
+Chart modules export their renderers; `engine/src/charts/builtin.ts` collects them in the `builtinRenderers` map and does nothing else. `engine/src/charts/registry.ts` installs that map the first time `getChartRenderer()` is called, so importing the engine runs no registration code and a consumer who never compiles a chart can tree-shake the chart renderers away. A renderer registered before the first lookup is kept. Tests call `registerBuiltinRenderers()` to restore built-ins after `clearRenderers()`.
 
 ```mermaid
 graph TB
-  A["engine/src/compile.ts"] -->|"imports"| B["charts/builtin.ts"]
-  C["bar, line, scatter and other chart modules"] -->|"export renderers"| B
-  B -->|"registerBuiltinRenderers()"| E[Registry Map]
+  C["bar, line, scatter and other chart modules"] -->|"export renderers"| B["charts/builtin.ts"]
+  B -->|"builtinRenderers"| E[Registry Map]
 
-  F["compileChart()"] -->|"getChartRenderer(type)"| E
+  F["compileChart()"] -->|"getChartRenderer(type), installs built-ins on first call"| E
 
   style E fill:#4a6fa5,color:#fff
 ```
 
 This decouples chart-type logic from the compile pipeline. Adding a new chart type means creating a directory under `charts/`, exporting its renderer, and adding it to `builtinRenderers` in `charts/builtin.ts`. The compile pipeline doesn't change.
+
+## Import-time purity
+
+Every package entry is free of import-time side effects, which is what lets a consumer import one visualization type and ship only that type (see [bundle size](bundle-size.md)). Each package builds to a single file, so bundlers drop unused code statement by statement and keep any top-level statement they can't prove pure. Three rules follow. A module-level constant built by a call carries `/* @__PURE__ */`, or sits inside an annotated IIFE when it needs more than one statement. Registries are literal tables or install lazily; nothing registers itself on import. And each typed compile entry (`compileSankey`, `compileTableLayout`, `compileGraph` and the rest) goes through `compileKind()` with its own `SpecKind` (`engine/src/compiler/kind.ts`), so it references only its own validator and normalizer, never the generic `validateSpec()` that knows every type.
+
+`bun run check:tree-shaking` (`scripts/check-tree-shaking.mjs`, run in CI) enforces this: a bare import of each entry may leave at most 1 kB of the package's own code behind, each single-import bundle has a size budget, and a non-chart bundle fails if chart renderers or another type's compiler appear in it.
 
 Each chart renderer receives `(spec, scales, chartArea, strategy)` and returns `Mark[]`. A `Mark` is a discriminated union (line marks, rect marks, arc marks, point marks, text marks, rule marks) with all positions and colors computed. Higher-level marks compose from these primitives rather than inventing new geometry: for example, `parliament` (a hemicycle seat chart) emits point marks for the seats, a rule mark for the majority line, and text marks for labels; `waffle` emits a grid of rects.
 

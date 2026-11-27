@@ -315,7 +315,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 
 ## Chart-type registry (`engine/src/charts/registry.ts`)
 
-- Registration goes through `engine/src/charts/builtin.ts`: a `builtinRenderers` map lists every renderer key and `registerBuiltinRenderers()` loops over it, calling `registerChartRenderer(key, fn)` as a side effect on first import. Chart-type `index.ts` files only export their renderer; they do not self-register.
+- `engine/src/charts/builtin.ts` exports the `builtinRenderers` map and nothing else. `registry.ts` installs it lazily on the first `getChartRenderer()` call (keeping any key registered earlier); nothing registers on import, so the chart renderers tree-shake out of non-chart bundles. `registerBuiltinRenderers()` lives in `registry.ts` and restores built-ins after `clearRenderers()` in tests. Chart-type `index.ts` files only export their renderer.
 - The compile pipeline resolves the renderer key via `resolveRendererKey(markType, encoding, markDef)` (`charts/post-process.ts`; e.g. `'bar'` -> `'bar:vertical'`, `'arc'` -> `'arc:donut'`) and dispatches with `getChartRenderer(key)`.
 - Per-chart-type renderers live under `engine/src/charts/{bar,column,line,pie,scatter,dot,range,calendar,rule,tick,text}/`. Each owns its `compute.ts` (mark generation), often with `__tests__/` alongside.
 - Adding a new chart type: create the directory, implement and export the renderer from its `index.ts`, and add it to the `builtinRenderers` map in `builtin.ts`. The pipeline doesn't change.
@@ -324,7 +324,7 @@ The vanilla adapter (`mount.ts`) takes the resulting `ChartLayout` and calls `re
 
 - Marks are a discriminated union (`packages/core/src/types/layout.ts`): `LineMark`, `AreaMark`, `RectMark`, `ArcMark`, `PointMark`, `TextMarkLayout`, `RuleMarkLayout`, `TickMarkLayout`.
 - `RectMark.orient` (`'horizontal' | 'vertical'`) — set by the engine from encoding (x: quantitative = horizontal bar, y: quantitative = vertical column). **Don't infer from geometry** in renderers; grouped columns with short bars get misclassified.
-- The renderer (`vanilla/src/renderers/marks.ts`) has one function per mark type and a `registerMarkRenderer<T>` extension hook.
+- The renderer (`vanilla/src/renderers/marks.ts`) has one function per mark type, listed in the `markRenderers` object literal (not registered by top-level calls, so it tree-shakes), and a `registerMarkRenderer<T>` extension hook.
 - **A default bar/column renders as `<path>`, not `<rect>`.** `BAR_CORNER_RADIUS` + `valueEndCorners()` (`engine/src/charts/utils.ts`) round only the value end, and SVG `rx` rounds all four corners or none, so `renderRectMark` emits `rectPathWithCorners()`. CSS and tests that target bars must match `:is(rect, path)` (see `animation.css`), and tests read geometry through `vanilla/src/__test-fixtures__/rect-geometry.ts`. Stacked segments stay square and carry a 1px seam stroke in the canvas color (`stackSeamStroke()`).
 - **Series color adaptation lives in one place.** `adaptSeriesStroke()` / `isStrokeSeriesMark()` (`engine/src/charts/utils.ts`, wrapping `adaptForLightLineStroke`) darken a line/area series color on a light canvas. `computeLineMarks`, `computeAreaMarks` and `legend/compute.ts` all call it, so a legend swatch, an endpoint label and the line itself can never show different colors. Fills (bar/arc/waffle) are never adapted. Guarded by `engine/src/__tests__/series-color-parity.test.ts`.
 - Band padding default: `DEFAULT_BAND_PADDING` in `engine/src/layout/scales.ts` (0.25 = a gap of one third of the bar width). `resolveBandPadding` must use the same constant, not a literal.
@@ -430,6 +430,8 @@ These are easy mistakes — written down so the next agent doesn't search for th
 | Pure review/recommendation/patch/identity APIs | `packages/engine/src/design/` |
 | Retained SVG and sampled reader geometry | `packages/vanilla/src/transition/{reconcile,scene,labels}.ts`, `reader.ts` |
 | Product dependency and consumer bundle checks | `scripts/check-product-boundary.mjs`, `scripts/check-library-bundle.mjs` |
+| Tree-shaking check (import-time residue per entry, single-import size budgets, forbidden code per mount type) | `scripts/check-tree-shaking.mjs` (`bun run check:tree-shaking`, needs a build). `--package <name> --show` prints the top-level code that survives a bare import. Rules in `docs/architecture.md` under Import-time purity. |
+| Typed compile path | `engine/src/compiler/kind.ts`: `SpecKind`, `compileKind()`, `assertKindType()`. Each typed compile function defines its kind beside itself (`SANKEY_KIND`, `TABLE_KIND`, `GRAPH_KIND`, `BARLIST_KIND`, `GEO_MAP_KIND`, `TILE_MAP_KIND`) and must not import `validateSpec` or `normalizeSpec`. |
 
 The browser authoring application lives in the separate [OpenStudio repository](https://github.com/tryopendata/openstudio). Its UI, imports, persistence and deployment are not part of this codebase.
 
