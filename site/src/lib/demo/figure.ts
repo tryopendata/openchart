@@ -16,7 +16,7 @@ import { demoDomId } from "./dom-id";
 import { escapeHtml } from "./escape-html";
 import { DEMO_ATTR, DEMO_CLASS } from "./markup";
 import { type SharedSplit, splitSharedValues } from "./shared-values";
-import { staticSvgPair } from "./static-svg";
+import { staticSetChild, staticSetHtml, staticSvgPair } from "./static-svg";
 
 /** Everything the figure shows, whether it came from the registry or a fence. */
 export type DemoFigure = {
@@ -119,8 +119,6 @@ const PHONE_STATIC_WIDTH = 390;
 const RACE_PHONE_STATIC_WIDTH = 320;
 /** The race stage at 1280px, with the docs sidebar and outline visible. */
 const RACE_WIDE_STATIC_WIDTH = 671;
-/** The wrapper demo.css shows or hides as one static pair, by `data-static-size`. */
-const STATIC_SET_CLASS = "demo-static-set";
 
 /**
  * A second static pair laid out at phone size, so a phone without the live
@@ -163,8 +161,10 @@ function stageHtml(figure: DemoFigure, domId: string): string {
   const content =
     phoneStatics === null
       ? wide
-      : `<div class="${STATIC_SET_CLASS}" data-static-size="wide">${wide}</div>` +
-        `<div class="${STATIC_SET_CLASS}" data-static-size="phone">${phoneStatics}</div>`;
+      : staticSetHtml([
+          staticSetChild(["tablet", "lg", "xl"], wide),
+          staticSetChild(["phone"], phoneStatics),
+        ]);
   const width = figure.width === undefined ? "" : `; --demo-width: ${figure.width}px`;
   // Written inline with the desktop height, so the phone height is reserved before any script runs.
   const phone =

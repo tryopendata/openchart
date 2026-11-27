@@ -152,7 +152,17 @@ export function staticSvgSet(spec: VizSpec, drawings: readonly StaticDrawing[]):
   for (const { ranges, ...options } of drawings) {
     const pair = staticSvgPair(spec, options);
     if (pair === null) return null;
-    children.push(`<div data-static-size="${ranges.join(" ")}">${pair}</div>`);
+    children.push(staticSetChild(ranges, pair));
   }
+  return staticSetHtml(children);
+}
+
+/** One drawing of a static set: `html` shown only in the viewport `ranges`. */
+export function staticSetChild(ranges: readonly StaticRange[], html: string): string {
+  return `<div data-static-size="${ranges.join(" ")}">${html}</div>`;
+}
+
+/** The set demo.css switches, around children built by `staticSetChild`. */
+export function staticSetHtml(children: readonly string[]): string {
   return `<div class="${STATIC_SET_CLASS}">${children.join("")}</div>`;
 }

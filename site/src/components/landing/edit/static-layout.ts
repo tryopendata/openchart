@@ -13,7 +13,7 @@ import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { compileChart } from "@opendata-ai/openchart-engine";
 import { chartTheme } from "../../../lib/demo/chart-theme";
 
-/** Which stage width range a static drawing is for; landing-edit.css matches `data-edit-static` on these. */
+/** Which stage width range a static drawing is for; demo.css matches `data-static-size` on these. */
 export type StaticSize = "phone" | "tablet" | "lg" | "xl";
 
 /** The size one static drawing is laid out at. */

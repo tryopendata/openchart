@@ -88,24 +88,6 @@
     }
   }
 
-  /* Docs and blog figures (lib/demo/figure.ts) still mark each set itself "wide" or
-     "phone"; these two rules serve them until figure.ts moves to staticSvgSet. */
-  .demo-static-set[data-static-size="wide"] {
-    display: contents;
-
-    @variant max-sm {
-      display: none;
-    }
-  }
-
-  .demo-static-set[data-static-size="phone"] {
-    display: none;
-
-    @variant max-sm {
-      display: contents;
-    }
-  }
-
   /* The renderer writes an inline pixel height; the stage decides the size instead. */
   .demo-static {
     position: absolute;

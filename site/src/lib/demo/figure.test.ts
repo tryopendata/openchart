@@ -168,8 +168,11 @@ describe("demoFigureHtml", () => {
 
   it("adds a static pair laid out at phone size, shown in its own set, with its own ids", async () => {
     const figure = await render(figureFor({ phoneHeight: 520 }));
-    const sets = [...figure.querySelectorAll("[data-demo-stage] > .demo-static-set")];
-    expect(sets.map((set) => set.getAttribute("data-static-size"))).toEqual(["wide", "phone"]);
+    const sets = [...figure.querySelectorAll("[data-demo-stage] > .demo-static-set > *")];
+    expect(sets.map((set) => set.getAttribute("data-static-size"))).toEqual([
+      "tablet lg xl",
+      "phone",
+    ]);
     const viewBoxes = (set: (typeof sets)[number] | undefined) =>
       [...(set?.querySelectorAll("svg.demo-static") ?? [])].map((svg) => [
         svg.getAttribute("data-theme"),
