@@ -4,7 +4,7 @@
  * it into the snapped width (frame-scroll.ts) before it reaches state, so the
  * frame re-renders only when the width moves a step, not during the holds.
  * With reduced motion, under the follow media query, and from the moment
- * `following` turns false the width is null and the frame is the reader's.
+ * `following` turns false the link is off and the frame is the reader's.
  */
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import { useMotionTools } from "../../shared/use-motion-tools";
@@ -13,17 +13,24 @@ import { followFrameScroll } from "./frame-scroll-trigger";
 import type { WidthRange } from "./frame-width";
 
 /**
- * How long the frame keeps its CSS width transition after the scroll first takes
- * it: a page loaded or restored part-way through the section eases from full
- * to the scroll's width instead of snapping. landing-responsive.css runs it for 520ms.
+ * How long the frame keeps its CSS width transition after the scroll first sets
+ * it, so the first step (on a page loaded or restored part-way through the
+ * section it can be large) eases. landing-responsive.css runs it for 520ms.
  */
 const EASE_IN_MS = 560;
 
 export type ScrollWidth = {
-  /** The width the scroll gives the chart's box, or null while the scroll does not drive it. */
-  width: number | null;
-  /** True from the first width the scroll gave in this page view: the figure reserves its height then. */
+  /** True while the scroll link is on: the scroll will drive the width. */
+  live: boolean;
+  /** True from the first moment the link was on in this page view: the figure reserves its height then. */
   linked: boolean;
+  /**
+   * The width the scroll gives the chart's box, or null while the link is off
+   * or the reader has not scrolled since it came on. Waiting for a scroll keeps
+   * the frame from moving on its own when the link loads, under a reader's
+   * pointer or eyes.
+   */
+  width: number | null;
   /** True once the first width has eased in: from then on the width follows the scroll with no transition. */
   tracking: boolean;
 };
@@ -39,15 +46,18 @@ export function useScrollWidth(
   following: boolean,
 ): ScrollWidth {
   const tools = useMotionTools("the resize frame");
-  const [width, setWidth] = useState<number | null>(null);
+  const [live, setLive] = useState(false);
   const [linked, setLinked] = useState(false);
+  const [width, setWidth] = useState<number | null>(null);
   const progress = useRef<number | null>(null);
+  const scrolled = useRef(false);
   const latestRange = useRef(range);
 
   const applyWidth = useCallback(() => {
     const at = progress.current;
     const within = latestRange.current;
-    setWidth(at === null || within === null ? null : widthAtProgress(at, within));
+    const ready = at !== null && within !== null && scrolled.current;
+    setWidth(ready ? widthAtProgress(at, within) : null);
   }, []);
 
   const min = range?.min;
@@ -60,19 +70,27 @@ export function useScrollWidth(
   useEffect(() => {
     const element = figure.current;
     if (!tools || !following || !element) return;
+    const onFirstScroll = () => {
+      scrolled.current = true;
+      applyWidth();
+    };
+    window.addEventListener("scroll", onFirstScroll, { once: true, passive: true });
     const stop = followFrameScroll(tools, element, (next) => {
       progress.current = next;
+      setLive(next !== null);
       if (next !== null) setLinked(true);
       applyWidth();
     });
     return () => {
+      window.removeEventListener("scroll", onFirstScroll);
       stop();
       progress.current = null;
+      scrolled.current = false;
       applyWidth();
     };
   }, [tools, following, figure, applyWidth]);
 
-  return { width, linked, tracking: useEasedIn(width !== null) };
+  return { live, linked, width, tracking: useEasedIn(width !== null) };
 }
 
 /** True once `active` has held for EASE_IN_MS; false again as soon as it drops. */

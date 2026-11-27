@@ -105,7 +105,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
   const range: WidthRange | null =
     available === null ? null : { min: Math.min(MIN_WIDTH, available), max: available };
   const scroll = useScrollWidth(figure, range, chosen === null);
-  const following = scroll.width !== null;
+  const following = scroll.live;
   const width = range === null ? null : frameWidth(range, chosen, scroll.width);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -174,7 +174,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
           className="resize-frame"
           data-resize-frame
           data-dragging={dragging || undefined}
-          data-following={(following && scroll.tracking) || undefined}
+          data-following={scroll.tracking || undefined}
           style={width === null ? undefined : { width: `${width}px` }}
         >
           <LiveChart spec={responsiveSpec} className="resize-chart">

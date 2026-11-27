@@ -38,6 +38,19 @@ test.beforeEach(({ page: _page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop", "sets its own desktop viewport");
 });
 
+/** The frame's drawn width, border included; it trails the slider's value while the first step eases. */
+const drawnWidth = (page: Page) =>
+  section(page)
+    .locator("[data-resize-frame]")
+    .evaluate((element) => element.getBoundingClientRect().width);
+
+/** Waits until the frame is drawn at the slider's value, so the handle is where a pointer would find it. */
+async function frameAtRest(page: Page) {
+  const value = await widthNow(page);
+  // The frame's 1px border sits outside the chart's box.
+  await expect.poll(() => drawnWidth(page)).toBe(value + 2);
+}
+
 /** Resolves after the browser has painted twice, so scroll-driven work has run. */
 async function settle(page: Page) {
   await page.evaluate(
@@ -108,14 +121,7 @@ test("the frame is full as the section arrives, narrower mid-way and compact bef
   await placeFigure(page, LEAVING);
   await expect.poll(() => widthNow(page)).toBe(narrowest);
   await expect(breakpoint(page)).toHaveText("compact");
-  // The frame's 1px border sits outside the chart's box.
-  await expect
-    .poll(() =>
-      section(page)
-        .locator("[data-resize-frame]")
-        .evaluate((element) => element.getBoundingClientRect().width),
-    )
-    .toBe(narrowest + 2);
+  await frameAtRest(page);
   // The scroll's changes are not read out; only the reader's own are.
   await expect(breakpoint(page)).not.toHaveAttribute("aria-live");
 });
@@ -132,6 +138,46 @@ test("scrolling back up widens the frame again", async ({ page }) => {
   await placeFigure(page, ARRIVING);
   await expect.poll(() => widthNow(page)).toBe(full);
   await expect(breakpoint(page)).toHaveText("full");
+});
+
+test("on a page opened part-way through the section the frame waits for a scroll, then eases in", async ({
+  page,
+}) => {
+  await page.setViewportSize(WIDE);
+  // The section is already mid-way when the link loads, as on a reload or a back navigation.
+  await openFrame(page);
+  await placeFigure(page, MIDWAY);
+  await page.reload();
+  await expect(slider(page)).toBeVisible();
+  await expect(hint(page)).toHaveText(FOLLOW_HINT);
+  await page.waitForLoadState("networkidle");
+  const full = await fullWidth(page);
+  expect(await widthNow(page), "the frame does not move on its own").toBe(full);
+
+  await page.mouse.move(WIDE.width / 2, WIDE.height / 2);
+  await page.mouse.wheel(0, 10);
+  await expect.poll(() => widthNow(page)).toBeLessThan(full);
+  const target = await widthNow(page);
+  // Still on its way: the first step eases with the frame's transition instead of snapping.
+  expect(await drawnWidth(page)).toBeGreaterThan(target + 2 + 40);
+  await frameAtRest(page);
+});
+
+test("content above that changes height does not throw the width off", async ({ page }) => {
+  await page.setViewportSize(WIDE);
+  await openFollowing(page);
+  await placeFigure(page, MIDWAY);
+  await expect.poll(() => widthNow(page)).toBeLessThan(await fullWidth(page));
+  const midway = await widthNow(page);
+
+  // An island above hydrating to a taller box, after the link measured where the figure is.
+  await section(page).evaluate((element) => {
+    const taller = document.createElement("div");
+    taller.style.height = "60px";
+    element.before(taller);
+  });
+  await placeFigure(page, MIDWAY);
+  await expect.poll(() => widthNow(page)).toBe(midway);
 });
 
 for (const viewport of [WIDE, { width: 1024, height: 700 }]) {
@@ -164,6 +210,7 @@ test("after a drag on the handle the scroll no longer changes the width", async 
   await placeFigure(page, MIDWAY);
   await expect.poll(() => widthNow(page)).toBeLessThan(await fullWidth(page));
   const before = await widthNow(page);
+  await frameAtRest(page);
 
   const box = await slider(page).boundingBox();
   if (!box) throw new Error("The resize handle has no box: it is not rendered visibly.");
@@ -187,6 +234,7 @@ test("a click on the handle that does not move it leaves the scroll in charge", 
   await openFollowing(page);
   await placeFigure(page, MIDWAY);
   await expect.poll(() => widthNow(page)).toBeLessThan(await fullWidth(page));
+  await frameAtRest(page);
 
   const box = await slider(page).boundingBox();
   if (!box) throw new Error("The resize handle has no box: it is not rendered visibly.");
