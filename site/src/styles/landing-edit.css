@@ -41,27 +41,6 @@
     outline-offset: 2px;
   }
 
-  /* One static drawing per stage width range (static-layout.ts), each drawn at its range's narrowest stage. */
-  .edit-static-set {
-    @apply hidden;
-  }
-
-  .edit-static-set[data-edit-static="phone"] {
-    @apply max-sm:contents;
-  }
-
-  .edit-static-set[data-edit-static="tablet"] {
-    @apply sm:max-lg:contents;
-  }
-
-  .edit-static-set[data-edit-static="lg"] {
-    @apply lg:max-xl:contents;
-  }
-
-  .edit-static-set[data-edit-static="xl"] {
-    @apply xl:contents;
-  }
-
   .edit-live {
     @apply h-full w-full;
   }

@@ -20,7 +20,7 @@
  * time, so the page's JavaScript need not: where the plot starts in the two
  * drawings the spec column sits beside, the spec excerpt and the how-to.
  */
-import { staticSvgPair } from "../../../lib/demo/static-svg";
+import { staticSvgSet } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { EditDesk } from "./EditDesk";
@@ -29,10 +29,14 @@ import { calloutExcerpt } from "./spec-excerpt";
 import { STATIC_LAYOUTS, type StaticSize, staticPlotTop } from "./static-layout";
 import "../../../styles/landing-edit.css";
 
-const statics = (Object.keys(STATIC_LAYOUTS) as StaticSize[]).map((size) => ({
-  size,
-  svg: staticSvgPair(editSpec, { ...STATIC_LAYOUTS[size], idPrefix: `edit-${size}` }),
-}));
+const statics = staticSvgSet(
+  editSpec,
+  (Object.keys(STATIC_LAYOUTS) as StaticSize[]).map((size) => ({
+    ranges: [size],
+    ...STATIC_LAYOUTS[size],
+    idPrefix: `edit-${size}`,
+  })),
+);
 const excerpt = calloutExcerpt(editSpec);
 /** The chart is one Tab stop, and arriving on it from the keyboard selects the callout (edit-guard.ts). */
 const HOW_TO =
@@ -51,11 +55,7 @@ const staticPlotTops = {
     </SectionHead>
     <PublishedFigure class="edit-figure figure-hairline" source={editSource}>
       <EditDesk client:visible excerpt={excerpt} howTo={HOW_TO} staticPlotTops={staticPlotTops}>
-        {statics.map(({ size, svg }) => (
-          <div class="edit-static-set" data-edit-static={size}>
-            <Fragment set:html={svg} />
-          </div>
-        ))}
+        <Fragment set:html={statics} />
       </EditDesk>
     </PublishedFigure>
   </div>

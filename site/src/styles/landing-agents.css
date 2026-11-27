@@ -24,33 +24,20 @@
     @apply min-w-0 min-[1100px]:col-span-5;
   }
 
-  /* The stage keeps the shape of the static SVG on show: narrow on a phone, wide above. */
+  /* The stage keeps the shape of the static SVG on show (demo.css picks it): the narrow
+     drawing on a phone, the wide one from 640px. */
   .agent-chart-stage {
     @apply relative w-full;
     aspect-ratio: 360 / 340;
   }
 
-  .agent-chart-wide,
-  .agent-chart-narrow,
   .agent-chart-live {
     @apply absolute inset-0;
-  }
-
-  .agent-chart-wide {
-    @apply hidden;
   }
 
   @media (width >= 40rem) {
     .agent-chart-stage {
       aspect-ratio: 720 / 420;
-    }
-
-    .agent-chart-wide {
-      @apply block;
-    }
-
-    .agent-chart-narrow {
-      @apply hidden;
     }
   }
 

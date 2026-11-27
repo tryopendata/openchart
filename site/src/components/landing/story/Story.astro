@@ -14,7 +14,7 @@
  */
 import { deepMergeSpec } from "@opendata-ai/openchart-core";
 import { storyBaseSpec, storySource, storySteps } from "../../../landing/story";
-import { staticSvgPair } from "../../../lib/demo/static-svg";
+import { staticSvgSet } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { ChartStoryScroll } from "./ChartStoryScroll";
@@ -27,9 +27,11 @@ const finished = storySteps.reduce(
 );
 const changes = storySteps.map((step) => step.change);
 const notes = storySteps.map((_, index) => describeChange(storyBaseSpec, changes, index));
-const statics = staticSvgPair(finished, { width: 840, height: 600, idPrefix: "story" });
 // A phone reader gets a still laid out for the phone stage, not the wide one scaled down.
-const phoneStatics = staticSvgPair(finished, { width: 360, height: 440, idPrefix: "story-phone" });
+const statics = staticSvgSet(finished, [
+  { ranges: ["phone"], width: 360, height: 440, idPrefix: "story-phone" },
+  { ranges: ["tablet", "lg", "xl"], width: 840, height: 600, idPrefix: "story" },
+]);
 ---
 
 <section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">
@@ -45,12 +47,7 @@ const phoneStatics = staticSvgPair(finished, { width: 360, height: 440, idPrefix
       note="Returns are rebased to 1 January 2022 and include reinvested dividends."
     >
       <ChartStoryScroll client:visible spec={storyBaseSpec} steps={storySteps} notes={notes}>
-        <div class="demo-static-set" data-static-size="wide">
-          <Fragment set:html={statics} />
-        </div>
-        <div class="demo-static-set" data-static-size="phone">
-          <Fragment set:html={phoneStatics} />
-        </div>
+        <Fragment set:html={statics} />
       </ChartStoryScroll>
     </PublishedFigure>
   </div>

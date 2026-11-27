@@ -13,7 +13,7 @@
  */
 import { wealthHealthSource } from "../../../demos/correlation/wealth-health-history";
 import { landingPlayback, landingPlaybackSpec } from "../../../demos/landing/playback";
-import { staticSvgPair } from "../../../lib/demo/static-svg";
+import { staticSvgPair, staticSvgSet } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { MotionReplay } from "./MotionReplay";
@@ -29,19 +29,29 @@ const stage = { wide: landingPlayback.height ?? 520, phone: landingPlayback.phon
 // whole run, with its labels, trails and year. Each still is laid out at the
 // narrowest container of its range, so its type never renders smaller than the
 // live chart's.
-const stills = [
-  { size: "phone", width: 350, height: stage.phone - CONTROLS_STRIP },
-  { size: "medium", width: 592, height: stage.wide - CONTROLS_STRIP },
-  { size: "wide", width: 960, height: stage.wide - CONTROLS_STRIP },
-].map((still) => ({
-  size: still.size,
-  html: staticSvgPair(landingPlaybackSpec, {
-    width: still.width,
-    height: still.height,
-    idPrefix: `playback-${still.size}`,
+const stills = staticSvgSet(landingPlaybackSpec, [
+  {
+    ranges: ["phone"],
+    width: 350,
+    height: stage.phone - CONTROLS_STRIP,
+    idPrefix: "playback-phone",
     precision: 0,
-  }),
-}));
+  },
+  {
+    ranges: ["tablet"],
+    width: 592,
+    height: stage.wide - CONTROLS_STRIP,
+    idPrefix: "playback-medium",
+    precision: 0,
+  },
+  {
+    ranges: ["lg", "xl"],
+    width: 960,
+    height: stage.wide - CONTROLS_STRIP,
+    idPrefix: "playback-wide",
+    precision: 0,
+  },
+]);
 const seconds = (landingPlaybackSpec.playback?.duration ?? 0) / 1000;
 const opening = payrollSpec(FIRST_MONTHS, "fluid");
 const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "motion" });
@@ -60,11 +70,7 @@ const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "mot
       >
         <PlaybackFigure client:visible>
           <div class="motion-playback-still">
-            {stills.map((still) => (
-              <div class="motion-playback-size" data-size={still.size}>
-                <Fragment set:html={still.html} />
-              </div>
-            ))}
+            <Fragment set:html={stills} />
           </div>
         </PlaybackFigure>
       </div>
