@@ -55,11 +55,58 @@ const RESIDUE_ENTRIES = [
   ['vue', `${SCOPE}vue`],
 ];
 
+/** Declarations that belong to charts; no other mount type may carry them. */
+const CHART_ONLY = ['barRenderer', 'lineRenderer', 'pieRenderer', 'validateChartSpec', 'expandChartSugar'];
+/** Declarations that belong to one non-chart type each. */
+const OTHER_TYPES = {
+  sankey: ['compileSankey', 'validateSankeySpec'],
+  table: ['compileTableLayout', 'validateTableSpec'],
+  graph: ['compileGraph', 'validateGraphSpec'],
+  tilemap: ['compileTileMap', 'validateTileMapSpec'],
+  map: ['compileGeoMap', 'validateGeoMapSpec'],
+  barlist: ['compileBarList', 'validateBarListSpec'],
+};
+const allBut = (...types) =>
+  Object.entries(OTHER_TYPES).flatMap(([type, ids]) => (types.includes(type) ? [] : ids));
+
+const kB = (n) => n * 1024;
+const vanilla = (name, maxBytes, forbid) => ({
+  pkg: 'vanilla',
+  specifier: `${SCOPE}vanilla`,
+  name,
+  maxBytes,
+  forbid,
+});
+const wrapper = (pkg, name, maxBytes, forbid) => ({
+  pkg,
+  specifier: `${SCOPE}${pkg}`,
+  name,
+  maxBytes,
+  forbid,
+});
+
 /**
- * Single-import budgets, in minified bytes.
- * `forbid` lists identifiers that must not survive in that bundle.
+ * Single-import budgets, in minified bytes: the measured size when the budget
+ * was set plus about 10%. `forbid` lists declarations that must not survive in
+ * that bundle. Raise a budget on purpose, in the change that needs it.
+ *
+ * Chart bundles forbid nothing: `mark` is runtime data, so a chart needs every
+ * chart renderer, and its validator is the generic one that knows every type.
  */
-const IMPORT_BUDGETS = [];
+const IMPORT_BUDGETS = [
+  vanilla('createSankey', kB(193), [...CHART_ONLY, ...allBut('sankey')]),
+  vanilla('createTable', kB(174), [...CHART_ONLY, ...allBut('table')]),
+  vanilla('createBarList', kB(187), [...CHART_ONLY, ...allBut('barlist')]),
+  vanilla('createGraph', kB(231), [...CHART_ONLY, ...allBut('graph')]),
+  vanilla('createTileMap', kB(250), [...CHART_ONLY, ...allBut('tilemap')]),
+  vanilla('createGeoMap', kB(440), [...CHART_ONLY, ...allBut('map')]),
+  vanilla('createChart', kB(866), []),
+  wrapper('react', 'Sankey', kB(196), [...CHART_ONLY, ...allBut('sankey')]),
+  wrapper('react', 'DataTable', kB(177), [...CHART_ONLY, ...allBut('table')]),
+  wrapper('react', 'Chart', kB(906), []),
+  wrapper('vue', 'Sankey', kB(196), [...CHART_ONLY, ...allBut('sankey')]),
+  wrapper('vue', 'Chart', kB(906), []),
+];
 
 function packageOf(inputPath) {
   const own = inputPath.match(/packages\/(\w+)\/dist\//);
