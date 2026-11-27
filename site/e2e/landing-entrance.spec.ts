@@ -70,9 +70,9 @@ async function ruleDrawn(page: Page, id: string): Promise<number> {
   return page.locator(`#${id} .landing-rule`).evaluate((rule) => {
     const clip = getComputedStyle(rule).clipPath;
     if (clip === "none") return 1;
-    const right = /^inset\(\S+ (\S+)%/.exec(clip);
-    if (!right) throw new Error(`Unexpected clip-path on the rule: ${clip}`);
-    return 1 - Number.parseFloat(right[1]) / 100;
+    const right = /^inset\(\S+ (\S+)%/.exec(clip)?.[1];
+    if (right === undefined) throw new Error(`Unexpected clip-path on the rule: ${clip}`);
+    return 1 - Number.parseFloat(right) / 100;
   });
 }
 
