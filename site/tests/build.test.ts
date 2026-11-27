@@ -862,7 +862,10 @@ describe("the landing page", () => {
   it("keeps the playback rows out of the HTML: the motion section loads them when seen", () => {
     const motion = home().querySelector("#motion");
     expect(motion?.querySelector("[data-playback-figure] svg")).not.toBeNull();
-    expect((motion?.outerHTML ?? "").length).toBeLessThan(MAX_MOTION_SECTION_BYTES);
+    const html = motion?.outerHTML ?? "";
+    // A row's field names would be here if the spec had been passed as a prop.
+    expect(html).not.toMatch(/(?:"|&quot;)gdp(?:"|&quot;)/);
+    expect(html.length).toBeLessThan(MAX_MOTION_SECTION_BYTES);
   });
 
   it("publishes a chart with its static SVG, alt text, data table and export buttons in the HTML", () => {
@@ -1041,11 +1044,12 @@ function contrastRatio(a: string, b: string): number {
 const MAX_LANDING_PAGE_BYTES = 1_000_000;
 
 /**
- * The motion section's HTML cap. Its playback chart has about 165 KB of rows,
- * which its island imports when the section is seen; only a poster SVG and the
- * payroll bench are in the page.
+ * The motion section's HTML cap. Its playback chart has 868 rows of data,
+ * which its island imports when the section is seen; the page holds stills of
+ * the last period at three widths in both themes (about 170 KB) and the
+ * payroll bench.
  */
-const MAX_MOTION_SECTION_BYTES = 150_000;
+const MAX_MOTION_SECTION_BYTES = 220_000;
 
 /**
  * A page's own JavaScript and CSS before lazily imported chunks, each file

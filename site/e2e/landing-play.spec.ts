@@ -68,27 +68,38 @@ test("with reduced motion the playback does not start by itself and the controls
   await expect(readout(page)).not.toHaveText(before ?? "");
 });
 
-test("the poster and live chart use the same axis ticks", async ({ page }, testInfo) => {
-  const viewport =
-    testInfo.project.name === "mobile" ? { width: 390, height: 844 } : { width: 1440, height: 900 };
-  await page.setViewportSize(viewport);
+// The widths each still is laid out for: there its axes are the live chart's.
+const STILL_WIDTHS = [390, 640, 1024];
+
+test("the still and the live chart use the same axis ticks", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "sets its own viewports");
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/");
-  const ticks = (kind: string) => figure(page).locator(`svg${kind}:visible .oc-axis-tick`);
-  const posterTicks = await ticks(".demo-static").allTextContents();
-  expect(posterTicks.length).toBeGreaterThan(0);
-
-  await figure(page).scrollIntoViewIfNeeded();
-  await expect(toggle(page)).toHaveAccessibleName("Play");
-  await expect(ticks(":not(.demo-static)")).toHaveText(posterTicks);
-});
-
-test("the poster text stays legible between phone and wide desktop widths", async ({ page }) => {
-  for (const width of [640, 768, 1024]) {
+  for (const width of STILL_WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/");
-    const tick = figure(page).locator("svg.demo-static:visible text.oc-axis-tick").first();
+    const ticks = (kind: string) => figure(page).locator(`svg${kind}:visible .oc-axis-tick`);
+    const stillTicks = await ticks(".demo-static").allTextContents();
+    expect(stillTicks.length, `ticks at ${width}px`).toBeGreaterThan(0);
+    await figure(page).scrollIntoViewIfNeeded();
+    await expect(toggle(page)).toHaveAccessibleName("Play");
+    await expect(ticks(":not(.demo-static)"), `ticks at ${width}px`).toHaveText(stillTicks);
+  }
+});
+
+test("the still names its year and countries and never renders smaller than the live chart", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "sets its own viewports");
+  await page.route("**/*.js", (route) => route.abort());
+  for (const width of [390, 640, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const still = figure(page).locator("svg.demo-static:visible");
+    await expect(still).toHaveCount(1);
+    await expect(still).toContainText("2022");
+    await expect(still).toContainText("China");
+    const tick = still.locator("text.oc-axis-tick").first();
     const scale = await tick.evaluate((element: SVGTextElement) => element.getScreenCTM()?.a ?? 0);
-    expect(scale, `poster text scale at ${width}px`).toBeGreaterThanOrEqual(0.75);
+    expect(scale, `still text scale at ${width}px`).toBeGreaterThanOrEqual(0.95);
   }
 });

@@ -1,8 +1,8 @@
 ---
 /**
  * Motion opens on a bubble playback of wealth and health from 1960 to 2022.
- * PlaybackFigure shows the last period as a static SVG until it loads the demo
- * on sight. Below it, MotionReplay lets readers replay the payroll chart's
+ * PlaybackFigure shows the last period as static SVG, at three widths, until it
+ * loads the demo on sight. Below it, MotionReplay lets readers replay the payroll chart's
  * entrance, add a month and change the animation style. Both islands hydrate
  * when visible.
  *
@@ -11,33 +11,38 @@
  * figure holds `[data-playback-figure]` and the second holds the payroll bench.
  * Each figure has a `<figcaption>` with a "Source: …" line.
  */
-import { isChartSpec } from "@opendata-ai/openchart-core";
 import { wealthHealthSource } from "../../../demos/correlation/wealth-health-history";
-import { landingPlayback } from "../../../demos/landing/playback";
+import { landingPlayback, landingPlaybackSpec } from "../../../demos/landing/playback";
 import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { MotionReplay } from "./MotionReplay";
 import { PlaybackFigure } from "./PlaybackFigure";
 import { FIRST_MONTHS, motionSource, payrollSpec } from "./motion-spec";
-import { playbackPosterSpec } from "./playback-poster";
 import "../../../styles/landing-motion.css";
 
-if (!isChartSpec(landingPlayback.spec))
-  throw new Error("The landing playback demo must be a chart.");
-const poster = playbackPosterSpec(landingPlayback.spec);
-// Each poster leaves 44px for the playback controls and fits its range of widths.
-const playbackWide = staticSvgPair(poster, { width: 1376, height: 476, idPrefix: "playback-wide" });
-const playbackMedium = staticSvgPair(poster, {
-  width: 780,
-  height: 476,
-  idPrefix: "playback-medium",
-});
-const playbackPhone = staticSvgPair(poster, {
-  width: 350,
-  height: 516,
-  idPrefix: "playback-phone",
-});
+// The library's playback controls take a strip under the plot
+// (PLAYBACK_CONTROLS_HEIGHT in packages/vanilla/src/playback/controls.ts).
+const CONTROLS_STRIP = 44;
+const stage = { wide: landingPlayback.height ?? 520, phone: landingPlayback.phoneHeight ?? 560 };
+// The static render draws a playback at its last period, on the scales of the
+// whole run, with its labels, trails and year. Each still is laid out at the
+// narrowest container of its range, so its type never renders smaller than the
+// live chart's.
+const stills = [
+  { size: "phone", width: 350, height: stage.phone - CONTROLS_STRIP },
+  { size: "medium", width: 592, height: stage.wide - CONTROLS_STRIP },
+  { size: "wide", width: 960, height: stage.wide - CONTROLS_STRIP },
+].map((still) => ({
+  size: still.size,
+  html: staticSvgPair(landingPlaybackSpec, {
+    width: still.width,
+    height: still.height,
+    idPrefix: `playback-${still.size}`,
+    precision: 0,
+  }),
+}));
+const seconds = (landingPlaybackSpec.playback?.duration ?? 0) / 1000;
 const opening = payrollSpec(FIRST_MONTHS, "fluid");
 const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "motion" });
 ---
@@ -45,26 +50,30 @@ const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "mot
 <section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <SectionHead id="motion">
-      Sixty years of wealth and health, played in sixteen seconds. Pause it, drag the scrubber to
+      Sixty years of wealth and health, played in {seconds} seconds. Pause it, drag the scrubber to
       any year, or let it run. Under it, a month of hiring figures arrives and the bars make room.
     </SectionHead>
     <PublishedFigure class="figure-hairline" source={wealthHealthSource}>
-      <PlaybackFigure client:visible>
-        <div class="motion-playback-poster">
-          <div class="hidden xl:contents">
-            <Fragment set:html={playbackWide} />
+      <div
+        class="motion-playback"
+        style={`--playback-height: ${stage.wide}px; --playback-phone-height: ${stage.phone}px; --playback-controls: ${CONTROLS_STRIP}px`}
+      >
+        <PlaybackFigure client:visible>
+          <div class="motion-playback-still">
+            {stills.map((still) => (
+              <div class="motion-playback-size" data-size={still.size}>
+                <Fragment set:html={still.html} />
+              </div>
+            ))}
           </div>
-          <div class="hidden sm:max-xl:contents">
-            <Fragment set:html={playbackMedium} />
-          </div>
-          <div class="contents sm:hidden">
-            <Fragment set:html={playbackPhone} />
-          </div>
-        </div>
-      </PlaybackFigure>
+        </PlaybackFigure>
+      </div>
     </PublishedFigure>
-    <h3 class="pub-figure-title">Add a month and the bars make room</h3>
-    <PublishedFigure class="figure-hairline" source={motionSource}>
+    <PublishedFigure
+      class="figure-hairline"
+      source={motionSource}
+      title="Add a month and the bars make room"
+    >
       <MotionReplay client:visible>
         <Fragment set:html={statics} />
       </MotionReplay>

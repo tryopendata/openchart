@@ -6,11 +6,11 @@
  */
 import type { ChartSpec } from "@opendata-ai/openchart-core";
 import { type ReactNode, useEffect, useState } from "react";
-import { LiveChart } from "../../shared/LiveChart";
+import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
 
-/** The build-time poster the figure shows while playback loads. */
+/** The build-time still the figure shows while playback loads. */
 export type PlaybackFigureProps = {
-  /** The poster: static SVGs of the last period, in both themes. */
+  /** The still: static SVGs of the last period, in both themes. */
   children?: ReactNode;
 };
 
@@ -20,13 +20,10 @@ export function PlaybackFigure({ children }: PlaybackFigureProps) {
 
   useEffect(() => {
     let active = true;
-    import("../../../demos/landing/playback")
-      .then(({ landingPlayback }) => {
-        const { spec } = landingPlayback;
-        if (!("mark" in spec) || "type" in spec) {
-          throw new Error("The landing playback demo must be a chart.");
-        }
-        if (active) setSpec(spec);
+    // The rows and the library are separate chunks; fetch them together.
+    Promise.all([import("../../../demos/landing/playback"), loadChartLibrary()])
+      .then(([{ landingPlaybackSpec }]) => {
+        if (active) setSpec(landingPlaybackSpec);
       })
       .catch((error: unknown) => {
         if (active) {

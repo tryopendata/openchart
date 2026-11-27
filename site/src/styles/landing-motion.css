@@ -6,13 +6,44 @@
 @reference "./global.css";
 
 @layer components {
+  /* Motion.astro sets the heights from the demo, so the still, the live chart
+     and this box cannot disagree. */
   [data-playback-figure] {
-    @apply relative h-[560px] sm:h-[520px];
+    @apply relative;
+    height: var(--playback-phone-height);
+
+    @variant sm {
+      height: var(--playback-height);
+    }
   }
 
-  /* Keep the same space below the poster that the live controls take. */
-  .motion-playback-poster {
-    @apply absolute inset-x-0 top-0 bottom-[44px];
+  /* Keep the same space below the still that the live controls take. */
+  .motion-playback-still {
+    @apply absolute inset-x-0 top-0;
+    bottom: var(--playback-controls);
+  }
+
+  /* One still per range of widths; hiding the wrapper hides both themes in it. */
+  .motion-playback-size {
+    display: none;
+  }
+
+  .motion-playback-size[data-size="phone"] {
+    @variant max-sm {
+      display: contents;
+    }
+  }
+
+  .motion-playback-size[data-size="medium"] {
+    @media (min-width: 640px) and (width < 1024px) {
+      display: contents;
+    }
+  }
+
+  .motion-playback-size[data-size="wide"] {
+    @variant lg {
+      display: contents;
+    }
   }
 
   /* The controls read as a toolbar above the graphic: plain words, no code. */
