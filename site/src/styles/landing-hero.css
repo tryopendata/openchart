@@ -1,6 +1,7 @@
 /*
  * Styles for the hero desk (#desk). From 1100px the text takes 4 of the 12
- * columns and the figure 8; below that the figure follows the text. Inside the
+ * columns and the figure 8. Below 1100px the short lede and tighter spacing
+ * bring the chart up, and the install command appears below the figure. Inside the
  * figure the chart takes the full width, with four editorial form tabs and a
  * sharp fuel spotlight strip above it and the spec closed in a disclosure under
  * it. The page stays ink on paper: the accent marks only the active editorial
@@ -37,6 +38,10 @@
 
     .hero-figure {
       @apply col-span-8;
+    }
+
+    .hero-lede-short {
+      display: none;
     }
   }
 
@@ -93,6 +98,30 @@
 
   .hero-install {
     @apply mt-9;
+  }
+
+  @media (width < 1100px) {
+    .hero-grid {
+      @apply gap-y-4;
+    }
+
+    .hero-text {
+      display: contents;
+    }
+
+    .hero-lede-full {
+      display: none;
+    }
+
+    .hero .hero-lede,
+    .hero-links {
+      @apply mt-0;
+    }
+
+    .hero-install {
+      @apply mt-0;
+      order: 1;
+    }
   }
 
   .hero-install .install-command-line {
@@ -193,6 +222,43 @@
   @media (min-width: 1100px) {
     .hero-chart {
       height: 480px;
+    }
+  }
+
+  /* On phones, keep the tabs and fuel label beside their peers to give the chart more room. */
+  @media (width < 640px) {
+    .landing-section.hero {
+      @apply pt-6;
+    }
+
+    .hero-figure .pub-figure-title {
+      @apply mt-2;
+    }
+
+    .hero-figure .pub-figure-body {
+      @apply mt-3;
+    }
+
+    .hero-forms {
+      @apply gap-x-3;
+    }
+
+    .hero-spotlight-bar {
+      @apply mt-2 flex-nowrap items-baseline;
+    }
+
+    /* One row of fuels that scrolls sideways, so the plot starts a row higher. */
+    .hero-spotlight {
+      @apply min-w-0 flex-nowrap overflow-x-auto;
+      scrollbar-width: none;
+    }
+
+    .hero-spotlight-item {
+      @apply shrink-0;
+    }
+
+    .hero-chart {
+      @apply mt-2;
     }
   }
 
