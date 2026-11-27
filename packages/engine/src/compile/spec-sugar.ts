@@ -947,6 +947,25 @@ function expandValueFormatSugar(
   };
 }
 
+function checkSugarInput(spec: Record<string, unknown>, checkMarkOptions: boolean): void {
+  const removed = collectRemovedSpecErrors(spec);
+  if (removed.length)
+    throw new Error(`Invalid spec:\n${removed.map((error) => error.message).join('\n')}`);
+  if (checkMarkOptions) assertMarkOptions(spec);
+}
+
+/** Apply the pre-validation sugar shared by typed specs. */
+export function expandTypedSpecSugar(
+  spec: Record<string, unknown>,
+  warnings: string[] = [],
+  checkMarkOptions = true,
+): Record<string, unknown> {
+  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return spec;
+  if (spec.type === 'race') return spec;
+  checkSugarInput(spec, checkMarkOptions);
+  return expandValueFormatSugar(spec, warnings);
+}
+
 /**
  * Expand VL-idiom and encoding-level sugar on a raw chart or layer spec.
  * Non-chart specs (tables, graphs, sankey, tilemap, barlist) get valueFormat
@@ -960,10 +979,10 @@ export function expandSpecSugar(
 ): Record<string, unknown> {
   if (!spec || typeof spec !== 'object' || Array.isArray(spec)) return spec;
   if (spec.type === 'race') return spec;
-  const removed = collectRemovedSpecErrors(spec);
-  if (removed.length)
-    throw new Error(`Invalid spec:\n${removed.map((error) => error.message).join('\n')}`);
-  if (checkMarkOptions) assertMarkOptions(spec);
+  if (typeof spec.type === 'string' && !('mark' in spec)) {
+    return expandTypedSpecSugar(spec, warnings, checkMarkOptions);
+  }
+  checkSugarInput(spec, checkMarkOptions);
   if (Array.isArray(spec.layer) && typeof spec.type !== 'string') {
     return expandLayerSugar(spec, warnings);
   }

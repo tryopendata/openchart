@@ -1,10 +1,12 @@
 import { type CompileWarning, resolveTheme } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings, type WarnSink } from '../compile/spec-sugar';
-import { compile } from '../compiler/index';
+import { compileKind } from '../compiler/kind';
+import { validateRaceSpec } from '../compiler/validation/race';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolvePlayback } from '../playback/options';
 import { assignRaceColors, resolveRaceColors } from './colors';
 import { buildRaceMatrix } from './matrix';
+import { normalizeRaceSpec } from './normalize';
 import { formatPeriodLabels } from './period-labels';
 import { createRaceTimeline } from './timeline';
 import type { NormalizedRaceSpec, RaceModel, ResolvedRaceOptions } from './types';
@@ -140,9 +142,15 @@ function prepareRanking({ data, encoding, race, labels }: NormalizedRaceSpec, wa
   return { matrix, timeline, periodLabels, formatValue };
 }
 
+const RACE_KIND = {
+  type: 'race',
+  validate: validateRaceSpec,
+  normalize: normalizeRaceSpec,
+};
+
 /**
  * Validate and prepare the size-independent race model.
- * @throws {Error} Aggregated spec validation errors or a valid non-race spec.
+ * @throws {Error} Aggregated spec validation errors or a non-race spec.
  * @throws {RaceDataError} Duplicate rows, too few periods, or no finite values.
  * @throws {RangeError} The step multiplied by the period intervals overflows.
  */
@@ -150,12 +158,11 @@ export function prepareRace(
   spec: unknown,
   options: { onWarn?: (w: CompileWarning) => void; previousModel?: RaceModel },
 ): RaceModel {
-  const { spec: normalized, warnings } = compile(spec);
-  if (!('type' in normalized) || normalized.type !== 'race') {
-    throw new Error(
-      'prepareRace received a non-race spec. Set type to "race" or use the matching compiler.',
-    );
-  }
+  const { spec: normalized, warnings } = compileKind(
+    spec,
+    RACE_KIND,
+    'prepareRace received a non-race spec. Set type to "race" or use the matching compiler.',
+  );
 
   const warn = createRaceWarn(warnings, options.onWarn);
   const { encoding, race } = normalized;

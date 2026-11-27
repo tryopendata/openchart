@@ -11,8 +11,8 @@ import type {
   ResolvedTheme,
   TextMarkLayout,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
-import { compile as compileSpec } from '../compiler/index';
+import { emitSpecWarnings, expandTypedSpecSugar } from '../compile/spec-sugar';
+import { assertKindType, compileKind, type SpecKind } from '../compiler/kind';
 import type { NormalizedSpec } from '../compiler/types';
 import { mapPeriodPlacement } from './map-period-placement';
 import type { MapSeries, MapSeriesOptions } from './map-series';
@@ -57,15 +57,18 @@ export function collectWarnings(options: CompileOptions): WarningCollector {
  *
  * @throws The validation error compile throws for an invalid spec.
  */
-export function prepareMapSpec<Normalized extends NormalizedSpec>(
+export function prepareMapSpec<Authored, Normalized extends NormalizedSpec>(
   spec: unknown,
+  kind: SpecKind<Authored, Normalized>,
+  wrongTypeMessage: string,
 ): PreparedMapSpec<Normalized> {
-  const expanded = expandSpecSugar(spec as Record<string, unknown>, []);
+  assertKindType(spec, kind.type, wrongTypeMessage);
+  const expanded = expandTypedSpecSugar(spec);
   // Frame compiles emit the normalize warnings; this pass only needs the normalized spec.
-  const { spec: normalized } = compileSpec(expanded);
+  const { spec: normalized } = compileKind(expanded, kind, wrongTypeMessage);
   return {
     expanded,
-    normalized: normalized as Normalized,
+    normalized,
     block: expanded.playback as PlaybackConfig | undefined,
   };
 }

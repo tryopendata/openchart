@@ -32,8 +32,10 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { emitSpecWarnings } from '../compile/spec-sugar';
-import { compile as compileSpec } from '../compiler/index';
+import { compileKind } from '../compiler/kind';
+import { normalizeGraphSpec } from '../compiler/normalize';
 import type { NormalizedGraphSpec } from '../compiler/types';
+import { validateGraphSpec } from '../compiler/validation/graph';
 import { resolveGraphAnimation } from './animation';
 import { applyCommunityColors, assignCommunities, buildCommunityColorMap } from './community';
 import { resolveCategoricalDomain, resolveEdgeVisuals, resolveNodeVisuals } from './encoding';
@@ -297,6 +299,12 @@ export function buildEdgeTooltip(edge: CompiledGraphEdge): TooltipContent {
 // Public API
 // ---------------------------------------------------------------------------
 
+export const GRAPH_KIND = {
+  type: 'graph',
+  validate: validateGraphSpec,
+  normalize: normalizeGraphSpec,
+};
+
 /**
  * Compile a graph spec into a GraphCompilation.
  *
@@ -321,16 +329,12 @@ export function buildEdgeTooltip(edge: CompiledGraphEdge): TooltipContent {
  */
 export function compileGraph(spec: unknown, options: CompileOptions): GraphCompilation {
   // 1. Validate + normalize
-  const { spec: normalized, warnings } = compileSpec(spec);
+  const { spec: graphSpec, warnings } = compileKind(
+    spec,
+    GRAPH_KIND,
+    'compileGraph received a non-graph spec. Use compileChart or compileTable instead.',
+  );
   emitSpecWarnings(warnings, options.onWarn);
-
-  if (!('type' in normalized) || normalized.type !== 'graph') {
-    throw new Error(
-      'compileGraph received a non-graph spec. Use compileChart or compileTable instead.',
-    );
-  }
-
-  const graphSpec = normalized as NormalizedGraphSpec;
 
   const numDimensions = resolveNumDimensions(graphSpec, options.onWarn);
 

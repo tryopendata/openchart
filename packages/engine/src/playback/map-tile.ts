@@ -3,6 +3,7 @@
  * compile's value scale over every period, and the tile paint each frame reads back.
  */
 import type { EncodingChannel, TileMapTileMark, TooltipContent } from '@opendata-ai/openchart-core';
+import { TILE_MAP_KIND, TILE_MAP_WRONG_TYPE } from '../tilemap/compile-tilemap';
 import type { NormalizedTileMapSpec } from '../tilemap/types';
 import { type PreparedMapSpec, prepareMapSpec, seriesTime } from './map-run';
 import {
@@ -32,7 +33,7 @@ export interface TilePlan {
  * @throws {Error} When the spec has no time channel; callers check first.
  */
 export function planTilePlayback(spec: unknown, warn: (message: string) => void): TilePlan {
-  const prepared = prepareMapSpec<NormalizedTileMapSpec>(spec);
+  const prepared = prepareMapSpec(spec, TILE_MAP_KIND, TILE_MAP_WRONG_TYPE);
   const { encoding, data } = prepared.normalized;
   const time = encoding.time;
   if (!time) {

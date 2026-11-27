@@ -102,27 +102,32 @@ function validateAnnotationLayout(
     }
 }
 
-function validateSpecShape(spec: unknown): ValidationResult {
-  const errors: ValidationError[] = [];
+export function isSpecObject(spec: unknown): spec is Record<string, unknown> {
+  return !!spec && typeof spec === 'object' && !Array.isArray(spec);
+}
 
-  // Basic shape check
-  if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
-    return {
-      valid: false,
-      errors: [
-        {
-          message: 'Spec error: spec must be a non-null object',
-          path: '',
-          code: 'INVALID_TYPE',
-          suggestion:
-            'Pass a spec object with at least a "mark" field for charts, e.g. { mark: "line", data: [...], encoding: {...} }',
-        },
-      ],
-      normalized: null,
-    };
-  }
+export function nonObjectSpecError(): ValidationError {
+  return {
+    message: 'Spec error: spec must be a non-null object',
+    path: '',
+    code: 'INVALID_TYPE',
+    suggestion:
+      'Pass a spec object with at least a "mark" field for charts, e.g. { mark: "line", data: [...], encoding: {...} }',
+  };
+}
 
-  const obj = spec as Record<string, unknown>;
+/** One line per error, prefixed with its JSON Pointer unless the message already names it. */
+export function invalidSpecError(errors: readonly ValidationError[]): Error {
+  const details = errors
+    .map((e) => (e.path && !e.message.includes(e.path) ? `${e.path}: ${e.message}` : e.message))
+    .join('\n');
+  return new Error(`Invalid spec:\n${details}`);
+}
+
+export function validateCommonSpecFields(
+  obj: Record<string, unknown>,
+  errors: ValidationError[],
+): void {
   errors.push(...collectRemovedSpecErrors(obj));
   validateAnnotationLayout(obj, errors);
   validateFieldMetadata(obj, errors);
@@ -156,6 +161,29 @@ function validateSpecShape(spec: unknown): ValidationResult {
       }
     }
   }
+}
+
+export function validateSpecAnimation(
+  obj: Record<string, unknown>,
+  errors: ValidationError[],
+  isGraph: boolean,
+): void {
+  // Graph's animation spec has camera/hover behaviors and no maxMarks or presets.
+  if (isGraph) {
+    validateGraphAnimation(obj, errors);
+  } else {
+    validateAnimation(obj, errors);
+  }
+}
+
+function validateSpecShape(spec: unknown): ValidationResult {
+  const obj = spec;
+  if (!isSpecObject(obj)) {
+    return { valid: false, errors: [nonObjectSpecError()], normalized: null };
+  }
+
+  const errors: ValidationError[] = [];
+  validateCommonSpecFields(obj, errors);
 
   // Determine spec type via structural discrimination:
   // - Layer specs have a 'layer' array
@@ -293,14 +321,7 @@ function validateSpecShape(spec: unknown): ValidationResult {
     validateRaceSpec(obj, errors);
   }
 
-  // animation is shared by every spec type, so it validates outside the
-  // per-spec-type dispatch. Graph carries the narrower GraphAnimationSpec
-  // (no maxMarks or presets; camera/hover behaviors), so it has its own check.
-  if (isGraph) {
-    validateGraphAnimation(obj, errors);
-  } else {
-    validateAnimation(obj, errors);
-  }
+  validateSpecAnimation(obj, errors, isGraph);
 
   if (errors.length > 0) {
     return { valid: false, errors, normalized: null };
@@ -313,11 +334,14 @@ function validateSpecShape(spec: unknown): ValidationResult {
   };
 }
 
+export function collectSpecMarkOptionErrors(spec: unknown): ValidationError[] {
+  return isRaceSpec(spec) ? [] : collectMarkOptionErrors(spec);
+}
+
 /** Validate authored mark contracts before any sugar transformation. */
 export function validateSpec(spec: unknown): ValidationResult {
   const result = validateSpecShape(spec);
-  if (isRaceSpec(spec)) return result;
-  const errors = collectMarkOptionErrors(spec);
+  const errors = collectSpecMarkOptionErrors(spec);
   return errors.length
     ? { ...result, valid: false, errors: [...result.errors, ...errors], normalized: null }
     : result;

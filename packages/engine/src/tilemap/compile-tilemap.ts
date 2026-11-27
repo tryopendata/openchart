@@ -46,9 +46,11 @@ import {
 } from '@opendata-ai/openchart-core';
 import { interpolateRgb } from 'd3-interpolate';
 import { scaleLinear } from 'd3-scale';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandTypedSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
-import { compile as compileSpec } from '../compiler/index';
+import { assertKindType, compileKind } from '../compiler/kind';
+import { normalizeTileMapSpec } from '../compiler/normalize';
+import { validateTileMapSpec } from '../compiler/validation/tilemap';
 import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
@@ -125,6 +127,15 @@ function growContentHeight(
 // Public API
 // ---------------------------------------------------------------------------
 
+export const TILE_MAP_KIND = {
+  type: 'tilemap',
+  validate: validateTileMapSpec,
+  normalize: normalizeTileMapSpec,
+};
+
+export const TILE_MAP_WRONG_TYPE =
+  'compileTileMap received a non-tilemap spec. Use compileChart, compileTable, compileGraph, or compileSankey instead.';
+
 /**
  * Compile a tilemap spec into a TileMapLayout.
  *
@@ -159,24 +170,18 @@ export function compileTileMapFrame(
   // valid US state codes", mixed-type coercion) the same way the chart path
   // does; without this the primary "your data did not map" diagnostic is
   // computed and then dropped.
+  assertKindType(spec, TILE_MAP_KIND.type, TILE_MAP_WRONG_TYPE);
   const sugarWarnings: string[] = [];
-  const expandedSpec =
-    spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
-      : spec;
-  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  const expandedSpec = expandTypedSpecSugar(spec, sugarWarnings);
+  const { spec: tilemapSpec, warnings } = compileKind(
+    expandedSpec,
+    TILE_MAP_KIND,
+    TILE_MAP_WRONG_TYPE,
+  );
   emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
 
-  if (!('type' in normalized) || normalized.type !== 'tilemap') {
-    throw new Error(
-      'compileTileMap received a non-tilemap spec. Use compileChart, compileTable, compileGraph, or compileSankey instead.',
-    );
-  }
-
-  const tilemapSpec = normalized as NormalizedTileMapSpec;
-
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
-  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const rawWatermark = spec.watermark;
   const watermark =
     rawWatermark !== undefined ? tilemapSpec.watermark : (options.watermark ?? true);
 

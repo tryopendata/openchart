@@ -526,7 +526,7 @@ function normalizeChartSpec(spec: ChartSpec, warnings: string[]): NormalizedChar
   };
 }
 
-function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTableSpec {
+export function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTableSpec {
   const density = spec.density ?? 'regular';
   const totalRow =
     spec.totalRow === true
@@ -555,7 +555,7 @@ function normalizeTableSpec(spec: TableSpec, _warnings: string[]): NormalizedTab
   };
 }
 
-function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedSankeySpec {
+export function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedSankeySpec {
   return {
     type: 'sankey',
     data: spec.data,
@@ -577,7 +577,7 @@ function normalizeSankeySpec(spec: SankeySpec, _warnings: string[]): NormalizedS
   };
 }
 
-function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGraphSpec {
+export function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGraphSpec {
   // Only default the layout `type`. chargeStrength/linkDistance are left unset
   // when the user omits them so the energy/settle presets in compileGraph can
   // supply the real defaults (a hardcoded chargeStrength here would mask them).
@@ -626,7 +626,7 @@ function normalizeGraphSpec(spec: GraphSpec, warnings: string[]): NormalizedGrap
   };
 }
 
-function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): NormalizedTileMapSpec {
+export function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): NormalizedTileMapSpec {
   // Convert record data to array if needed
   let data: Record<string, unknown>[] = Array.isArray(spec.data) ? spec.data : [];
 
@@ -696,7 +696,7 @@ function normalizeTileMapSpec(spec: TileMapSpec, warnings: string[]): Normalized
   };
 }
 
-function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedGeoMapSpec {
+export function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedGeoMapSpec {
   return {
     type: 'map',
     geo: {
@@ -728,7 +728,10 @@ function normalizeGeoMapSpec(spec: GeoMapSpec, _warnings: string[]): NormalizedG
   };
 }
 
-function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): NormalizedBarListSpec {
+export function normalizeBarListSpec(
+  spec: BarListSpec,
+  _warnings: string[],
+): NormalizedBarListSpec {
   return {
     type: 'barlist',
     data: spec.data,
@@ -752,16 +755,7 @@ function normalizeBarListSpec(spec: BarListSpec, _warnings: string[]): Normalize
 // Public API
 // ---------------------------------------------------------------------------
 
-/**
- * Normalize a validated VizSpec, filling in all defaults.
- *
- * @param spec - A validated VizSpec (must pass validateSpec first).
- * @param warnings - Mutable array to collect non-fatal warnings.
- * @returns A NormalizedSpec with all optionals filled.
- */
-export function normalizeSpec(spec: VizSpec, warnings: string[] = []): NormalizedSpec {
-  const authored = spec as unknown as Record<string, unknown>;
-  const annotations = authored.annotations as Annotation[] | undefined;
+export function warnAboutAnnotationIds(annotations: unknown, warnings: string[]): void {
   if (Array.isArray(annotations)) {
     const ids = annotations.map((a) => a.id).filter((id) => id !== undefined);
     // A spec with no IDs at all is the common read-only case and gets source
@@ -772,6 +766,17 @@ export function normalizeSpec(spec: VizSpec, warnings: string[] = []): Normalize
         '[openchart] Missing or duplicate annotation IDs use revision-local source indices; provide unique IDs for durable identity.',
       );
   }
+}
+
+/**
+ * Normalize a validated VizSpec, filling in all defaults.
+ *
+ * @param spec - A validated VizSpec (must pass validateSpec first).
+ * @param warnings - Mutable array to collect non-fatal warnings.
+ * @returns A NormalizedSpec with all optionals filled.
+ */
+export function normalizeSpec(spec: VizSpec, warnings: string[] = []): NormalizedSpec {
+  warnAboutAnnotationIds((spec as unknown as Record<string, unknown>).annotations, warnings);
 
   if (isRaceSpec(spec)) {
     return normalizeRaceSpec(spec, warnings);

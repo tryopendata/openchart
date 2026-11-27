@@ -36,9 +36,11 @@ import {
   estimateTextWidth,
   resolveTheme,
 } from '@opendata-ai/openchart-core';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandTypedSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
-import { compile as compileSpec } from '../compiler/index';
+import { assertKindType, compileKind } from '../compiler/kind';
+import { normalizeSankeySpec } from '../compiler/normalize';
+import { validateSankeySpec } from '../compiler/validation/sankey';
 import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
@@ -225,6 +227,15 @@ function rewriteRowsForOther(
 // Public API
 // ---------------------------------------------------------------------------
 
+export const SANKEY_KIND = {
+  type: 'sankey',
+  validate: validateSankeySpec,
+  normalize: normalizeSankeySpec,
+};
+
+const WRONG_TYPE =
+  'compileSankey received a non-sankey spec. Use compileChart, compileTable, or compileGraph instead.';
+
 /**
  * Compile a sankey spec into a SankeyLayout.
  *
@@ -236,32 +247,22 @@ function rewriteRowsForOther(
 export function compileSankey(spec: unknown, options: CompileOptions): SankeyLayout {
   // 1. Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
   // before validation, then validate + normalize via the shared compiler pipeline.
+  assertKindType(spec, SANKEY_KIND.type, WRONG_TYPE);
   const sugarWarnings: string[] = [];
   // The active breakpoint's override block merges in first, so everything
   // after (validation included) sees the spec as it applies at this width.
-  const expandedSpec =
-    spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandSpecSugar(
-          applySankeyOverride(spec as Record<string, unknown>, options.width),
-          sugarWarnings,
-        )
-      : spec;
-  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  const expandedSpec = expandTypedSpecSugar(
+    applySankeyOverride(spec, options.width),
+    sugarWarnings,
+  );
+  const { spec: sankeySpec, warnings } = compileKind(expandedSpec, SANKEY_KIND, WRONG_TYPE);
   emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
-
-  if (!('type' in normalized) || normalized.type !== 'sankey') {
-    throw new Error(
-      'compileSankey received a non-sankey spec. Use compileChart, compileTable, or compileGraph instead.',
-    );
-  }
-
-  const sankeySpec = normalized as NormalizedSankeySpec;
 
   // Resolve format: encoding-level (v8 canonical) wins over deprecated top-level valueFormat
   const resolvedValueFormat = sankeySpec.encoding.value.format;
 
   // Resolve watermark: explicit spec value wins, then options fallback, then default true.
-  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const rawWatermark = spec.watermark;
   const watermark = rawWatermark !== undefined ? sankeySpec.watermark : (options.watermark ?? true);
 
   // 2. Resolve theme

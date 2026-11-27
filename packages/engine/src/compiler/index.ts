@@ -7,15 +7,8 @@
  */
 
 import { normalizeSpec } from './normalize';
-import type { CompileResult, ValidationError } from './types';
-import { validateSpec } from './validate';
-
-/** One line per error, prefixed with its JSON Pointer unless the message already names it. */
-function formatValidationErrors(errors: readonly ValidationError[]): string {
-  return errors
-    .map((e) => (e.path && !e.message.includes(e.path) ? `${e.path}: ${e.message}` : e.message))
-    .join('\n');
-}
+import type { CompileResult } from './types';
+import { invalidSpecError, validateSpec } from './validate';
 
 /**
  * Compile a raw spec through the validate -> normalize pipeline.
@@ -28,7 +21,7 @@ export function compile(spec: unknown): CompileResult {
   const validation = validateSpec(spec);
 
   if (!validation.valid || !validation.normalized) {
-    throw new Error(`Invalid spec:\n${formatValidationErrors(validation.errors)}`);
+    throw invalidSpecError(validation.errors);
   }
 
   const warnings: string[] = [];

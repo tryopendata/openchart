@@ -31,9 +31,10 @@ import { compileLayer as compileLayerImpl } from './compile/layer';
 import { applySpecSize } from './compile/prepare';
 import { emitSpecWarnings, expandSpecSugar } from './compile/spec-sugar';
 import { compileTimeChart } from './compile-chart-time';
-import { compile as compileSpec } from './compiler/index';
+import { compileKind } from './compiler/kind';
 import { assertMarkOptions } from './compiler/mark-options';
-import type { NormalizedTableSpec } from './compiler/types';
+import { normalizeTableSpec } from './compiler/normalize';
+import { validateTableSpec } from './compiler/validation/table';
 import { noteCapacityDiagnostic } from './design/diagnostics';
 import { compileGeoMap as compileGeoMapImpl } from './geo/compile-geo-map';
 import { compileGraph as compileGraphImpl } from './graphs/compile-graph';
@@ -122,6 +123,12 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
 // Table compilation
 // ---------------------------------------------------------------------------
 
+export const TABLE_KIND = {
+  type: 'table',
+  validate: validateTableSpec,
+  normalize: normalizeTableSpec,
+};
+
 /**
  * Compile a table spec into a TableLayout.
  *
@@ -134,15 +141,12 @@ export function compileLayer(spec: LayerSpec, options: CompileOptions): ChartLay
  * @returns Fully resolved TableLayout.
  */
 export function compileTable(spec: unknown, options: CompileTableOptions): TableLayout {
-  const { spec: normalized, warnings: normalizeWarnings } = compileSpec(spec);
+  const { spec: tableSpec, warnings: normalizeWarnings } = compileKind(
+    spec,
+    TABLE_KIND,
+    'compileTable received a non-table spec. Use compileChart instead.',
+  );
   emitSpecWarnings(normalizeWarnings, options.onWarn);
-
-  const normType = 'type' in normalized ? normalized.type : undefined;
-  if (normType !== 'table') {
-    throw new Error(`compileTable received a non-table spec. Use compileChart instead.`);
-  }
-
-  const tableSpec = normalized as NormalizedTableSpec;
 
   // Resolve theme: merge spec-level theme with options-level overrides
   const theme = resolveCompileTheme(tableSpec.theme, options);

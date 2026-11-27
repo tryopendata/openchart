@@ -4,6 +4,7 @@
  * the context frames and tooltips read back (see map-geo-frames.ts and map-geo-tooltips.ts).
  */
 import type { EncodingChannel, GeoMapLayout, GeoMapPointsLayer } from '@opendata-ai/openchart-core';
+import { GEO_MAP_KIND, GEO_MAP_WRONG_TYPE } from '../geo/compile-geo-map';
 import type { NormalizedGeoMapSpec } from '../geo/types';
 import { type PreparedMapSpec, prepareMapSpec, seriesTime } from './map-run';
 import {
@@ -60,7 +61,7 @@ function pointChannels(points: GeoMapPointsLayer): PlaybackChannel[] {
  * @throws {Error} When neither layer has a time channel; callers check first.
  */
 export function planGeoPlayback(spec: unknown, warn: (message: string) => void): GeoPlan {
-  const prepared = prepareMapSpec<NormalizedGeoMapSpec>(spec);
+  const prepared = prepareMapSpec(spec, GEO_MAP_KIND, GEO_MAP_WRONG_TYPE);
   const { encoding, data, points } = prepared.normalized;
   const gaps = prepared.block?.gaps ?? 'interpolate';
   const featureTime = encoding.time && seriesTime(encoding.time);

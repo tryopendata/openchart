@@ -31,14 +31,15 @@ import {
   resolveTheme,
 } from '@opendata-ai/openchart-core';
 import { descriptionForRows, identityForRows } from '../charts/_shared/mark-metadata';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandTypedSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
-import { compile as compileSpec } from '../compiler/index';
 import { dedupeKeys, serializeKeyValue } from '../compiler/keys';
+import { assertKindType, compileKind } from '../compiler/kind';
+import { normalizeBarListSpec } from '../compiler/normalize';
+import { validateBarListSpec } from '../compiler/validation/barlist';
 import { finiteNumber } from '../data/finite-number';
 import { resolveFieldFormatter } from '../format/field-format';
 import { resolveChromeLayout } from '../layout/shared';
-import type { NormalizedBarListSpec } from './types';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -61,26 +62,25 @@ const BARLIST_COLORS = ['#06b6d4', '#34d399', '#fbbf24', '#f472b6', '#a78bfa'];
 // Public API
 // ---------------------------------------------------------------------------
 
+export const BARLIST_KIND = {
+  type: 'barlist',
+  validate: validateBarListSpec,
+  normalize: normalizeBarListSpec,
+};
+
+const WRONG_TYPE =
+  'compileBarList received a non-barlist spec. Use compileChart, compileTable, compileGraph, compileSankey, or compileTileMap instead.';
+
 export function compileBarList(spec: unknown, options: CompileOptions): BarListLayout {
   // Expand deprecated top-level sugar (valueFormat -> encoding.value.format)
   // before validation, then validate + normalize via the shared pipeline.
+  assertKindType(spec, BARLIST_KIND.type, WRONG_TYPE);
   const sugarWarnings: string[] = [];
-  const expandedSpec =
-    spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
-      : spec;
-  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  const expandedSpec = expandTypedSpecSugar(spec, sugarWarnings);
+  const { spec: barlistSpec, warnings } = compileKind(expandedSpec, BARLIST_KIND, WRONG_TYPE);
   emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
 
-  if (!('type' in normalized) || normalized.type !== 'barlist') {
-    throw new Error(
-      'compileBarList received a non-barlist spec. Use compileChart, compileTable, compileGraph, compileSankey, or compileTileMap instead.',
-    );
-  }
-
-  const barlistSpec = normalized as NormalizedBarListSpec;
-
-  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const rawWatermark = spec.watermark;
   const watermark =
     rawWatermark !== undefined ? barlistSpec.watermark : (options.watermark ?? true);
 

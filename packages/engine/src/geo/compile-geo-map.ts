@@ -37,9 +37,11 @@ import { feature as topoFeature, mesh as topoMesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import { resolveKnockoutColor } from '../charts/utils';
 import { buildSizeScale, SIZE_SCALE_DEFAULTS } from '../compile/size-scale';
-import { emitSpecWarnings, expandSpecSugar } from '../compile/spec-sugar';
+import { emitSpecWarnings, expandTypedSpecSugar } from '../compile/spec-sugar';
 import { resolveAnimation } from '../compiler/animation';
-import { compile as compileSpec } from '../compiler/index';
+import { assertKindType, compileKind } from '../compiler/kind';
+import { normalizeGeoMapSpec } from '../compiler/normalize';
+import { validateGeoMapSpec } from '../compiler/validation/geo-map';
 import { finiteNumber } from '../data/finite-number';
 import { resolveChromeLayout } from '../layout/shared';
 import {
@@ -239,6 +241,15 @@ function validateGeoFeatures(geo: NormalizedGeoMapSpec['geo']): Topology {
   return topo as unknown as Topology;
 }
 
+export const GEO_MAP_KIND = {
+  type: 'map',
+  validate: validateGeoMapSpec,
+  normalize: normalizeGeoMapSpec,
+};
+
+export const GEO_MAP_WRONG_TYPE =
+  'compileGeoMap received a non-map spec. Use compileChart, compileTileMap, compileSankey, or compileBarList instead.';
+
 /**
  * Compile a map spec into a GeoMapLayout. A spec with `encoding.time` or `points.time`
  * compiles one frame of its playback: `options.playbackT`, else the final period.
@@ -305,27 +316,17 @@ function compileGeoMapImpl(
   scope?: GeoMapPlaybackScope,
 ): GeoMapLayout {
   // 1. Sugar expansion + validate + normalize
+  assertKindType(spec, GEO_MAP_KIND.type, GEO_MAP_WRONG_TYPE);
   const sugarWarnings: string[] = [];
-  const expandedSpec =
-    spec && typeof spec === 'object' && !Array.isArray(spec)
-      ? expandSpecSugar(spec as Record<string, unknown>, sugarWarnings)
-      : spec;
-  const { spec: normalized, warnings } = compileSpec(expandedSpec);
+  const expandedSpec = expandTypedSpecSugar(spec, sugarWarnings);
+  const { spec: mapSpec, warnings } = compileKind(expandedSpec, GEO_MAP_KIND, GEO_MAP_WRONG_TYPE);
   emitSpecWarnings([...sugarWarnings, ...warnings], options.onWarn);
-
-  if (!('type' in normalized) || normalized.type !== 'map') {
-    throw new Error(
-      'compileGeoMap received a non-map spec. Use compileChart, compileTileMap, compileSankey, or compileBarList instead.',
-    );
-  }
-
-  const mapSpec = normalized as NormalizedGeoMapSpec;
 
   // 2. Validate geo features
   const topology = validateGeoFeatures(mapSpec.geo);
 
   // Resolve watermark
-  const rawWatermark = (spec as Record<string, unknown>).watermark;
+  const rawWatermark = spec.watermark;
   const watermark = rawWatermark !== undefined ? mapSpec.watermark : (options.watermark ?? true);
 
   // 3. Resolve theme
