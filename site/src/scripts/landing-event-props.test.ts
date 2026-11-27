@@ -137,6 +137,19 @@ describe("demo interaction properties", () => {
     expect(demoInteractedProps(element(selector))).toEqual({ section: "desk" });
   });
 
+  it("counts the edit chart's callout, and not the rest of that chart", () => {
+    render(`
+      <section id="edit" data-landing-section><div data-landing-demo><div data-edit-chart>
+        <svg>
+          <text class="oc-title"><tspan id="title"></tspan></text>
+          <g class="oc-annotation-text"><text class="oc-annotation-label"><tspan id="label"></tspan></text></g>
+        </svg>
+      </div></div></section>
+    `);
+    expect(demoInteractedProps(element("#label"))).toEqual({ section: "edit" });
+    expect(demoInteractedProps(element("#title"))).toBeNull();
+  });
+
   it("ignores links, focusable panes, the plot itself and controls outside a demo", () => {
     render(`
       <section id="desk" data-landing-section>

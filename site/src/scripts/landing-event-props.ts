@@ -44,9 +44,11 @@ export function docsLinkProps(link: HTMLAnchorElement): EventProps | null {
 /**
  * What a reader presses to use a demo. Links are left out (a docs link has its
  * own event, a source link leaves the page), and so is anything that is only
- * focusable, such as a scrolling code pane.
+ * focusable, such as a scrolling code pane. The edit chart's callout is the one
+ * control that is drawn by the chart, so it is named by the library's class.
  */
-const DEMO_CONTROL = 'button, input, select, [role="slider"], [role="tab"], [role="button"]';
+const DEMO_CONTROL =
+  'button, input, select, [role="slider"], [role="tab"], [role="button"], [data-edit-chart] .oc-annotation-text';
 
 /**
  * Reads the section of the demo whose control received a press. A demo is an

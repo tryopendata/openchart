@@ -47,7 +47,7 @@ export const editSpec: ChartSpec = {
     { type: "refline", y: 2, label: "Fed's 2% target", style: "dashed", strokeWidth: 1 },
   ],
   chrome: {
-    title: "US inflation has fallen most of the way back from its 2022 peak",
+    title: "US inflation is most of the way back down",
     subtitle: "Consumer prices, change from a year earlier, quarterly, 2019 to 2024 (%)",
   },
 };

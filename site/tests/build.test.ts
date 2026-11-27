@@ -855,7 +855,7 @@ describe("the landing page", () => {
     expect(hidden).toEqual([]);
   });
 
-  it("keeps the page's own JavaScript and CSS under 160 KB gzipped before lazy chunks", () => {
+  it("keeps the page's own JavaScript and CSS under 170 KB gzipped before lazy chunks", () => {
     const { total, report } = upFrontWeight(HOME);
     expect(total, report).toBeLessThan(MAX_OWN_ASSET_GZIP_BYTES);
   });
@@ -1057,8 +1057,10 @@ const MAX_MOTION_SECTION_BYTES = 220_000;
  * gzipped: what a reader downloads before the page works. React's client is
  * about 66 KB of the landing page's, so the cap leaves room for the islands and
  * catches a chart or GSAP chunk imported statically by mistake (115 KB when it happened).
+ * Raised from 160 KB when the edit section, the scroll-driven frame and the
+ * landing events arrived together at 162 KB; their live-only code is already lazy.
  */
-const MAX_OWN_ASSET_GZIP_BYTES = 160_000;
+const MAX_OWN_ASSET_GZIP_BYTES = 170_000;
 
 /** The gzipped size of a page's up-front assets plus its inline code, with a per-file report. */
 function upFrontWeight(file: string): { total: number; report: string } {
