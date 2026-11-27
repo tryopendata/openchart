@@ -35,7 +35,9 @@ import "../styles/landing.css";
 
 <script>
   import { track } from "../lib/analytics";
+  import { holdHashTarget } from "../scripts/landing-anchor";
   import { watchLandingEvents } from "../scripts/landing-events";
 
   watchLandingEvents(document, track);
+  holdHashTarget(document);
 </script>
