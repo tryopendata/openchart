@@ -8,6 +8,18 @@
 @layer components {
   /* ---- #responsive: a frame with a draggable edge ------------------------- */
 
+  /*
+   * Where the scroll narrows the frame (frame-scroll-trigger.ts, FOLLOW_MEDIA),
+   * the figure reserves its tallest height. The library adds rows as the chart
+   * narrows (a wrapped title, the compact notes), up to 577px with the readout,
+   * so the section below never moves as the frame narrows and widens.
+   */
+  @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) and (min-height: 700px) {
+    .resize-figure {
+      min-height: 580px;
+    }
+  }
+
   .resize-readout {
     @apply m-0 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm;
   }
@@ -43,7 +55,9 @@
     transition: width 520ms var(--landing-ease);
   }
 
-  .resize-frame[data-dragging] {
+  /* A drag or the scroll sets the width every frame; easing would trail it and re-lay out the chart on every eased frame. */
+  .resize-frame[data-dragging],
+  .resize-frame[data-following] {
     transition: none;
   }
 
