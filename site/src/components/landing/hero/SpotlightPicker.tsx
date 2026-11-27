@@ -4,7 +4,7 @@
  * active item marked via `data-active`. Once live, they upgrade to toggle
  * buttons inside a labelled group (`aria-pressed`).
  */
-import { useId } from "react";
+import { useEffect, useId, useRef } from "react";
 import { HERO_SPOTLIGHTS, type HeroSpotlight } from "../../../landing/hero";
 
 /** Props for `SpotlightPicker`. */
@@ -20,13 +20,23 @@ export type SpotlightPickerProps = {
 /** Focus strip letting the reader spotlight a single fuel or view all six together. */
 export function SpotlightPicker({ interactive, current, onSelect }: SpotlightPickerProps) {
   const labelId = useId();
+  const group = useRef<HTMLFieldSetElement>(null);
+
+  // On phones the fuels scroll sideways on one row; a fuel chosen elsewhere
+  // (a table row) has to come into view. `current` is the trigger.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the choice changes
+  useEffect(() => {
+    group.current
+      ?.querySelector('[aria-pressed="true"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [current]);
   return (
     <div className="hero-spotlight-bar">
       <span className="hero-spotlight-label" id={labelId}>
         Focus
       </span>
       {interactive ? (
-        <fieldset className="hero-spotlight" aria-label="Spotlight a fuel">
+        <fieldset ref={group} className="hero-spotlight" aria-label="Spotlight a fuel">
           {HERO_SPOTLIGHTS.map((item) => (
             <button
               key={item}

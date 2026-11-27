@@ -32,12 +32,23 @@
       @apply grid-cols-12 items-start gap-x-10;
     }
 
+    /* The install command follows the figure in the DOM; here it sits under the
+       text, with the first row only as tall as the text so it stays close. */
+    .hero-grid {
+      @apply gap-y-0;
+      grid-template-rows: auto 1fr;
+    }
+
     .hero-text {
-      @apply col-span-4;
+      @apply col-span-4 row-start-1;
+    }
+
+    .hero-install {
+      @apply col-span-4 col-start-1 row-start-2;
     }
 
     .hero-figure {
-      @apply col-span-8;
+      @apply col-span-8 col-start-5 row-span-2 row-start-1;
     }
 
     .hero-lede-short {
@@ -106,7 +117,7 @@
     }
 
     .hero-text {
-      display: contents;
+      @apply grid gap-y-4;
     }
 
     .hero-lede-full {
@@ -120,7 +131,6 @@
 
     .hero-install {
       @apply mt-0;
-      order: 1;
     }
   }
 
@@ -250,11 +260,13 @@
     /* One row of fuels that scrolls sideways, so the plot starts a row higher. */
     .hero-spotlight {
       @apply min-w-0 flex-nowrap overflow-x-auto;
-      scrollbar-width: none;
+      scrollbar-width: thin;
     }
 
+    /* The scrolling row clips an outline drawn outside the chip. */
     .hero-spotlight-item {
       @apply shrink-0;
+      outline-offset: -2px;
     }
 
     .hero-chart {
