@@ -17,6 +17,21 @@ export type SpotlightPickerProps = {
   onSelect: (spotlight: HeroSpotlight) => void;
 };
 
+/**
+ * Scrolls the chip row sideways just far enough to show `chip`. Only the row
+ * moves: `scrollIntoView` would scroll every scrolling ancestor, the window
+ * included, so picking a fuel while the picker is off screen would move the page.
+ */
+function scrollChipIntoRow(row: HTMLElement, chip: HTMLElement) {
+  const rowBox = row.getBoundingClientRect();
+  const chipBox = chip.getBoundingClientRect();
+  if (chipBox.left < rowBox.left) {
+    row.scrollTo({ left: row.scrollLeft + chipBox.left - rowBox.left });
+  } else if (chipBox.right > rowBox.right) {
+    row.scrollTo({ left: row.scrollLeft + chipBox.right - rowBox.right });
+  }
+}
+
 /** Focus strip letting the reader spotlight a single fuel or view all six together. */
 export function SpotlightPicker({ interactive, current, onSelect }: SpotlightPickerProps) {
   const labelId = useId();
@@ -26,9 +41,9 @@ export function SpotlightPicker({ interactive, current, onSelect }: SpotlightPic
   // (a table row) has to come into view. `current` is the trigger.
   // biome-ignore lint/correctness/useExhaustiveDependencies: runs when the choice changes
   useEffect(() => {
-    group.current
-      ?.querySelector('[aria-pressed="true"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const row = group.current;
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (row && chip) scrollChipIntoRow(row, chip);
   }, [current]);
   return (
     <div className="hero-spotlight-bar">

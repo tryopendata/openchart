@@ -20,14 +20,14 @@ describe("exportStatusText", () => {
     expect(exportStatusText({ kind: "working", format: "csv" })).toBe("Exporting CSV…");
   });
 
-  it("names the saved file and its size when a download is done", () => {
+  it("says the download started, never that it was saved, naming the file and its size", () => {
     const state = {
       kind: "done",
       format: "svg",
       bytes: 18_400,
       fileName: "openchart-wind-solar-coal.svg",
     } as const;
-    expect(exportStatusText(state)).toBe("Saved openchart-wind-solar-coal.svg (18 KB)");
+    expect(exportStatusText(state)).toBe("Download started: openchart-wind-solar-coal.svg (18 KB)");
   });
 
   it("points to the GIF shown in place when a GIF is done", () => {
