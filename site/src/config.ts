@@ -63,6 +63,7 @@ export const site = {
   /** Components that hydrate on the landing page. The build test fails on any other island. */
   islands: [
     "HeroDesk",
+    "EditDesk",
     "VocabularyWall",
     "PresetScrub",
     "ChartStoryScroll",

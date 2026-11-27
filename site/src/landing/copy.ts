@@ -1,12 +1,13 @@
 /**
  * The landing page's words that more than one file needs: the headline, the lede,
- * the short lede and the nine section headings. Each section component takes its h2 from here, and
+ * the short lede and the ten section headings. Each section component takes its h2 from here, and
  * the build test checks the page against it, so a heading changes in one place.
  */
 
 /** The landing sections' ids, in page order. Each is a `<section>` id and the prefix of its heading id. */
 export const LANDING_SECTION_IDS = [
   "desk",
+  "edit",
   "story",
   "motion",
   "styles",
@@ -40,6 +41,7 @@ export const landingCopy: LandingCopy = {
     "OpenChart draws the headline, source line, annotations and responsive layout for you, from a short JSON spec, in React, Vue, Svelte or plain JavaScript.",
   headings: {
     desk: "One dataset, four ways to tell the story",
+    edit: "Drag the callout to where the story needs it",
     story: "Annotate the story as the reader scrolls",
     motion: "When the numbers change, the chart moves with them",
     styles: "One chart, set in four house styles",
