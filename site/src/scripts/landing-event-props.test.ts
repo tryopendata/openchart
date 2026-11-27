@@ -45,23 +45,38 @@ describe("landing sections", () => {
 });
 
 describe("install copy properties", () => {
-  it("uses the manager suffix from either install command's tab panel", () => {
+  it("uses the manager suffix from the install command's tab panel", () => {
     render(`
       <section id="desk" data-landing-section>
         <div id="hero-install-npm" role="tabpanel"><button data-copy-command></button></div>
-      </section>
-      <section id="start" data-landing-section>
-        <div id="start-install-bun" role="tabpanel"><button data-copy-command></button></div>
+        <div id="hero-install-bun" role="tabpanel"><button data-copy-command></button></div>
       </section>
     `);
-    expect(installCopiedProps(element("#desk button"))).toEqual({
+    expect(installCopiedProps(element("#hero-install-npm button"))).toEqual({
       section: "desk",
       manager: "npm",
     });
-    expect(installCopiedProps(element("#start button"))).toEqual({
-      section: "start",
+    expect(installCopiedProps(element("#hero-install-bun button"))).toEqual({
+      section: "desk",
       manager: "bun",
     });
+  });
+
+  it("reads the manager and framework the start section's bench names", () => {
+    render(`
+      <section id="start" data-landing-section>
+        <div class="install-tab-command" data-install-manager="npm" data-install-framework="vue">
+          <button class="copy-button"><span>Copy</span></button>
+        </div>
+        <div class="install-tab-code-head"><button class="copy-button"></button></div>
+      </section>
+    `);
+    expect(installCopiedProps(element(".install-tab-command span"))).toEqual({
+      section: "start",
+      manager: "npm",
+      framework: "vue",
+    });
+    expect(installCopiedProps(element(".install-tab-code-head button"))).toBeNull();
   });
 
   it("ignores a copy button outside a section or without an install panel", () => {
@@ -100,19 +115,45 @@ describe("docs link properties", () => {
 });
 
 describe("demo interaction properties", () => {
-  it("uses the id of the section containing the figure", () => {
-    render(
-      '<section id="motion" data-landing-section><figure><button></button></figure></section>',
-    );
-    expect(demoInteractedProps(element("button"))).toEqual({ section: "motion" });
+  it("uses the section of the demo a control is in", () => {
+    render(`
+      <section id="motion" data-landing-section>
+        <figure><div data-landing-demo><button><span></span></button></div></figure>
+      </section>
+      <section id="vocabulary" data-landing-section>
+        <div class="wall" data-landing-demo><button></button></div>
+      </section>
+    `);
+    expect(demoInteractedProps(element("#motion span"))).toEqual({ section: "motion" });
+    expect(demoInteractedProps(element("#vocabulary button"))).toEqual({ section: "vocabulary" });
   });
 
-  it("ignores targets outside a figure or in a figure outside a landing section", () => {
+  it.each(['[role="slider"]', '[role="tab"]', "input", "select"])("counts %s", (selector) => {
     render(`
-      <section id="desk" data-landing-section><button></button></section>
-      <figure><button></button></figure>
+      <section id="desk" data-landing-section><div data-landing-demo>
+        <div role="slider" tabindex="0"></div><div role="tab"></div><input /><select></select>
+      </div></section>
     `);
-    expect(demoInteractedProps(element("#desk button"))).toBeNull();
-    expect(demoInteractedProps(element("figure button"))).toBeNull();
+    expect(demoInteractedProps(element(selector))).toEqual({ section: "desk" });
+  });
+
+  it("ignores links, focusable panes, the plot itself and controls outside a demo", () => {
+    render(`
+      <section id="desk" data-landing-section>
+        <button id="outside"></button>
+        <figure>
+          <div data-landing-demo>
+            <svg><path /></svg>
+            <section tabindex="0" id="pane"><code>{}</code></section>
+            <a id="tile" href="/docs/charts/line/">Line</a>
+          </div>
+          <figcaption>Source: <a id="source" href="https://example.org/data">Example</a></figcaption>
+        </figure>
+      </section>
+      <div data-landing-demo><button id="unsectioned"></button></div>
+    `);
+    for (const selector of ["#outside", "path", "#pane code", "#tile", "#source", "#unsectioned"]) {
+      expect(demoInteractedProps(element(selector)), selector).toBeNull();
+    }
   });
 });

@@ -103,7 +103,7 @@ export function VocabularyWall({ intents, total, sectionId, children }: Vocabula
   ];
 
   return (
-    <div className="wall">
+    <div className="wall" data-landing-demo="">
       <div className="wall-filter-slot">
         {ready ? (
           <fieldset className="tile-filter">

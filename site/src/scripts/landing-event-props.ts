@@ -9,12 +9,22 @@ export function sectionOf(element: Element): string | null {
   return element.closest("[data-landing-section]")?.id || null;
 }
 
-/** Reads the section and package manager for an install command copy button. */
+/**
+ * Reads where an install command was copied from. The hero's command sits in a
+ * tab panel whose id ends in the package manager; the start section's bench
+ * names its manager and framework on the command's wrapper.
+ */
 export function installCopiedProps(button: Element): EventProps | null {
   const section = sectionOf(button);
-  const panel = button.closest('[role="tabpanel"]');
-  const manager = panel?.id.match(/-install-([a-z0-9]+)$/)?.[1];
-  return section && manager ? { section, manager } : null;
+  if (!section) return null;
+  const bench = button.closest<HTMLElement>("[data-install-manager]");
+  if (bench) {
+    const { installManager: manager, installFramework: framework } = bench.dataset;
+    return manager && framework ? { section, manager, framework } : null;
+  }
+  if (!button.matches("[data-copy-command]")) return null;
+  const manager = button.closest('[role="tabpanel"]')?.id.match(/-install-([a-z0-9]+)$/)?.[1];
+  return manager ? { section, manager } : null;
 }
 
 /** Reads the section and path for a link to this site's docs. */
@@ -32,16 +42,19 @@ export function docsLinkProps(link: HTMLAnchorElement): EventProps | null {
 }
 
 /**
- * What a reader presses to use a demo: a control, or the chart they drag a
- * callout on. A press on a figure's plain text or plot is not one, so a thumb
- * that lands on a chart to scroll the page is not counted as using it.
+ * What a reader presses to use a demo. Links are left out (a docs link has its
+ * own event, a source link leaves the page), and so is anything that is only
+ * focusable, such as a scrolling code pane.
  */
-const DEMO_CONTROL =
-  'button, a[href], input, select, [role="slider"], [role="tab"], [tabindex], [data-edit-chart]';
+const DEMO_CONTROL = 'button, input, select, [role="slider"], [role="tab"], [role="button"]';
 
-/** Reads the section of the figure whose control received a press, or null for any other press. */
+/**
+ * Reads the section of the demo whose control received a press. A demo is an
+ * element marked `data-landing-demo` (a figure's body, the vocabulary wall, the
+ * agent session), so a press on a caption or on the chart itself is not one.
+ */
 export function demoInteractedProps(target: Element): { section: string } | null {
-  const figure = target.closest(DEMO_CONTROL)?.closest("figure");
-  const section = figure && sectionOf(figure);
+  const demo = target.closest(DEMO_CONTROL)?.closest("[data-landing-demo]");
+  const section = demo && sectionOf(demo);
   return section ? { section } : null;
 }
