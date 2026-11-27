@@ -29,7 +29,10 @@ test("every word is painted from the first frame and the headline's box never ch
     }).length,
   }));
   expect(first.hidden).toBe(0);
-  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished)));
+  // The headline's own animations only: the rules' scroll-driven ones never finish.
+  await headline(page).evaluate((element) =>
+    Promise.all(element.getAnimations({ subtree: true }).map((a) => a.finished)),
+  );
   await page.evaluate(() => document.fonts.ready);
   const settled = await headline(page).evaluate((element) => ({
     height: element.getBoundingClientRect().height,
@@ -62,17 +65,14 @@ test("with reduced motion no word animates", async ({ page }) => {
   expect(animated).toBe(0);
 });
 
-/** The share of its container a section's rule is drawn across, 0 to 1. */
+/** The share of a section's rule that is drawn (not clipped away), 0 to 1. */
 async function ruleDrawn(page: Page, id: string): Promise<number> {
   return page.locator(`#${id} .landing-rule`).evaluate((rule) => {
-    const container = rule.parentElement;
-    if (!container) return 0;
-    const style = getComputedStyle(container);
-    const inner =
-      container.clientWidth -
-      Number.parseFloat(style.paddingLeft) -
-      Number.parseFloat(style.paddingRight);
-    return rule.getBoundingClientRect().width / inner;
+    const clip = getComputedStyle(rule).clipPath;
+    if (clip === "none") return 1;
+    const right = /^inset\(\S+ (\S+)%/.exec(clip);
+    if (!right) throw new Error(`Unexpected clip-path on the rule: ${clip}`);
+    return 1 - Number.parseFloat(right[1]) / 100;
   });
 }
 
