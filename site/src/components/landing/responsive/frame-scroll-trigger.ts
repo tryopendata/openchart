@@ -15,13 +15,13 @@ import type { MotionTools } from "../../../scripts/motion";
 export const FOLLOW_MEDIA = "(min-width: 1024px) and (min-height: 700px)";
 
 /**
- * Progress 0 when the figure's top is three quarters down the viewport, 1 when
- * its bottom reaches the middle. With the holds in frame-scroll.ts, the frame
- * starts narrowing once about two thirds of it is on screen and reaches its
- * narrowest as its top meets the viewport's top, so every width is seen.
+ * Progress 0 when the figure's top is 70% down the viewport, 1 when it is 12%
+ * down. With the holds in frame-scroll.ts the frame is at its narrowest while
+ * its top is still a fifth of the way down, so the compact layout arrives with
+ * the whole chart on screen and clear of the sticky header.
  */
-const START = "top 75%";
-const END = "bottom center";
+const START = "top 70%";
+const END = "top 12%";
 
 /** Called with the scroll progress (0 to 1), or null when the scroll no longer drives the frame. */
 export type ProgressListener = (progress: number | null) => void;
