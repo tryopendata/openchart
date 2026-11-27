@@ -7,6 +7,9 @@
 /** Every event name the site sends. */
 export const Events = {
   exampleViewed: "example_viewed",
+  installCopied: "install_copied",
+  docsLinkClicked: "docs_link_clicked",
+  demoInteracted: "demo_interacted",
 } as const;
 
 /** One name from the catalog. */
