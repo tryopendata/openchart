@@ -17,7 +17,9 @@ let started = false;
 export function startPageHeightRefresh({ ScrollTrigger }: MotionTools): void {
   if (started || typeof ResizeObserver !== "function") return;
   started = true;
-  refreshOnPageHeightChange(document, () => ScrollTrigger.refresh());
+  // The safe refresh waits for any scroll in progress to end: a refresh puts the scroll back
+  // where it recorded it, which would cut short a smooth scroll (a link, scrollTo) mid-way.
+  refreshOnPageHeightChange(document, () => ScrollTrigger.refresh(true));
 }
 
 /**

@@ -69,6 +69,10 @@ test("a scroll with no input event, as a scrollbar drag or a screen reader makes
 test("a reload keeps the reader where they had scrolled, not on the linked section", async ({
   page,
 }) => {
+  // With motion on, the page's smooth scrolling makes the browser restore by animating, and a
+  // layout shift during hydration can stop that animation part-way, whatever the hash holder does.
+  // Reduced motion restores in one jump, so this checks only that the holder leaves it alone.
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await landOn(page, "motion");
   await page.locator("#publish").evaluate((section) => {
     section.scrollIntoView({ block: "start", behavior: "instant" });
@@ -82,8 +86,10 @@ test("a reload keeps the reader where they had scrolled, not on the linked secti
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
-  // The browser restores the offset; islands above may settle it by a little, never back to #motion.
-  expect(Math.abs((await sectionTop(page, "publish")) - before)).toBeLessThan(400);
+  // The browser restores the offset. Islands above hydrate to different heights on the reload,
+  // which can leave #publish some hundreds of px off; a holder that took over would put it
+  // thousands of px below, with #motion back at the top.
+  expect(Math.abs((await sectionTop(page, "publish")) - before)).toBeLessThan(1200);
   expect(await sectionTop(page, "motion")).toBeLessThan(-500);
 });
 

@@ -145,8 +145,17 @@ test("on a link to the section the frame stays full until the reader scrolls", a
   await page.goto("/#responsive");
   await expect(slider(page)).toBeVisible();
   await expect(hint(page)).toHaveText(FOLLOW_HINT);
+  // An island above hydrating to a taller box once the link is on: the page scrolls the section back to the top.
+  await section(page).evaluate((element) => {
+    const taller = document.createElement("div");
+    taller.style.height = "120px";
+    element.before(taller);
+  });
   await page.waitForLoadState("networkidle");
   await settle(page);
+  await expect
+    .poll(() => section(page).evaluate((element) => element.getBoundingClientRect().top))
+    .toBeLessThanOrEqual(120);
   const full = await fullWidth(page);
   // The page put the section at the top itself, part-way through the scroll link's range.
   expect(await widthNow(page), "the frame does not move for the page's own scrolls").toBe(full);
