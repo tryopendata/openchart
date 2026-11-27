@@ -63,6 +63,10 @@
     letter-spacing: -0.022em;
   }
 
+  .hero-word {
+    display: inline-block;
+  }
+
   @media (min-width: 1100px) {
     .hero .hero-title {
       @apply -mt-1.5;
@@ -430,11 +434,17 @@
     }
   }
 
-  /* The text block rises into place on load. It moves but never hides, so the
-     headline paints at once and nothing waits on a script. */
+  /* All the text paints at once. The headline rises word by word, followed by
+     the lede, links and install command. */
   @media (prefers-reduced-motion: no-preference) {
-    .hero-rise {
+    .hero-rise,
+    .hero-word {
       animation: hero-rise 700ms cubic-bezier(0.16, 1, 0.3, 1) var(--rise-delay, 0ms) both;
+    }
+
+    .hero-word {
+      animation-delay: calc(var(--word-index) * 40ms);
+      animation-fill-mode: backwards;
     }
 
     .hero-stage-enter {

@@ -35,9 +35,25 @@
     @apply mx-auto w-full max-w-[90rem] px-5 sm:px-6 lg:px-8;
   }
 
-  /* The rule a section opens on, with space before its heading. */
+  /* With scroll-driven motion, the section rule draws as it enters the viewport.
+     It is clipped, not scaled, so the ticks stay on the 12 columns while it draws. */
   .landing-rule {
     @apply mb-10 lg:mb-14;
+  }
+
+  @supports (animation-timeline: view()) {
+    /* Screen only: a printed page has no scroll position, so its rules would stay clipped. */
+    @media screen and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+      .landing-rule {
+        /* Longhands keep Lightning CSS from folding the timeline into the shorthand. */
+        animation-name: landing-rule-draw;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: view();
+        /* Done within the bottom seventh of the screen, so a rule in view at load is whole. */
+        animation-range: entry 0% cover 15%;
+      }
+    }
   }
 
   /* The page's one h1, in the hero. */
@@ -111,6 +127,15 @@
 
   .pub-figure-caption a {
     @apply text-muted hover:text-ink underline decoration-1 underline-offset-2 transition-colors duration-150;
+  }
+}
+
+@keyframes landing-rule-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
   }
 }
 

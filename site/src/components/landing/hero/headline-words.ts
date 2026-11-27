@@ -6,7 +6,10 @@
 /** One word of the headline, with its punctuation, and its place in the line. */
 export type HeadlineWord = { word: string; index: number };
 
-/** The headline's words in order; joining them with single spaces gives the text back. */
-export function headlineWords(_text: string): HeadlineWord[] {
-  throw new Error("headlineWords is not implemented.");
+/** Split the headline into indexed words, keeping punctuation and dropping extra spaces. */
+export function headlineWords(text: string): HeadlineWord[] {
+  return text
+    .split(" ")
+    .filter(Boolean)
+    .map((word, index) => ({ word, index }));
 }

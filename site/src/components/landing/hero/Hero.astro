@@ -36,9 +36,9 @@
  *   or live DataTable.
  * - The figure has a `<figcaption>` with a "Source: …" line.
  *
- * Nothing above the fold waits on a script to show: the text block's entrance
- * is a CSS rise that moves it (never hides it), and the figure opts out of
- * `data-reveal`. The chart's own entrance is the library's, when it goes live.
+ * The headline paints in full, then its words rise in sequence with CSS. The
+ * lede, links and install command follow. The figure opts out of `data-reveal`
+ * and the chart uses the library's entrance when it goes live.
  */
 import { site } from "../../../config";
 import { landingCopy } from "../../../landing/copy";
@@ -50,6 +50,7 @@ import {
 } from "../../../landing/hero";
 import { staticSvgPair } from "../../../lib/demo/static-svg";
 import "../../../styles/landing-hero.css";
+import { headlineWords } from "./headline-words";
 import HeroDesk from "./HeroDesk";
 import InstallCommand from "../../shared/InstallCommand.astro";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
@@ -66,14 +67,23 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
 <section id="desk" aria-labelledby="desk-title" data-landing-section class="landing-section hero">
   <div class="landing-container hero-grid">
     <div class="hero-text">
-      <h1 class="landing-display hero-title hero-rise">{landingCopy.headline}</h1>
-      <p class="landing-lede hero-lede hero-rise hero-lede-full" style="--rise-delay: 80ms">
+      <h1 class="landing-display hero-title">
+        {headlineWords(landingCopy.headline).map(({ word, index }) => (
+          <>
+            {index > 0 && " "}
+            <span class="hero-word" style={`--word-index: ${index}`}>
+              {word}
+            </span>
+          </>
+        ))}
+      </h1>
+      <p class="landing-lede hero-lede hero-rise hero-lede-full" style="--rise-delay: 400ms">
         {landingCopy.lede}
       </p>
-      <p class="landing-lede hero-lede hero-rise hero-lede-short" style="--rise-delay: 80ms">
+      <p class="landing-lede hero-lede hero-rise hero-lede-short" style="--rise-delay: 400ms">
         {landingCopy.ledeShort}
       </p>
-      <p class="hero-links hero-rise" style="--rise-delay: 160ms">
+      <p class="hero-links hero-rise" style="--rise-delay: 480ms">
         <a href="/docs/get-started/getting-started/" class="hero-action">
           Read the docs
         </a>
@@ -96,7 +106,7 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
         <Fragment set:html={staticCharts} />
       </HeroDesk>
     </PublishedFigure>
-    <div id="hero-install" class="hero-install hero-rise" style="--rise-delay: 220ms">
+    <div id="hero-install" class="hero-install hero-rise" style="--rise-delay: 540ms">
       <InstallCommand id="hero-install" commands={site.install} />
     </div>
   </div>
