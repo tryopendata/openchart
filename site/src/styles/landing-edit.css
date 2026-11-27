@@ -1,2 +1,131 @@
-/* Styles for the edit section (#edit). Lane 3a fills this in. */
+/*
+ * Styles for the edit section (#edit): the editable chart in a fixed box and
+ * what the spec says about its callout.
+ *
+ * From 1024px the chart takes eight of the twelve columns and the spec excerpt
+ * the last four, starting level with the chart's plot: `--edit-plot-top` once
+ * the live chart reports it, and before that the plot's top in the static
+ * drawing for the width range (`--edit-plot-top-lg`, `--edit-plot-top-xl`, from
+ * the build), so the line that changes is on screen while the reader drags.
+ * Under 1024px only the excerpt's offset line shows, under the chart with Reset
+ * beside it, or under it on a phone.
+ */
 @reference "./global.css";
+
+@layer components {
+  /* The figure's rule spans the section; its caption stays under the chart. */
+  .edit-figure {
+    @apply min-w-0 lg:grid lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .edit-figure > * {
+    @apply lg:col-span-12;
+  }
+
+  .edit-figure > figcaption {
+    @apply lg:col-span-8;
+  }
+
+  .edit-desk {
+    @apply lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8;
+  }
+
+  /* The chart's box: one height for the static SVG and the live chart, so the swap never moves the page. */
+  .edit-stage {
+    @apply relative h-[480px] w-full max-sm:h-[440px] lg:col-span-8;
+  }
+
+  /* The library turns the chart's own outline off; the box draws the site's focus ring instead. */
+  .edit-stage:has(svg:focus-visible) {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  /* One static drawing per stage width range (static-layout.ts), each drawn at its range's narrowest stage. */
+  .edit-static-set {
+    @apply hidden;
+  }
+
+  .edit-static-set[data-edit-static="phone"] {
+    @apply max-sm:contents;
+  }
+
+  .edit-static-set[data-edit-static="tablet"] {
+    @apply sm:max-lg:contents;
+  }
+
+  .edit-static-set[data-edit-static="lg"] {
+    @apply lg:max-xl:contents;
+  }
+
+  .edit-static-set[data-edit-static="xl"] {
+    @apply xl:contents;
+  }
+
+  .edit-live {
+    @apply h-full w-full;
+  }
+
+  /* Under 1024px: the offset line and Reset on one ruled line under the chart, the how-to below.
+     A phone has no room for both on one line, so Reset goes under the offset line. */
+  .edit-readout {
+    @apply border-line mt-4 grid grid-cols-1 items-center gap-x-4 gap-y-3 border-t pt-4;
+    @apply sm:grid-cols-[minmax(0,1fr)_auto];
+    @apply lg:col-span-4 lg:mt-0 lg:block lg:border-t-0;
+    @apply lg:max-xl:pt-[var(--edit-plot-top,var(--edit-plot-top-lg))];
+    @apply xl:pt-[var(--edit-plot-top,var(--edit-plot-top-xl))];
+  }
+
+  .edit-spec-label {
+    @apply text-muted border-line m-0 mb-3 hidden border-t pt-3 text-sm lg:block;
+  }
+
+  .edit-spec {
+    @apply text-muted m-0 min-w-0 overflow-hidden bg-transparent p-0 font-mono text-xs leading-5 sm:text-sm;
+    @apply lg:overflow-x-auto lg:text-xs lg:leading-6 xl:text-[13px];
+  }
+
+  /* One character per level until the column is wide enough for two: at 1024 the text line needs every column. */
+  .edit-spec-line {
+    @apply block whitespace-pre lg:pl-[calc(var(--depth)*1ch)] xl:pl-[calc(var(--depth)*2ch)];
+  }
+
+  .edit-spec-context {
+    @apply hidden lg:block;
+  }
+
+  /* The numbers carry the change: in ink, and beside the chart in fixed cells so a minus sign
+     or a third digit moves nothing. A phone has no room for the cells. */
+  .edit-readout-number {
+    @apply text-ink font-medium tabular-nums lg:inline-block lg:min-w-[4ch] lg:text-right;
+  }
+
+  .edit-reset {
+    @apply h-8 shrink-0 cursor-pointer justify-self-start px-3 lg:mt-5;
+  }
+
+  .edit-reset:disabled {
+    @apply cursor-default opacity-40 hover:bg-transparent;
+  }
+
+  .edit-how-to {
+    @apply text-muted m-0 text-sm sm:col-span-2 lg:mt-4;
+  }
+
+  /* Reset and the how-to do nothing until the chart is live; they keep their space so nothing moves. */
+  .edit-desk:not([data-live]) :is(.edit-reset, .edit-how-to) {
+    @apply invisible;
+  }
+}
+
+/* Only the callout moves, so only the callout shows the library's edit affordances: no hover
+   outline on the title, the target line or its label, and no connector or anchor handles.
+   Outside the layer on purpose: the library's own rule is an unlayered <style> in the SVG,
+   which beats anything layered. */
+.edit-stage .oc-editable-hover:not([data-annotation-index="0"]) {
+  outline: none;
+}
+
+.edit-stage :is(.oc-connector-handle, .oc-anchor-handle) {
+  display: none;
+}

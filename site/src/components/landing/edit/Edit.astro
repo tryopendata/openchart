@@ -1,22 +1,62 @@
 ---
 /**
  * Edit: one chart whose callout the reader can drag, with the spec line the
- * drag rewrites under it. The page's second section, after the hero.
+ * drag rewrites beside or under it. The page's second section, after the hero.
  *
  * Contract (e2e/landing-edit.spec.ts and tests/build.test.ts rely on it):
  * - `<section id="edit" aria-labelledby="edit-title" data-landing-section>` with
  *   one h2, id `edit-title` (`landingCopy.headings.edit`).
  * - `[data-edit-chart]` holds the chart, static SVG in the server HTML.
- * - `[data-edit-readout]` holds the spec line with the callout's live offset.
+ * - `[data-edit-readout]` holds the spec line with the callout's live offset:
+ *   from 1024px one line of a spec excerpt beside the chart, under that the
+ *   only line shown, under the chart.
  * - A "Reset" button, disabled while the callout is where the spec put it.
  * - The figure has a `<figcaption>` with a "Source: …" line.
+ *
+ * The island imports its own spec, so the spec is not repeated in the page as a
+ * prop; this file renders the same spec to static SVG at build time, one pair
+ * per stage width range (static-layout.ts), for the box the live chart then
+ * fills at the same height. It hands the island what it can work out at build
+ * time, so the page's JavaScript need not: where the plot starts in the two
+ * drawings the spec column sits beside, the spec excerpt and the how-to.
  */
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
+import { EditDesk } from "./EditDesk";
+import { editSource, editSpec } from "./edit-spec";
+import { calloutExcerpt } from "./spec-excerpt";
+import { STATIC_LAYOUTS, type StaticSize, staticPlotTop } from "./static-layout";
 import "../../../styles/landing-edit.css";
+
+const statics = (Object.keys(STATIC_LAYOUTS) as StaticSize[]).map((size) => ({
+  size,
+  svg: staticSvgPair(editSpec, { ...STATIC_LAYOUTS[size], idPrefix: `edit-${size}` }),
+}));
+const excerpt = calloutExcerpt(editSpec);
+/** The chart is one Tab stop, and arriving on it from the keyboard selects the callout (edit-guard.ts). */
+const HOW_TO =
+  "Drag the callout, or tab to the chart and move it with the arrow keys. Only the callout moves; the rest of the chart stays as written.";
+const staticPlotTops = {
+  lg: staticPlotTop(editSpec, STATIC_LAYOUTS.lg),
+  xl: staticPlotTop(editSpec, STATIC_LAYOUTS.xl),
+};
 ---
 
 <section id="edit" aria-labelledby="edit-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <SectionHead id="edit" />
+    <SectionHead id="edit">
+      The callout on this chart is live: put it where it reads best, and watch the offset your move
+      writes into the spec.
+    </SectionHead>
+    <PublishedFigure class="edit-figure figure-hairline" source={editSource}>
+      <EditDesk client:visible excerpt={excerpt} howTo={HOW_TO} staticPlotTops={staticPlotTops}>
+        {statics.map(({ size, svg }) => (
+          <div class="edit-static-set" data-edit-static={size}>
+            <Fragment set:html={svg} />
+          </div>
+        ))}
+      </EditDesk>
+    </PublishedFigure>
   </div>
 </section>
