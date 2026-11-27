@@ -98,7 +98,12 @@ export function AgentSession({ script, chart }: AgentSessionProps) {
   const showControls = demo.ready && !demo.reduced;
 
   return (
-    <div ref={demo.ref} className="agent-session" data-live={live ? "" : undefined}>
+    <div
+      ref={demo.ref}
+      className="agent-session"
+      data-landing-demo=""
+      data-live={live ? "" : undefined}
+    >
       {/* The reveal attributes are left off: the island re-creates the chart on every
           replay, after the reveal script has run. */}
       <FigureFrame

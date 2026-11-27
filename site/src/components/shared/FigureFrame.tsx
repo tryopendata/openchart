@@ -69,7 +69,12 @@ export function FigureFrame({
           {deck}
         </p>
       ) : null}
-      <div className={["pub-figure-body", bodyClassName].filter(Boolean).join(" ")}>{children}</div>
+      <div
+        className={["pub-figure-body", bodyClassName].filter(Boolean).join(" ")}
+        data-landing-demo=""
+      >
+        {children}
+      </div>
       <figcaption className="figure-caption pub-figure-caption" data-motion={motion("quiet")}>
         {note ? <span>{`${note} `}</span> : null}
         {caption}

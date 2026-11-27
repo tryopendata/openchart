@@ -61,7 +61,11 @@ export function InstallTabs({ panels }: InstallTabsProps) {
         </TabList>
         {panels.map((panel) => (
           <TabPanel key={panel.id} value={panel.id} className="install-tab-panel">
-            <div className="install-tab-command">
+            <div
+              className="install-tab-command"
+              data-install-manager="npm"
+              data-install-framework={panel.id}
+            >
               <code>
                 <span className="install-tab-prompt" aria-hidden="true">
                   ${" "}
