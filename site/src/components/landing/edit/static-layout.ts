@@ -24,12 +24,14 @@ export type StaticLayout = { width: number; height: number };
  * eight-of-twelve column from 1024px give: under 640px 280 to 599 (drawn at a
  * phone's 360, the height the phone stage has), 640 to 1023 592 to 976 (the
  * readout sits under the chart there, so the plot's top matters less), 1024 to
- * 1279 629 to 800, and from 1280 800 to 907.
+ * 1279 629 to 800, and from 1280 800 to 907. A classic scrollbar (15px on
+ * Linux, 17px on Windows) narrows the stage by two thirds of its width, to 617
+ * at 1024, so the `lg` drawing is 616 wide and never shrinks.
  */
 export const STATIC_LAYOUTS: Readonly<Record<StaticSize, StaticLayout>> = {
   phone: { width: 360, height: 440 },
   tablet: { width: 880, height: 480 },
-  lg: { width: 640, height: 480 },
+  lg: { width: 616, height: 480 },
   xl: { width: 800, height: 480 },
 };
 

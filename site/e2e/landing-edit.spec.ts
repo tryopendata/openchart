@@ -43,9 +43,10 @@ async function goLive(page: Page) {
 
 /** The centre of an element on screen. */
 async function centreOf(locator: Locator) {
-  await expect(locator).toBeVisible();
+  // A re-render (a font arriving, the stage settling) swaps the element out for a moment, so wait for a box.
+  await expect.poll(() => locator.boundingBox(), "the element has a box on screen").not.toBeNull();
   const box = await locator.boundingBox();
-  if (!box) throw new Error("The element has no box on screen.");
+  if (!box) throw new Error("The element lost its box on screen after it had one.");
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
 

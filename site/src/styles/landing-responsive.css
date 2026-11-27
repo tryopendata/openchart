@@ -12,13 +12,14 @@
    * Once the scroll has driven the frame (the island sets data-scroll-linked),
    * and while the page still matches FOLLOW_MEDIA (frame-scroll-trigger.ts),
    * the figure reserves its tallest height. The library adds rows as the chart
-   * narrows (a wrapped title, the compact notes), up to 577px with the readout,
+   * narrows (a wrapped title, the compact notes), up to 577px with the readout
+   * on macOS and 583px on Linux, where the title takes one more line at 280px,
    * so the section below never moves as the frame narrows and widens. Before
    * hydration, without JavaScript or GSAP, nothing is reserved.
    */
   @media (min-width: 1024px) and (min-height: 700px) {
     .resize-figure[data-scroll-linked] {
-      min-height: 580px;
+      min-height: 600px;
     }
   }
 

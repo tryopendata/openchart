@@ -6,7 +6,7 @@
  * the reload case stubs it.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { scrollByPage, whenReaderScrolls } from "./reader-scroll";
+import { scrollByPage, scrollMovedByPage, whenReaderScrolls } from "./reader-scroll";
 
 /** Moves the scroll to `top` and fires the scroll event the browser would. */
 function scrollTo(top: number) {
@@ -109,6 +109,36 @@ describe("whenReaderScrolls", () => {
     // Content above grew 600px; the browser moved the scroll by the same amount, so the anchor did not move.
     scrollTo(600);
     expect(reader).not.toHaveBeenCalled();
+  });
+
+  it("with an anchor, does not count anchoring that steadies another element and leaves the anchor lower", () => {
+    let top = 80;
+    const anchor = document.createElement("section");
+    vi.spyOn(anchor, "getBoundingClientRect").mockImplementation(() => ({ top }) as DOMRect);
+    const reader = vi.fn();
+    watchers.push(whenReaderScrolls(window, reader, anchor));
+    // Content above grew 600px; the browser made up 566px of it, so the anchor sits 34px lower.
+    top = 114;
+    scrollTo(566);
+    expect(reader).not.toHaveBeenCalled();
+  });
+
+  it("does not count a scroll the page moved by a distance, and still counts a reader's scroll made before it", () => {
+    const moved = vi.fn();
+    watch(moved);
+    // A refresh leaves the scroll 40px further down than it found it.
+    window.scrollTo(0, 40);
+    scrollMovedByPage(window, 40);
+    window.dispatchEvent(new Event("scroll"));
+    expect(moved).not.toHaveBeenCalled();
+
+    const reader = vi.fn();
+    watch(reader);
+    // The reader's scroll has not been reported yet when a refresh that moves nothing runs.
+    window.scrollTo(0, 2400);
+    scrollMovedByPage(window, 0);
+    window.dispatchEvent(new Event("scroll"));
+    expect(reader).toHaveBeenCalledTimes(1);
   });
 
   it("counts a scroll after the reader's input even where the page last put it", () => {

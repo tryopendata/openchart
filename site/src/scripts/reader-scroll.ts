@@ -14,8 +14,12 @@ export const READER_INPUT = ["wheel", "touchstart", "pointerdown", "keydown"] as
 /** Scroll positions closer than this are the same position (scrollY can be fractional when zoomed). */
 const SAME_POSITION_PX = 1;
 
-/** Told that the page has just scrolled; it reads the new position itself. */
-type PageScrollListener = () => void;
+/**
+ * Told that the page has just scrolled. With no argument the scroll is where the
+ * page put it; with `movedBy` the page moved it that far from wherever it was,
+ * which leaves a reader's scroll not yet reported still counted as theirs.
+ */
+type PageScrollListener = (movedBy?: number) => void;
 
 /** Watchers per window, told each time the page scrolls. */
 const pageScrollListeners = new WeakMap<Window, Set<PageScrollListener>>();
@@ -31,6 +35,15 @@ export function navigationRestoresScroll(view: Window): boolean {
 export function scrollByPage(view: Window, scroll: () => void): void {
   scroll();
   for (const listener of pageScrollListeners.get(view) ?? []) listener();
+}
+
+/**
+ * Tells every watcher in `view` that the page moved the scroll by `movedBy` px
+ * from where it was (a ScrollTrigger refresh re-applying the position on a page
+ * whose height changed), without claiming the position it started from.
+ */
+export function scrollMovedByPage(view: Window, movedBy: number): void {
+  for (const listener of pageScrollListeners.get(view) ?? []) listener(movedBy);
 }
 
 /** Calls `listener` on each of the reader's input events in `view`. Returns the function that stops. */
@@ -49,8 +62,10 @@ export function onReaderInput(view: Window, listener: () => void): () => void {
  * scroll anchoring keeping the view steady as content above grows or shrinks
  * (which can arrive before the page's own correction), and one while the
  * browser restores the position (before load and the frames after it, on a
- * reload or back/forward). Anchoring leaves `anchor` where it was in the
- * viewport, so with an anchor that is the test; without one, any scroll no
+ * reload or back/forward). Anchoring never moves the scroll further than the
+ * content above it grew, so with an `anchor` a scroll no larger than the change
+ * in the anchor's place in the document passes (anchoring may steady another
+ * element and leave the anchor part of the way). Without one, any scroll no
  * larger than the change in the page's height passes, which can also swallow a
  * reader's scroll made while content below grows. Returns the function that
  * stops watching.
@@ -61,22 +76,31 @@ export function whenReaderScrolls(
   anchor?: Element,
 ): () => void {
   const pageHeight = () => view.document.documentElement.scrollHeight;
-  const anchorTop = () => anchor?.getBoundingClientRect().top ?? 0;
+  /** The anchor's distance from the top of the document, which only content above it changes. */
+  const anchorOffset = () => (anchor?.getBoundingClientRect().top ?? 0) + view.scrollY;
   let expected = view.scrollY;
   let expectedHeight = pageHeight();
-  let expectedAnchorTop = anchorTop();
+  let expectedAnchorOffset = anchorOffset();
   let readerActed = false;
   let restoring = navigationRestoresScroll(view) && view.document.readyState !== "complete";
 
-  const acceptPosition = () => {
+  const acceptPosition = (movedBy?: number) => {
+    if (movedBy !== undefined) {
+      // Only the position moves: the height and the anchor's place stay as last seen, so growth
+      // that arrived with the page's move still explains the scroll event that reports it.
+      expected += movedBy;
+      return;
+    }
     expected = view.scrollY;
     expectedHeight = pageHeight();
-    expectedAnchorTop = anchorTop();
+    expectedAnchorOffset = anchorOffset();
   };
+
   const anchoringMovedIt = () => {
-    if (anchor) return Math.abs(anchorTop() - expectedAnchorTop) < SAME_POSITION_PX;
-    const heightChange = Math.abs(pageHeight() - expectedHeight);
-    return Math.abs(view.scrollY - expected) < SAME_POSITION_PX + heightChange;
+    const grew = anchor
+      ? Math.abs(anchorOffset() - expectedAnchorOffset)
+      : Math.abs(pageHeight() - expectedHeight);
+    return Math.abs(view.scrollY - expected) < SAME_POSITION_PX + grew;
   };
   const pageMovedIt = () =>
     Math.abs(view.scrollY - expected) < SAME_POSITION_PX || anchoringMovedIt() || restoring;

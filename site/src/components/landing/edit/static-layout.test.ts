@@ -18,7 +18,7 @@ describe("staticPlotTop", () => {
 
   it("follows the width: a phone's narrower headline wraps further and starts the plot lower", () => {
     expect(staticPlotTop(editSpec, STATIC_LAYOUTS.phone)).toBeGreaterThan(
-      staticPlotTop(editSpec, STATIC_LAYOUTS.lg),
+      staticPlotTop(editSpec, STATIC_LAYOUTS.xl),
     );
   });
 

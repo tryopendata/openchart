@@ -3,7 +3,7 @@
  * preference is a browser global, so `matchMedia` is faked with a query list
  * whose `matches` can flip; GSAP runs for real unless a test makes the loader fail.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withMotion } from "./index";
 import { loadMotionTools } from "./register";
 
@@ -56,6 +56,13 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+// ScrollTrigger keeps a 250ms interval that calls requestAnimationFrame; left running it can
+// fire after the test environment is torn down and fail the whole run.
+afterAll(async () => {
+  const { ScrollTrigger } = await import("gsap/ScrollTrigger");
+  ScrollTrigger.disable();
 });
 
 describe("withMotion", () => {
