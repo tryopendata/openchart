@@ -10,13 +10,57 @@
  * - `[data-edit-readout]` holds the spec line with the callout's live offset.
  * - A "Reset" button, disabled while the callout is where the spec put it.
  * - The figure has a `<figcaption>` with a "Source: …" line.
+ *
+ * The island imports its own spec, so the spec is not repeated in the page as a
+ * prop; this file renders the same spec to static SVG at build time, at a wide
+ * and a phone size, for the box the live chart then fills at the same height.
  */
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
+import { EditDesk } from "./EditDesk";
+import { editSource, editSpec } from "./edit-spec";
 import "../../../styles/landing-edit.css";
+
+/** The chart box's height in px from 640px wide; landing-edit.css sets the same. */
+const STAGE_HEIGHT = 480;
+/** The chart box's height in px under 640px wide. */
+const PHONE_STAGE_HEIGHT = 440;
+/** The figure's widest column from 1024px. */
+const WIDE_WIDTH = 880;
+const PHONE_WIDTH = 360;
+const HOW_TO =
+  "Drag the callout, or select it and use the arrow keys. Only the callout moves; the rest of the chart stays as written.";
+
+const wideStatics = staticSvgPair(editSpec, {
+  width: WIDE_WIDTH,
+  height: STAGE_HEIGHT,
+  idPrefix: "edit",
+});
+const phoneStatics = staticSvgPair(editSpec, {
+  width: PHONE_WIDTH,
+  height: PHONE_STAGE_HEIGHT,
+  idPrefix: "edit-phone",
+});
 ---
 
 <section id="edit" aria-labelledby="edit-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <SectionHead id="edit" />
+    <SectionHead id="edit">
+      The callout on this chart is live: put it where it reads best, and the line under the chart
+      shows the offset your move writes into the spec.
+    </SectionHead>
+    <div class="edit-layout">
+      <PublishedFigure class="edit-figure figure-hairline" source={editSource} note={HOW_TO}>
+        <EditDesk client:visible>
+          <div class="demo-static-set" data-static-size="wide">
+            <Fragment set:html={wideStatics} />
+          </div>
+          <div class="demo-static-set" data-static-size="phone">
+            <Fragment set:html={phoneStatics} />
+          </div>
+        </EditDesk>
+      </PublishedFigure>
+    </div>
   </div>
 </section>

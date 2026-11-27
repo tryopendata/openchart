@@ -1,2 +1,46 @@
-/* Styles for the edit section (#edit). Lane 3a fills this in. */
+/*
+ * Styles for the edit section (#edit): the editable chart in a fixed box, and
+ * under it the spec line the callout writes and Reset. From 1024px the figure
+ * takes eight of the twelve columns; under that it takes the full width.
+ */
 @reference "./global.css";
+
+@layer components {
+  .edit-layout {
+    @apply grid lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  .edit-figure {
+    @apply min-w-0 lg:col-span-8;
+  }
+
+  /* The chart's box: one height for the static SVG and the live chart, so the swap never moves the page. */
+  .edit-stage {
+    @apply relative h-[480px] w-full max-sm:h-[440px];
+  }
+
+  .edit-live {
+    @apply h-full w-full;
+  }
+
+  .edit-controls {
+    @apply border-line mt-4 flex items-center justify-between gap-4 border-t pt-4;
+  }
+
+  /* The spec line: JSON muted, the two numbers in ink. One line at every width. */
+  .edit-readout {
+    @apply text-muted m-0 min-w-0 truncate font-mono text-[13px] leading-5 sm:text-sm;
+  }
+
+  .edit-readout-number {
+    @apply text-ink font-medium;
+  }
+
+  .edit-reset {
+    @apply h-8 shrink-0 cursor-pointer px-3;
+  }
+
+  .edit-reset:disabled {
+    @apply cursor-default opacity-40 hover:bg-transparent;
+  }
+}
