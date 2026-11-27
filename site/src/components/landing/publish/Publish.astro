@@ -16,13 +16,110 @@
  *   GIF, disabled in the server HTML; a `role="status"` line reports each export.
  * - An exported GIF shows as `<img data-publish-gif>` with a "Download GIF" link
  *   and a "Back to the live chart" button.
+ *
+ * The alt text and table are built here at build time from the library's own
+ * generators, so the panel shows exactly what the chart gives assistive tech.
  */
+import { staticSvgPair } from "../../../lib/demo/static-svg";
+import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
+import { PublishDesk } from "./PublishDesk";
+import { publishSource, publishSpec } from "./publish-spec";
+import { numericColumns, screenReaderContent } from "./screen-reader";
 import "../../../styles/landing-publish.css";
+
+/** Rows of the data table the panel shows before summing up the rest. */
+const SHOWN_ROWS = 8;
+/** The chart box is 440px tall at every width; the phone statics are laid out for a phone column. */
+const STAGE_HEIGHT = 440;
+const WIDE_WIDTH = 680;
+const PHONE_WIDTH = 360;
+
+const reader = screenReaderContent(publishSpec);
+const numeric = numericColumns(publishSpec);
+const shownRows = reader.rows.slice(0, SHOWN_ROWS);
+const moreRows = reader.rows.length - shownRows.length;
+const wideStatics = staticSvgPair(publishSpec, {
+  width: WIDE_WIDTH,
+  height: STAGE_HEIGHT,
+  idPrefix: "publish",
+});
+const phoneStatics = staticSvgPair(publishSpec, {
+  width: PHONE_WIDTH,
+  height: STAGE_HEIGHT,
+  idPrefix: "publish-phone",
+});
 ---
 
 <section id="publish" aria-labelledby="publish-title" data-landing-section class="landing-section">
   <div class="landing-container">
-    <SectionHead id="publish" />
+    <SectionHead id="publish">
+      The spec that draws the chart in the article also writes the files for the social post and the
+      newsletter, and the text a screen reader speaks.
+    </SectionHead>
+    <div class="publish-layout">
+      <div class="publish-article" data-publish-article>
+        <p>
+          Wind and solar farms generated 15.9% of US electricity in 2023, almost level with coal at
+          16.2%, according to Our World in Data's count of the six main sources of generation. In
+          2016 coal's share was more than four times theirs.
+        </p>
+        <PublishedFigure class="publish-figure" source={publishSource}>
+          <PublishDesk client:visible>
+            <div class="demo-static-set" data-static-size="wide">
+              <Fragment set:html={wideStatics} />
+            </div>
+            <div class="demo-static-set" data-static-size="phone">
+              <Fragment set:html={phoneStatics} />
+            </div>
+          </PublishDesk>
+        </PublishedFigure>
+        <p>
+          Coal's decline was steady rather than sudden. Its share fell in every year but 2021, when
+          high gas prices briefly brought coal plants back, while wind and solar added more than a
+          percentage point a year on average.
+        </p>
+      </div>
+      <aside
+        class="publish-reader"
+        aria-labelledby="publish-reader-title"
+        data-publish-screen-reader
+      >
+        <h3 id="publish-reader-title" class="publish-reader-title">
+          What a screen reader reads
+        </h3>
+        <h4 class="publish-reader-label">Alt text</h4>
+        <p class="publish-alt" data-publish-alt>
+          {reader.altText}
+        </p>
+        <h4 class="publish-reader-label">Data table</h4>
+        <table class="publish-table">
+          <caption>Share of US electricity generation by source, 2016-2023</caption>
+          <thead>
+            <tr>
+              {reader.header.map((cell, index) => (
+                <th scope="col" data-numeric={numeric[index] ? "" : undefined}>
+                  {cell}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {shownRows.map((row) => (
+              <tr>
+                {row.map((cell, index) => (
+                  <td data-numeric={numeric[index] ? "" : undefined}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {moreRows > 0 && <p class="publish-more">and {moreRows} more rows</p>}
+        <p class="publish-static-note">
+          In the page source the chart is static SVG, so it shows and prints with JavaScript turned
+          off.
+        </p>
+      </aside>
+    </div>
   </div>
 </section>
