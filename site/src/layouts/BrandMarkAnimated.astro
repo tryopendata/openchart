@@ -1,0 +1,44 @@
+---
+/**
+ * The OpenChart mark for the header, animated: on page load the four shapes drop in,
+ * bounce and settle into the logo. The shapes are BrandMark's, each wrapped in the two
+ * groups that src/styles/brand-mark-motion.css animates; brand/source/build.mjs writes
+ * that stylesheet from a bounce solved ahead of time, so there is no script and readers
+ * who prefer reduced motion get the still mark. Decorative, like BrandMark. Use it once
+ * per page.
+ */
+import "../styles/brand-mark-motion.css";
+
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 16 16"
+  aria-hidden="true"
+  class:list={["ocb", className]}
+>
+  <g class="ocb-bar-o">
+    <g class="ocb-bar-i">
+      <path fill="var(--brand-bar)" d="M0 0h7v7H0z"></path>
+    </g>
+  </g>
+  <g class="ocb-point-o">
+    <g class="ocb-point-i">
+      <circle fill="var(--brand-point)" cx="12.5" cy="3.5" r="3.5"></circle>
+    </g>
+  </g>
+  <g class="ocb-arc-o">
+    <g class="ocb-arc-i">
+      <path fill="var(--brand-arc)" d="M0 9a7 7 0 0 1 7 7H0z"></path>
+    </g>
+  </g>
+  <g class="ocb-area-o">
+    <g class="ocb-area-i">
+      <path fill="var(--brand-area)" d="M9 16l7-7v7z"></path>
+    </g>
+  </g>
+</svg>

@@ -15,7 +15,8 @@
       "!node_modules",
       "!playwright-report",
       "!test-results",
-      "!.stacks"
+      "!.stacks",
+      "!src/styles/brand-mark-motion.css"
     ]
   },
   "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
