@@ -7,6 +7,7 @@
  * `following` turns false the link is off and the frame is the reader's.
  */
 import { type RefObject, useCallback, useEffect, useRef, useState } from "react";
+import { whenReaderScrolls } from "../../../scripts/reader-scroll";
 import { useMotionTools } from "../../shared/use-motion-tools";
 import { widthAtProgress } from "./frame-scroll";
 import { followFrameScroll } from "./frame-scroll-trigger";
@@ -26,7 +27,8 @@ export type ScrollWidth = {
   linked: boolean;
   /**
    * The width the scroll gives the chart's box, or null while the link is off
-   * or the reader has not scrolled since it came on. Waiting for a scroll keeps
+   * or the reader has not scrolled since it came on (a scroll the page makes
+   * does not count). Waiting for a scroll keeps
    * the frame from moving on its own when the link loads, under a reader's
    * pointer or eyes.
    */
@@ -70,11 +72,11 @@ export function useScrollWidth(
   useEffect(() => {
     const element = figure.current;
     if (!tools || !following || !element) return;
-    const onFirstScroll = () => {
+    // The page's own scrolls (the hash holder, scroll restoration) must not start the frame moving.
+    const stopWaiting = whenReaderScrolls(window, () => {
       scrolled.current = true;
       applyWidth();
-    };
-    window.addEventListener("scroll", onFirstScroll, { once: true, passive: true });
+    });
     const stop = followFrameScroll(tools, element, (next) => {
       progress.current = next;
       setLive(next !== null);
@@ -82,7 +84,7 @@ export function useScrollWidth(
       applyWidth();
     });
     return () => {
-      window.removeEventListener("scroll", onFirstScroll);
+      stopWaiting();
       stop();
       progress.current = null;
       scrolled.current = false;

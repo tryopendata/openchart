@@ -109,7 +109,8 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
   const range: WidthRange | null =
     available === null ? null : { min: Math.min(MIN_WIDTH, available), max: available };
   const scroll = useScrollWidth(figure, range, chosen === null);
-  const following = scroll.live;
+  // Decided from `chosen` in this render: `scroll.live` turns off a render after the reader's first change.
+  const readerOwnsWidth = chosen !== null || !scroll.live;
   const width = range === null ? null : frameWidth(range, chosen, scroll.width);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -148,16 +149,19 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
           <span className="resize-width tabular-nums" data-resize-width>
             {width} pixels wide
           </span>
-          {/* Only the reader's own changes are announced, not the ones the scroll makes. */}
-          <span
-            className="resize-breakpoint"
-            data-resize-breakpoint
-            aria-live={following ? undefined : "polite"}
-          >
-            {breakpoint}
+          {/*
+            The live region is always there, so the reader's first change is announced; the
+            label sits inside it only while the reader owns the width, so the scroll's changes
+            are not read out.
+          */}
+          <span className="resize-breakpoint" data-resize-breakpoint>
+            <span aria-live="polite" data-resize-announce>
+              {readerOwnsWidth ? breakpoint : null}
+            </span>
+            {readerOwnsWidth ? null : breakpoint}
           </span>
           <span className="resize-hint" data-resize-hint>
-            {following ? FOLLOW_HINT : HANDLE_HINT}
+            {readerOwnsWidth ? HANDLE_HINT : FOLLOW_HINT}
           </span>
         </p>
       ) : null}

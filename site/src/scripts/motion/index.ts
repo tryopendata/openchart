@@ -8,12 +8,15 @@
  *
  * GSAP loads lazily, so `setup` runs a moment after the call, inside a
  * `gsap.matchMedia()` context: if the reader turns on reduced motion later,
- * everything `setup` made is reverted then too.
+ * everything `setup` made is reverted then too. The first time tools are handed
+ * out, a page-wide watcher starts that re-measures every ScrollTrigger when the
+ * page's height changes (page-height-refresh.ts).
  */
 import type { gsap } from "gsap";
 import type { Draggable } from "gsap/Draggable";
 import type { Flip } from "gsap/Flip";
 import type { ScrollTrigger } from "gsap/ScrollTrigger";
+import { startPageHeightRefresh } from "./page-height-refresh";
 import { MOTION_OK_QUERY, prefersReducedMotion } from "./reduced";
 import { loadMotionTools } from "./register";
 
@@ -39,6 +42,7 @@ export function withMotion(setup: (tools: MotionTools) => void | (() => void)): 
   loadMotionTools().then(
     (tools) => {
       if (reverted) return;
+      startPageHeightRefresh(tools);
       const media = tools.gsap.matchMedia();
       media.add(MOTION_OK_QUERY, () => setup(tools));
       revert = () => media.revert();
