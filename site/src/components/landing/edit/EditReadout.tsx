@@ -13,10 +13,13 @@
  */
 import type { CSSProperties } from "react";
 import { type Offset, offsetLineParts } from "./callout-offset";
-import { editSpec } from "./edit-spec";
-import { calloutExcerpt } from "./spec-excerpt";
+import type { ExcerptLine } from "./spec-excerpt";
 
 export type EditReadoutProps = {
+  /** The spec's lines around the callout's offset (spec-excerpt.ts), worked out at build time. */
+  excerpt: ExcerptLine[];
+  /** How to move the callout. */
+  howTo: string;
   offset: Offset;
   /** True once the reader has moved the callout from where the spec put it; Reset is off otherwise. */
   resettable: boolean;
@@ -24,11 +27,6 @@ export type EditReadoutProps = {
   busy: boolean;
   onReset: () => void;
 };
-
-const excerpt = calloutExcerpt(editSpec);
-/** How to move the callout. The chart is one Tab stop, and arriving on it selects the callout. */
-const HOW_TO =
-  "Drag the callout, or tab to the chart and move it with the arrow keys. Only the callout moves; the rest of the chart stays as written.";
 
 /** A line's nesting depth, for the indent the CSS draws. */
 const depthStyle = (depth: number) => ({ "--depth": depth }) as CSSProperties;
@@ -57,7 +55,14 @@ function OffsetLine({ offset, busy, depth }: { offset: Offset; busy: boolean; de
 }
 
 /** The spec excerpt with the live offset line, and Reset. */
-export function EditReadout({ offset, resettable, busy, onReset }: EditReadoutProps) {
+export function EditReadout({
+  excerpt,
+  howTo,
+  offset,
+  resettable,
+  busy,
+  onReset,
+}: EditReadoutProps) {
   return (
     <div className="edit-readout">
       <p className="edit-spec-label">What the spec says</p>
@@ -83,7 +88,7 @@ export function EditReadout({ offset, resettable, busy, onReset }: EditReadoutPr
       <button type="button" className="btn edit-reset" disabled={!resettable} onClick={onReset}>
         Reset
       </button>
-      <p className="edit-how-to">{HOW_TO}</p>
+      <p className="edit-how-to">{howTo}</p>
     </div>
   );
 }

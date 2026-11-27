@@ -16,14 +16,16 @@
  * The island imports its own spec, so the spec is not repeated in the page as a
  * prop; this file renders the same spec to static SVG at build time, one pair
  * per stage width range (static-layout.ts), for the box the live chart then
- * fills at the same height, and hands the island where the plot starts in the
- * two drawings the spec column sits beside.
+ * fills at the same height. It hands the island what it can work out at build
+ * time, so the page's JavaScript need not: where the plot starts in the two
+ * drawings the spec column sits beside, the spec excerpt and the how-to.
  */
 import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { EditDesk } from "./EditDesk";
 import { editSource, editSpec } from "./edit-spec";
+import { calloutExcerpt } from "./spec-excerpt";
 import { STATIC_LAYOUTS, type StaticSize, staticPlotTop } from "./static-layout";
 import "../../../styles/landing-edit.css";
 
@@ -31,6 +33,10 @@ const statics = (Object.keys(STATIC_LAYOUTS) as StaticSize[]).map((size) => ({
   size,
   svg: staticSvgPair(editSpec, { ...STATIC_LAYOUTS[size], idPrefix: `edit-${size}` }),
 }));
+const excerpt = calloutExcerpt(editSpec);
+/** The chart is one Tab stop, and arriving on it from the keyboard selects the callout (edit-guard.ts). */
+const HOW_TO =
+  "Drag the callout, or tab to the chart and move it with the arrow keys. Only the callout moves; the rest of the chart stays as written.";
 const staticPlotTops = {
   lg: staticPlotTop(editSpec, STATIC_LAYOUTS.lg),
   xl: staticPlotTop(editSpec, STATIC_LAYOUTS.xl),
@@ -44,7 +50,7 @@ const staticPlotTops = {
       writes into the spec.
     </SectionHead>
     <PublishedFigure class="edit-figure figure-hairline" source={editSource}>
-      <EditDesk client:visible staticPlotTops={staticPlotTops}>
+      <EditDesk client:visible excerpt={excerpt} howTo={HOW_TO} staticPlotTops={staticPlotTops}>
         {statics.map(({ size, svg }) => (
           <div class="edit-static-set" data-edit-static={size}>
             <Fragment set:html={svg} />

@@ -240,7 +240,7 @@ test.describe("handling the chart", () => {
     const ruleLoadFailed = page.waitForEvent("console", (message) =>
       message.text().includes("edit rules could not be loaded"),
     );
-    await page.route(/\/edit-state\.[\w-]+\.js$/, (route) => route.abort());
+    await page.route(/\/edit-tools\.[\w-]+\.js$/, (route) => route.abort());
     await page.goto("/");
     await figure(page).evaluate((element) => element.scrollIntoView({ block: "center" }));
     await ruleLoadFailed;
@@ -535,6 +535,14 @@ test.describe("the self-demonstration", () => {
     await moveStarted(page);
     await page.emulateMedia({ reducedMotion: "reduce" });
     await expect(readout(page)).toHaveText(START_LINE);
+    // Over before any press: the line is announced again.
+    await expect(readout(page)).toHaveAttribute("aria-live", "polite");
+    // Motion back on does not replay the run.
+    await recordReadout(page);
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    // Nothing to wait on: this checks that no run starts within the demonstration's length.
+    await page.waitForTimeout(DEMO_WINDOW_MS);
+    expect(await readoutValues(page)).toEqual([START_LINE]);
     await mouseDrag(page, await centreOf(calloutLabel(page)), { x: -40, y: 50 });
     await expect(readout(page)).not.toHaveText(START_LINE);
     await expect(resetButton(page)).toBeEnabled();

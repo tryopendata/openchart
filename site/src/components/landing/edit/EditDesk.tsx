@@ -11,9 +11,10 @@
  * Server render and before the library loads: the static SVGs (children) in a
  * box of fixed height and the readout at the starting offset, with the how-to
  * and Reset holding their space but hidden. The live chart replaces the static
- * one only once both the library and the edit rules have loaded (an edit chart
- * without its rules would offer edits it cannot apply); if either fails, the
- * static chart stays and the hook that failed logs why.
+ * one only once both the library and the edit tools (the rule, the guard and
+ * the touch relay, one lazy chunk) have loaded: an edit chart without its rules
+ * would offer edits it cannot apply. If either fails, the static chart stays
+ * and the hook that failed logs why.
  */
 import type { EditTransaction } from "@opendata-ai/openchart-core";
 import type { ChartHandle } from "@opendata-ai/openchart-react";
@@ -30,12 +31,10 @@ import { flushSync } from "react-dom";
 import { Mounted, useChartModule } from "../../shared/LiveChart";
 import { usePageChartTheme } from "../../shared/page-theme";
 import { CALLOUT_INDEX, type Offset, sameOffset, specWithOffset } from "./callout-offset";
-import { EditReadout } from "./EditReadout";
-import { guardEdits } from "./edit-guard";
+import { EditReadout, type EditReadoutProps } from "./EditReadout";
 import { editSpec, startOffset } from "./edit-spec";
-import { relayDetachedTouches } from "./touch-drag-relay";
 import { useCalloutDemo } from "./use-callout-demo";
-import { useEditRules } from "./use-edit-rules";
+import { useEditTools } from "./use-edit-tools";
 import { usePlotTop } from "./use-plot-top";
 
 /** Where the self-demonstration takes the callout: further down and right, still clear of the line. */
@@ -46,7 +45,7 @@ const CALLOUT_REF = {
   path: `/annotations/${CALLOUT_INDEX}`,
 } as const;
 
-export type EditDeskProps = {
+export type EditDeskProps = Pick<EditReadoutProps, "excerpt" | "howTo"> & {
   /** Where the plot starts in the static drawings beside the spec column, in px from the chart's top. */
   staticPlotTops: { lg: number; xl: number };
   /** The static SVGs the island shows until the chart is live. */
@@ -54,9 +53,9 @@ export type EditDeskProps = {
 };
 
 /** The editable chart with its readout and Reset. */
-export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
+export function EditDesk({ excerpt, howTo, staticPlotTops, children }: EditDeskProps) {
   const module = useChartModule();
-  const acceptedOffset = useEditRules();
+  const tools = useEditTools();
   const { theme, darkMode } = usePageChartTheme();
   const root = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -68,6 +67,7 @@ export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
   const demoRunning = useCalloutDemo({
     root,
     live,
+    play: tools?.playCalloutDemo ?? null,
     from: startOffset,
     to: DEMO_OFFSET,
     setOffset,
@@ -82,10 +82,10 @@ export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
 
   const applyEdit = useCallback(
     (transaction: EditTransaction) => {
-      const next = acceptedOffset?.(shownSpec.current, transaction);
+      const next = tools?.acceptedOffset(shownSpec.current, transaction);
       if (next) setOffset(next);
     },
-    [acceptedOffset],
+    [tools],
   );
   const reset = useCallback(() => {
     // Reset disables itself, which would drop focus to the page: hand it to the callout first,
@@ -95,12 +95,12 @@ export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
   }, []);
 
   useEffect(() => {
-    if (root.current) return relayDetachedTouches(root.current);
-  }, []);
+    if (live && tools && root.current) return tools.relayDetachedTouches(root.current);
+  }, [live, tools]);
 
   useEffect(() => {
-    if (!live || !stage.current) return;
-    return guardEdits(stage.current, {
+    if (!live || !tools || !stage.current) return;
+    return tools.guardEdits(stage.current, {
       selectCallout: () => handle.current?.select(CALLOUT_REF),
       deselect: () => handle.current?.deselect(),
       calloutSelected: () => {
@@ -108,7 +108,7 @@ export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
         return selected?.type === "annotation" && selected.index === CALLOUT_INDEX;
       },
     });
-  }, [live]);
+  }, [live, tools]);
 
   const deskStyle = {
     "--edit-plot-top-lg": `${staticPlotTops.lg}px`,
@@ -119,7 +119,7 @@ export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
   return (
     <div className="edit-desk" ref={root} style={deskStyle} data-live={live ? "" : undefined}>
       <div className="edit-stage" ref={stage} data-edit-chart>
-        {module && acceptedOffset ? (
+        {module && tools ? (
           <>
             <module.Chart
               ref={handle}
@@ -137,6 +137,8 @@ export function EditDesk({ staticPlotTops, children }: EditDeskProps) {
         )}
       </div>
       <EditReadout
+        excerpt={excerpt}
+        howTo={howTo}
         offset={offset}
         resettable={!demoRunning && !sameOffset(offset, startOffset)}
         busy={demoRunning}

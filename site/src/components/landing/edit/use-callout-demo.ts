@@ -16,7 +16,7 @@
 import { type RefObject, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { prefersReducedMotion } from "../../../scripts/motion";
-import { playCalloutDemo } from "./callout-demo";
+import type { playCalloutDemo } from "./callout-demo";
 import type { Offset } from "./callout-offset";
 
 /** Share of the figure that must be on screen before the callout moves by itself. */
@@ -30,6 +30,8 @@ export type CalloutDemoSetup = {
   root: RefObject<HTMLElement | null>;
   /** True once the live chart has replaced the static one. */
   live: boolean;
+  /** The player, which loads lazily with the live chart (edit-tools.ts); null until then. */
+  play: typeof playCalloutDemo | null;
   from: Offset;
   to: Offset;
   /** Sets the callout's offset. */
@@ -43,12 +45,19 @@ function takesOverAtOnce(event: PointerEvent): boolean {
 }
 
 /** Runs the demonstration once; true while it is moving the callout. */
-export function useCalloutDemo({ root, live, from, to, setOffset }: CalloutDemoSetup): boolean {
+export function useCalloutDemo({
+  root,
+  live,
+  play,
+  from,
+  to,
+  setOffset,
+}: CalloutDemoSetup): boolean {
   const [running, setRunning] = useState(false);
 
   useEffect(() => {
     const element = root.current;
-    if (!live || !element || prefersReducedMotion()) return;
+    if (!live || !play || !element || prefersReducedMotion()) return;
     const figure = element.closest("figure") ?? element;
     let stop: (() => void) | null = null;
     let finished = false;
@@ -82,7 +91,7 @@ export function useCalloutDemo({ root, live, from, to, setOffset }: CalloutDemoS
     };
     const start = () => {
       observer.disconnect();
-      stop = playCalloutDemo({
+      stop = play({
         from,
         to,
         onOffset: (offset) =>
@@ -121,7 +130,7 @@ export function useCalloutDemo({ root, live, from, to, setOffset }: CalloutDemoS
       stop?.();
       if (!finished) finish();
     };
-  }, [root, live, from, to, setOffset]);
+  }, [root, live, play, from, to, setOffset]);
 
   return running;
 }
