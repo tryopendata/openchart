@@ -35,7 +35,7 @@ export type LandingCopy = {
 
 /** The landing copy every section and the build test read. */
 export const landingCopy: LandingCopy = {
-  headline: "Publish-ready charts, maps and tables from a JSON spec.",
+  headline: "Publish-ready charts, maps and tables from JSON.",
   lede: "OpenChart draws the headline, source line, annotations, legend and a responsive layout for you, in your house style and with animation. It runs in React, Vue, Svelte or plain JavaScript.",
   ledeShort:
     "OpenChart draws the headline, source line, annotations and responsive layout for you, in React, Vue, Svelte or plain JavaScript.",
