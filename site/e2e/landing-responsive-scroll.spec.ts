@@ -6,7 +6,8 @@
  * not. With reduced motion, under 1024px wide and under 700px tall, the scroll
  * never moves it. Positions are set by where the figure's top sits in the
  * viewport, as a share of its height, so the tests do not depend on the
- * sections above.
+ * sections above. Content above that grows is re-measured page-wide, before
+ * the frame hydrates too, which the styles pin above the section shows.
  */
 import { expect, type Page, test } from "@playwright/test";
 
@@ -29,6 +30,8 @@ const figure = (page: Page) => section(page).locator(".resize-figure");
 const slider = (page: Page) => section(page).getByRole("slider", { name: "Chart width" });
 const hint = (page: Page) => section(page).locator("[data-resize-hint]");
 const breakpoint = (page: Page) => section(page).locator("[data-resize-breakpoint]");
+/** The live region inside the breakpoint label: it holds the label only while the reader owns the width. */
+const announcement = (page: Page) => breakpoint(page).locator("[data-resize-announce]");
 const numberOf = async (page: Page, attribute: string) =>
   Number(await slider(page).getAttribute(attribute));
 const widthNow = (page: Page) => numberOf(page, "aria-valuenow");
@@ -123,7 +126,74 @@ test("the frame is full as the section arrives, narrower mid-way and compact bef
   await expect(breakpoint(page)).toHaveText("compact");
   await frameAtRest(page);
   // The scroll's changes are not read out; only the reader's own are.
-  await expect(breakpoint(page)).not.toHaveAttribute("aria-live");
+  await expect(announcement(page)).toHaveText("");
+});
+
+test("the reader's first width change is announced", async ({ page }) => {
+  await page.setViewportSize(WIDE);
+  await openFollowing(page);
+  // The live region is in place, and quiet, before the reader changes anything.
+  await expect(announcement(page)).toHaveAttribute("aria-live", "polite");
+  await expect(announcement(page)).toHaveText("");
+  await slider(page).press("PageDown");
+  await expect(announcement(page)).toHaveText((await breakpoint(page).textContent()) ?? "");
+  await expect(breakpoint(page)).toHaveText(/^(full|medium|compact)$/);
+});
+
+test("on a link to the section the frame stays full until the reader scrolls", async ({ page }) => {
+  await page.setViewportSize(WIDE);
+  await page.goto("/#responsive");
+  await expect(slider(page)).toBeVisible();
+  await expect(hint(page)).toHaveText(FOLLOW_HINT);
+  await page.waitForLoadState("networkidle");
+  await settle(page);
+  const full = await fullWidth(page);
+  // The page put the section at the top itself, part-way through the scroll link's range.
+  expect(await widthNow(page), "the frame does not move for the page's own scrolls").toBe(full);
+
+  await page.mouse.move(WIDE.width / 2, WIDE.height / 2);
+  await page.mouse.wheel(0, 10);
+  await expect.poll(() => widthNow(page)).toBeLessThan(full);
+});
+
+test("the styles pin starts where its block is centred after a section above it grows", async ({
+  page,
+}) => {
+  await page.setViewportSize(WIDE);
+  await page.goto("/");
+  const block = page.locator("#styles .scrub-block");
+  await block.scrollIntoViewIfNeeded();
+  await expect(block).toHaveAttribute("data-pinned", "");
+  await page.waitForLoadState("networkidle");
+  // The frame's island has not hydrated, so nothing in the responsive section re-measures the page.
+  await expect(section(page).locator("astro-island[ssr]")).toHaveCount(1);
+
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await page.locator("#styles").evaluate((styles) => {
+    const taller = document.createElement("div");
+    taller.style.height = "300px";
+    styles.before(taller);
+  });
+
+  /** Where the block's centre sits below the viewport's, once scrolled to `offset` px before the pin's start. */
+  const centreOffsetAt = async (offset: number) => {
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await block.evaluate((element, before) => {
+      const box = element.getBoundingClientRect();
+      const centre = box.top + box.height / 2;
+      window.scrollBy({ top: centre - (window.innerHeight / 2 + before), behavior: "instant" });
+    }, offset);
+    await settle(page);
+    return block.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return Math.round(box.top + box.height / 2 - window.innerHeight / 2);
+    });
+  };
+  // Just before the pin: the block scrolls freely. A pin still measured before the growth would hold it centred.
+  await expect.poll(() => centreOffsetAt(50)).toBe(50);
+  // Just past the start: the block holds centred.
+  expect(await centreOffsetAt(-50)).toBeCloseTo(0, 0);
+  await expect(section(page).locator("astro-island[ssr]")).toHaveCount(1);
 });
 
 test("scrolling back up widens the frame again", async ({ page }) => {
@@ -222,7 +292,7 @@ test("after a drag on the handle the scroll no longer changes the width", async 
   await page.mouse.up();
   await expect.poll(() => widthNow(page)).toBe(before - 60);
   await expect(hint(page)).toHaveText(HANDLE_HINT);
-  await expect(breakpoint(page)).toHaveAttribute("aria-live", "polite");
+  await expect(announcement(page)).toHaveText((await breakpoint(page).textContent()) ?? "");
 
   await expectScrollLeaves(page, before - 60);
 });
