@@ -1,22 +1,43 @@
 ---
 /**
- * Motion: one chart of 2024 US payrolls with a bench of controls, "Replay
- * entrance", "Next month" (a data update) and a fluid, subtle or off choice
- * mapped to the spec's `animation` field, with the spec lines they change. The
- * MotionReplay island hydrates when visible; before that the opening chart shows
- * as static SVG and the controls are disabled.
+ * Motion opens on a bubble playback of wealth and health from 1960 to 2022.
+ * PlaybackFigure shows the last period as a static SVG until it loads the demo
+ * on sight. Below it, MotionReplay lets readers replay the payroll chart's
+ * entrance, add a month and change the animation style. Both islands hydrate
+ * when visible.
  *
  * Contract: `<section id="motion" aria-labelledby="motion-title" data-landing-section>`
- * with one h2, id `motion-title` (`landingCopy.headings.motion`). The chart's
- * figure has a `<figcaption>` with a "Source: …" line.
+ * with one h2, id `motion-title` (`landingCopy.headings.motion`). The first
+ * figure holds `[data-playback-figure]` and the second holds the payroll bench.
+ * Each figure has a `<figcaption>` with a "Source: …" line.
  */
+import { isChartSpec } from "@opendata-ai/openchart-core";
+import { wealthHealthSource } from "../../../demos/correlation/wealth-health-history";
+import { landingPlayback } from "../../../demos/landing/playback";
 import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { MotionReplay } from "./MotionReplay";
+import { PlaybackFigure } from "./PlaybackFigure";
 import { FIRST_MONTHS, motionSource, payrollSpec } from "./motion-spec";
+import { playbackPosterSpec } from "./playback-poster";
 import "../../../styles/landing-motion.css";
 
+if (!isChartSpec(landingPlayback.spec))
+  throw new Error("The landing playback demo must be a chart.");
+const poster = playbackPosterSpec(landingPlayback.spec);
+// Each poster leaves 44px for the playback controls and fits its range of widths.
+const playbackWide = staticSvgPair(poster, { width: 1376, height: 476, idPrefix: "playback-wide" });
+const playbackMedium = staticSvgPair(poster, {
+  width: 780,
+  height: 476,
+  idPrefix: "playback-medium",
+});
+const playbackPhone = staticSvgPair(poster, {
+  width: 350,
+  height: 516,
+  idPrefix: "playback-phone",
+});
 const opening = payrollSpec(FIRST_MONTHS, "fluid");
 const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "motion" });
 ---
@@ -24,9 +45,25 @@ const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "mot
 <section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <SectionHead id="motion">
-      Add a month of hiring figures and the bars make room for it. Switch the animation style to see
-      the same change made three ways, or turn it off.
+      Sixty years of wealth and health, played in sixteen seconds. Pause it, drag the scrubber to
+      any year, or let it run. Under it, a month of hiring figures arrives and the bars make room.
     </SectionHead>
+    <PublishedFigure class="figure-hairline" source={wealthHealthSource}>
+      <PlaybackFigure client:visible>
+        <div class="motion-playback-poster">
+          <div class="hidden xl:contents">
+            <Fragment set:html={playbackWide} />
+          </div>
+          <div class="hidden sm:max-xl:contents">
+            <Fragment set:html={playbackMedium} />
+          </div>
+          <div class="contents sm:hidden">
+            <Fragment set:html={playbackPhone} />
+          </div>
+        </div>
+      </PlaybackFigure>
+    </PublishedFigure>
+    <h3 class="pub-figure-title">Add a month and the bars make room</h3>
     <PublishedFigure class="figure-hairline" source={motionSource}>
       <MotionReplay client:visible>
         <Fragment set:html={statics} />

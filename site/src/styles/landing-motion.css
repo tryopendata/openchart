@@ -1,12 +1,19 @@
 /*
- * Styles for the motion section (#motion): a full-width chart under one row of
- * controls, with the spec collapsed beneath it. Transitions use `--landing-ease`
- * from landing.css.
+ * Styles for the motion section (#motion): a fixed stage for the playback
+ * chart, then a payroll chart with controls and a collapsed spec excerpt.
+ * Transitions use `--landing-ease` from landing.css.
  */
 @reference "./global.css";
 
 @layer components {
-  /* ---- #motion: a full-width chart under one row of controls ------------- */
+  [data-playback-figure] {
+    @apply relative h-[560px] sm:h-[520px];
+  }
+
+  /* Keep the same space below the poster that the live controls take. */
+  .motion-playback-poster {
+    @apply absolute inset-x-0 top-0 bottom-[44px];
+  }
 
   /* The controls read as a toolbar above the graphic: plain words, no code. */
   .motion-controls {
