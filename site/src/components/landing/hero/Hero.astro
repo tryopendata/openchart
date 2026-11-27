@@ -1,15 +1,18 @@
 ---
 /**
- * The hero, "the desk": the page's h1 and lede, the two links and the install
+ * The hero includes the page's h1 and lede, the two links and the install
  * command, and an interactive newsroom figure rendering one US electricity
- * generation dataset (2016–2023) across four editorial forms. The graphic is
- * the hero; the JSON spec that builds the active view waits in a disclosure
- * underneath. The text block takes 4 of the 12 columns and the figure 8 from
- * 1100px; below that the figure follows the text. The figure uses published-
- * graphic framing: a ticked rule, the section's h2 as its headline, the
- * HeroDesk island, and a caption with the source line.
+ * generation dataset (2016–2023) across four editorial forms. The JSON spec for
+ * the active view sits in a disclosure below the chart. From 1100px the text
+ * block takes 4 of the 12 columns and the figure takes 8. Below 1100px the
+ * shorter lede and tighter spacing bring the chart into view sooner. The install
+ * command follows the figure in the DOM, so reading and focus order match what
+ * narrow screens show; from 1100px the grid places it under the text. A ticked
+ * rule, an h2, and a source caption frame the HeroDesk island.
  *
- * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
+ * Contract (e2e/landing.spec.ts, e2e/landing-fold.spec.ts and tests/build.test.ts
+ * rely on it; the fold spec needs the `#hero-install` wrapper, one visible
+ * `.hero-lede` per width and `[data-hero-chart]`):
  * - `<section id="desk" aria-labelledby="desk-title" data-landing-section>` holding
  *   the page's only h1 (`landingCopy.headline`) and one h2 with id `desk-title`
  *   (`landingCopy.headings.desk`).
@@ -64,8 +67,11 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
   <div class="landing-container hero-grid">
     <div class="hero-text">
       <h1 class="landing-display hero-title hero-rise">{landingCopy.headline}</h1>
-      <p class="landing-lede hero-lede hero-rise" style="--rise-delay: 80ms">
+      <p class="landing-lede hero-lede hero-rise hero-lede-full" style="--rise-delay: 80ms">
         {landingCopy.lede}
+      </p>
+      <p class="landing-lede hero-lede hero-rise hero-lede-short" style="--rise-delay: 80ms">
+        {landingCopy.ledeShort}
       </p>
       <p class="hero-links hero-rise" style="--rise-delay: 160ms">
         <a href="/docs/get-started/getting-started/" class="hero-action">
@@ -75,9 +81,6 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
           See every chart type <span aria-hidden="true">→</span>
         </a>
       </p>
-      <div class="hero-install hero-rise" style="--rise-delay: 220ms">
-        <InstallCommand id="hero-install" commands={site.install} />
-      </div>
     </div>
 
     <PublishedFigure
@@ -93,5 +96,8 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
         <Fragment set:html={staticCharts} />
       </HeroDesk>
     </PublishedFigure>
+    <div id="hero-install" class="hero-install hero-rise" style="--rise-delay: 220ms">
+      <InstallCommand id="hero-install" commands={site.install} />
+    </div>
   </div>
 </section>
