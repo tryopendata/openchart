@@ -11,9 +11,11 @@
  *
  * Where the page is wide and motion is allowed, the scroll drives the width
  * first: the frame narrows from full to the narrowest as its figure travels up
- * the viewport (use-scroll-progress.ts, frame-scroll.ts), and widens again on
- * the way back. The first drag or width key on the handle hands the width to
- * the reader for the rest of the page view.
+ * the viewport (use-scroll-width.ts), and widens again on the way back. The
+ * first width key, or a sideways drag, on the handle hands the width to the
+ * reader for the rest of the page view; focusing the handle does not. The
+ * slider's value always tells the truth, but the breakpoint label is announced
+ * only for changes the reader makes.
  *
  * Server render and before hydration: the chart at its natural width, with no
  * slider, readout or ruler, so no reader meets a control that cannot work.
@@ -28,7 +30,6 @@ import {
   useState,
 } from "react";
 import { LiveChart } from "../../shared/LiveChart";
-import { widthAtProgress } from "./frame-scroll";
 import {
   breakpointFor,
   COMPACT_BELOW,
@@ -38,7 +39,7 @@ import {
   widthAfterKey,
 } from "./frame-width";
 import { responsiveSpec } from "./responsive-spec";
-import { useScrollProgress } from "./use-scroll-progress";
+import { useScrollWidth } from "./use-scroll-width";
 
 /** The narrowest the chart goes: a small phone's chart column. */
 const MIN_WIDTH = 280;
@@ -76,6 +77,9 @@ function useAvailableWidth(track: RefObject<HTMLDivElement | null>): number | nu
 
 type Drag = { pointer: number; startX: number; startWidth: number };
 
+/** How far a pointer must move sideways on the handle before it counts as a drag. */
+const DRAG_START_PX = 4;
+
 const HANDLE_HINT = "Drag the frame's right edge, or focus it and use the arrow keys.";
 const FOLLOW_HINT =
   "The frame follows your scroll until you drag its right edge or use the arrow keys on it.";
@@ -84,9 +88,8 @@ const FOLLOW_HINT =
  * The chart's box width: the reader's choice once they have one, else the
  * scroll's while it drives the frame, else the full width.
  */
-function frameWidth(range: WidthRange, chosen: number | null, progress: number | null): number {
-  if (chosen !== null) return clampWidth(chosen, range);
-  return progress === null ? range.max : widthAtProgress(progress, range);
+function frameWidth(range: WidthRange, chosen: number | null, scrolled: number | null): number {
+  return clampWidth(chosen ?? scrolled ?? range.max, range);
 }
 
 /** The frame, its ruler and readout, and the drag handle. */
@@ -94,28 +97,23 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
   const figure = useRef<HTMLDivElement>(null);
   const track = useRef<HTMLDivElement>(null);
   const available = useAvailableWidth(track);
+  // The reader's first width (a key, or a drag past DRAG_START_PX) ends the scroll's control for this page view.
   const [chosen, setChosen] = useState<number | null>(null);
-  const [taken, setTaken] = useState(false);
   const [dragging, setDragging] = useState(false);
   const drag = useRef<Drag | null>(null);
-  const scrollProgress = useScrollProgress(figure, !taken);
-  const following = scrollProgress !== null;
 
   const range: WidthRange | null =
     available === null ? null : { min: Math.min(MIN_WIDTH, available), max: available };
-  const width = range === null ? null : frameWidth(range, chosen, scrollProgress);
+  const scroll = useScrollWidth(figure, range, chosen === null);
+  const following = scroll.width !== null;
+  const width = range === null ? null : frameWidth(range, chosen, scroll.width);
 
-  // The reader's first move on the handle ends the scroll's control for this page view.
-  const take = (from: number) => {
-    setChosen(from);
-    setTaken(true);
-  };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (range === null || width === null) return;
     const next = widthAfterKey(event.key, width, range);
     if (next === null) return;
     event.preventDefault();
-    take(next);
+    setChosen(next);
   };
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     // Only the primary button of the primary pointer drags; a right click opens the menu as usual.
@@ -123,13 +121,15 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
     event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     drag.current = { pointer: event.pointerId, startX: event.clientX, startWidth: width };
-    take(width);
     setDragging(true);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const active = drag.current;
     if (!active || active.pointer !== event.pointerId || range === null) return;
-    setChosen(clampWidth(active.startWidth + event.clientX - active.startX, range));
+    const moved = event.clientX - active.startX;
+    // A click, or a touch that starts on the handle and goes up or down, leaves the scroll in charge.
+    if (chosen === null && Math.abs(moved) < DRAG_START_PX) return;
+    setChosen(clampWidth(active.startWidth + moved, range));
   };
   const endDrag = () => {
     drag.current = null;
@@ -138,13 +138,18 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
 
   const breakpoint = width === null ? null : breakpointFor(width);
   return (
-    <div ref={figure} className="resize-figure">
+    <div ref={figure} className="resize-figure" data-scroll-linked={scroll.linked || undefined}>
       {width !== null && breakpoint !== null ? (
         <p className="resize-readout">
           <span className="resize-width tabular-nums" data-resize-width>
             {width} pixels wide
           </span>
-          <span className="resize-breakpoint" data-resize-breakpoint aria-live="polite">
+          {/* Only the reader's own changes are announced, not the ones the scroll makes. */}
+          <span
+            className="resize-breakpoint"
+            data-resize-breakpoint
+            aria-live={following ? undefined : "polite"}
+          >
             {breakpoint}
           </span>
           <span className="resize-hint" data-resize-hint>
@@ -169,7 +174,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
           className="resize-frame"
           data-resize-frame
           data-dragging={dragging || undefined}
-          data-following={following || undefined}
+          data-following={(following && scroll.tracking) || undefined}
           style={width === null ? undefined : { width: `${width}px` }}
         >
           <LiveChart spec={responsiveSpec} className="resize-chart">
