@@ -1,5 +1,134 @@
 /*
  * Styles for the publish section (#publish): a chart set at article width in
  * body copy, what a screen reader reads beside it, and the export buttons.
+ * From 1024px the article takes seven of the twelve columns and the panel the
+ * last four; under that the panel follows the article.
  */
 @reference "./global.css";
+
+@layer components {
+  .publish-layout {
+    @apply mt-10 grid gap-y-14 lg:mt-14 lg:grid-cols-12 lg:gap-x-8;
+  }
+
+  /* The article column: body copy and the figure share one 680px measure. */
+  .publish-article {
+    @apply max-w-[680px] min-w-0 lg:col-span-7;
+  }
+
+  .publish-article > p {
+    @apply text-ink-2 font-display m-0 text-[19px] leading-relaxed;
+  }
+
+  .publish-article > .pub-figure {
+    @apply my-10;
+  }
+
+  /* The chart's box: the same height for the static SVG, the live chart and the GIF. */
+  .publish-stage {
+    @apply relative h-[440px] w-full;
+  }
+
+  .publish-live {
+    @apply h-full w-full;
+  }
+
+  /* The GIF covers the live chart, which stays mounted under it but leaves the accessibility tree. */
+  .publish-gif {
+    @apply bg-canvas absolute inset-0 h-full w-full object-contain;
+  }
+
+  .publish-stage[data-showing-gif] > .publish-live {
+    visibility: hidden;
+  }
+
+  .publish-exports {
+    @apply border-line mt-4 flex flex-wrap items-center gap-x-4 gap-y-3 border-t pt-4;
+  }
+
+  .publish-export-buttons {
+    @apply flex gap-2;
+  }
+
+  .publish-export-button {
+    @apply h-8 min-w-[3.25rem] cursor-pointer justify-center px-3;
+  }
+
+  .publish-export-button:disabled {
+    @apply cursor-default opacity-40 hover:bg-transparent;
+  }
+
+  /* Busy: still focusable, so the pressed button keeps focus, but visibly paused. */
+  .publish-export-button[aria-disabled="true"] {
+    @apply cursor-progress opacity-60 hover:bg-transparent;
+  }
+
+  /* One line whatever it says: a fixed basis decides wrapping by width alone,
+     and a long message is cut off (its full text is in the title). */
+  .publish-export-status {
+    @apply text-muted m-0 h-5 min-w-0 flex-[1_1_14rem] truncate text-sm leading-5;
+  }
+
+  .publish-export-status[data-state="failed"] {
+    @apply text-ink;
+  }
+
+  /* Reserved whether or not a GIF is showing, so the figure keeps its height. */
+  .publish-gif-actions {
+    @apply flex h-8 basis-full gap-2;
+  }
+
+  .publish-gif-actions > .btn {
+    @apply h-8 cursor-pointer px-3;
+  }
+
+  .publish-gif-actions > .btn:disabled {
+    @apply cursor-default opacity-40 hover:bg-transparent;
+  }
+
+  /* The panel: a hairline-ruled column of what assistive tech gets. */
+  .publish-reader {
+    @apply border-line-strong min-w-0 self-start border-t pt-5 lg:col-span-4 lg:col-start-9;
+  }
+
+  .publish-reader-title {
+    @apply text-ink font-display m-0 text-xl leading-tight font-medium;
+  }
+
+  .publish-reader-label {
+    @apply text-ink mt-6 mb-2 text-sm font-medium;
+  }
+
+  .publish-alt {
+    @apply text-ink-2 m-0 text-[15px] leading-snug;
+  }
+
+  .publish-table {
+    @apply w-full border-collapse text-[13px] leading-snug;
+  }
+
+  .publish-table caption {
+    @apply text-muted mb-2 text-left text-[13px];
+  }
+
+  .publish-table th {
+    @apply text-ink border-line-strong border-b py-1.5 pr-3 text-left align-bottom font-medium;
+  }
+
+  .publish-table th[data-numeric] {
+    @apply pr-6 text-right;
+  }
+
+  .publish-table td {
+    @apply text-ink-2 border-line border-b py-1.5 pr-3;
+  }
+
+  /* Numbers line up on the right, a figure's width each. */
+  .publish-table td[data-numeric] {
+    @apply pr-6 text-right;
+  }
+
+  .publish-more {
+    @apply text-muted mt-2 mb-0 text-[13px];
+  }
+}
