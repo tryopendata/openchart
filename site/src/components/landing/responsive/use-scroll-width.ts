@@ -73,10 +73,14 @@ export function useScrollWidth(
     const element = figure.current;
     if (!tools || !following || !element) return;
     // The page's own scrolls (the hash holder, scroll restoration) must not start the frame moving.
-    const stopWaiting = whenReaderScrolls(window, () => {
-      scrolled.current = true;
-      applyWidth();
-    });
+    const stopWaiting = whenReaderScrolls(
+      window,
+      () => {
+        scrolled.current = true;
+        applyWidth();
+      },
+      element,
+    );
     const stop = followFrameScroll(tools, element, (next) => {
       progress.current = next;
       setLive(next !== null);

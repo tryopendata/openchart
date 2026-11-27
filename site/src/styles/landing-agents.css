@@ -25,7 +25,7 @@
   }
 
   /* The stage keeps the shape of the static SVG on show (demo.css picks it): the narrow
-     drawing on a phone, the wide one from 640px. */
+     drawing on a phone, the wide one from 40rem. */
   .agent-chart-stage {
     @apply relative w-full;
     aspect-ratio: 360 / 340;

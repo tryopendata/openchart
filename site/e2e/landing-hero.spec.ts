@@ -45,8 +45,12 @@ test("picking a fuel while the picker is above the viewport scrolls only the chi
   const pickerBottom = await spotlightGroup(page).evaluate(
     (row) => row.getBoundingClientRect().bottom + window.scrollY,
   );
-  await page.evaluate((y) => window.scrollTo(0, y), pickerBottom + PHONE.height);
-  const scrollY = await page.evaluate(() => window.scrollY);
+  // Instant, and settled for two frames: the page's smooth scrolling would still be moving when scrollY is read.
+  const scrollY = await page.evaluate(async (y) => {
+    window.scrollTo({ top: y, behavior: "instant" });
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+    return window.scrollY;
+  }, pickerBottom + PHONE.height);
   await lastChip.dispatchEvent("click");
   await expect(lastChip).toHaveAttribute("aria-pressed", "true");
 

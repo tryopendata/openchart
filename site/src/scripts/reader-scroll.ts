@@ -45,29 +45,41 @@ export function onReaderInput(view: Window, listener: () => void): () => void {
 /**
  * Calls `onReaderScroll` once, on the first scroll event the reader caused: one
  * after the reader's input, or one that leaves the scroll somewhere the page did
- * not put it. Two other kinds of scroll count as the page's: one no larger
- * than the change in the page's height since the last known position (the
- * browser's scroll anchoring keeping the view steady as content grows or
- * shrinks, which can arrive before the page's own correction), and one while
- * the browser restores the position (before load and the frames after it, on a
- * reload or back/forward). Returns the function that stops watching.
+ * not put it. Two other kinds of scroll count as the page's: the browser's
+ * scroll anchoring keeping the view steady as content above grows or shrinks
+ * (which can arrive before the page's own correction), and one while the
+ * browser restores the position (before load and the frames after it, on a
+ * reload or back/forward). Anchoring leaves `anchor` where it was in the
+ * viewport, so with an anchor that is the test; without one, any scroll no
+ * larger than the change in the page's height passes, which can also swallow a
+ * reader's scroll made while content below grows. Returns the function that
+ * stops watching.
  */
-export function whenReaderScrolls(view: Window, onReaderScroll: () => void): () => void {
+export function whenReaderScrolls(
+  view: Window,
+  onReaderScroll: () => void,
+  anchor?: Element,
+): () => void {
   const pageHeight = () => view.document.documentElement.scrollHeight;
+  const anchorTop = () => anchor?.getBoundingClientRect().top ?? 0;
   let expected = view.scrollY;
   let expectedHeight = pageHeight();
+  let expectedAnchorTop = anchorTop();
   let readerActed = false;
   let restoring = navigationRestoresScroll(view) && view.document.readyState !== "complete";
 
   const acceptPosition = () => {
     expected = view.scrollY;
     expectedHeight = pageHeight();
+    expectedAnchorTop = anchorTop();
   };
-  const pageMovedIt = () => {
-    const moved = Math.abs(view.scrollY - expected);
-    const anchoring = Math.abs(pageHeight() - expectedHeight);
-    return moved < SAME_POSITION_PX + anchoring || restoring;
+  const anchoringMovedIt = () => {
+    if (anchor) return Math.abs(anchorTop() - expectedAnchorTop) < SAME_POSITION_PX;
+    const heightChange = Math.abs(pageHeight() - expectedHeight);
+    return Math.abs(view.scrollY - expected) < SAME_POSITION_PX + heightChange;
   };
+  const pageMovedIt = () =>
+    Math.abs(view.scrollY - expected) < SAME_POSITION_PX || anchoringMovedIt() || restoring;
 
   const onScroll = () => {
     if (!readerActed && pageMovedIt()) {

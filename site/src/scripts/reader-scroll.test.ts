@@ -85,6 +85,32 @@ describe("whenReaderScrolls", () => {
     expect(reader).toHaveBeenCalledTimes(1);
   });
 
+  it("with an anchor, counts a scroll that moves it in the viewport even while the page grows below", () => {
+    let height = 9000;
+    let top = 80;
+    vi.spyOn(document.documentElement, "scrollHeight", "get").mockImplementation(() => height);
+    const anchor = document.createElement("section");
+    vi.spyOn(anchor, "getBoundingClientRect").mockImplementation(() => ({ top }) as DOMRect);
+    const reader = vi.fn();
+    watchers.push(whenReaderScrolls(window, reader, anchor));
+    // An island below hydrates (1,000px taller) in the frame the reader scrolls 300px with no input event.
+    height = 10_000;
+    top = -220;
+    scrollTo(300);
+    expect(reader).toHaveBeenCalledTimes(1);
+  });
+
+  it("with an anchor, does not count scroll anchoring that leaves it where it was", () => {
+    const top = 80;
+    const anchor = document.createElement("section");
+    vi.spyOn(anchor, "getBoundingClientRect").mockImplementation(() => ({ top }) as DOMRect);
+    const reader = vi.fn();
+    watchers.push(whenReaderScrolls(window, reader, anchor));
+    // Content above grew 600px; the browser moved the scroll by the same amount, so the anchor did not move.
+    scrollTo(600);
+    expect(reader).not.toHaveBeenCalled();
+  });
+
   it("counts a scroll after the reader's input even where the page last put it", () => {
     const reader = vi.fn();
     watch(reader);

@@ -58,31 +58,33 @@
   /* A chart drawn at several sizes (staticSvgSet in lib/demo/static-svg.ts): each child of
      the set names the viewport ranges it covers in `data-static-size`, and only the child
      for the current range shows. Hiding a child hides both themes inside it whatever their
-     own rules say; the wrappers take no box, so the SVGs fill the stage as a lone pair does. */
+     own rules say; the wrappers take no box, so the SVGs fill the stage as a lone pair does.
+     The ranges are in rem, as the stages' own sm/lg/xl breakpoints are, so a reader with a
+     larger default font size never gets one size's stage with another's drawing. */
   .demo-static-set,
   .demo-static-set > [data-static-size] {
     display: contents;
   }
 
-  @media (width < 640px) {
+  @media (width < 40rem) {
     .demo-static-set > [data-static-size]:not([data-static-size~="phone"]) {
       display: none;
     }
   }
 
-  @media (640px <= width < 1024px) {
+  @media (40rem <= width < 64rem) {
     .demo-static-set > [data-static-size]:not([data-static-size~="tablet"]) {
       display: none;
     }
   }
 
-  @media (1024px <= width < 1280px) {
+  @media (64rem <= width < 80rem) {
     .demo-static-set > [data-static-size]:not([data-static-size~="lg"]) {
       display: none;
     }
   }
 
-  @media (width >= 1280px) {
+  @media (width >= 80rem) {
     .demo-static-set > [data-static-size]:not([data-static-size~="xl"]) {
       display: none;
     }

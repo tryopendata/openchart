@@ -6,6 +6,7 @@
  * the first time it hands out tools; it runs for the life of the page, so a
  * page restored from the back/forward cache keeps it.
  */
+import { scrollByPage } from "../reader-scroll";
 import type { MotionTools } from "./index";
 
 /** How long the page's height must hold still before the triggers re-measure. */
@@ -20,6 +21,8 @@ export function startPageHeightRefresh({ ScrollTrigger }: MotionTools): void {
   // The safe refresh waits for any scroll in progress to end: a refresh puts the scroll back
   // where it recorded it, which would cut short a smooth scroll (a link, scrollTo) mid-way.
   refreshOnPageHeightChange(document, () => ScrollTrigger.refresh(true));
+  // A refresh re-applies the scroll position around its measuring; that scroll is the page's, not the reader's.
+  ScrollTrigger.addEventListener("refresh", () => scrollByPage(window, () => {}));
 }
 
 /**

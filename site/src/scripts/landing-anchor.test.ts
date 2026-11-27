@@ -39,6 +39,10 @@ afterEach(() => {
 function holdAt(hash: string) {
   history.replaceState(null, "", `/${hash}`);
   const putBack = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+  // happy-dom lays nothing out: give the target the viewport position a real page would, 2,000px down the page.
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    () => ({ top: 2000 - window.scrollY }) as DOMRect,
+  );
   stops.push(holdHashTarget(document));
   return putBack;
 }

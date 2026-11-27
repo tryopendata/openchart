@@ -51,7 +51,7 @@ export function holdHashTarget(root: Document): () => void {
   // The reader's input stops the hold at once, before a resize could fight a scroll they started.
   const stopInput = onReaderInput(view, stop);
   // Scrolls with no input event (a scrollbar drag, assistive technology) show up as a position the page did not set.
-  const stopScrollWatch = whenReaderScrolls(view, stop);
+  const stopScrollWatch = whenReaderScrolls(view, stop, target);
   putTargetAtTop();
   observer.observe(root.body);
 

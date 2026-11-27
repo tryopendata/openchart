@@ -107,8 +107,8 @@ export function staticSvgPair(
 
 /**
  * A viewport width range a static drawing can be shown in, as demo.css names
- * them: `phone` under 640px, `tablet` 640 to 1023, `lg` 1024 to 1279 and `xl`
- * from 1280.
+ * them, on Tailwind's sm, lg and xl breakpoints: `phone` under 40rem, `tablet`
+ * from 40rem, `lg` from 64rem and `xl` from 80rem.
  */
 export type StaticRange = "phone" | "tablet" | "lg" | "xl";
 
