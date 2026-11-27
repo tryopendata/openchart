@@ -27,7 +27,7 @@ const finished = storySteps.reduce(
 );
 const changes = storySteps.map((step) => step.change);
 const notes = storySteps.map((_, index) => describeChange(storyBaseSpec, changes, index));
-const statics = staticSvgPair(finished, { width: 720, height: 480, idPrefix: "story" });
+const statics = staticSvgPair(finished, { width: 840, height: 600, idPrefix: "story" });
 ---
 
 <section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">

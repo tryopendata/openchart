@@ -37,8 +37,15 @@ test("the rail fills from 0 to 1 as the steps scroll past", async ({ page }) => 
   await scrollToStep(page, 2, "center");
   await expect.poll(() => railProgress(page)).toBeGreaterThan(0.3);
   expect(await railProgress(page)).toBeLessThan(0.8);
-  const steps = await section(page).locator("[data-story-step]").count();
-  await scrollToStep(page, steps - 1, "start");
+  await section(page)
+    .locator(".story-steps")
+    .evaluate((element) => {
+      const triggerY = innerHeight * (innerWidth >= 1024 ? 0.5 : 0.78);
+      scrollBy({
+        top: element.getBoundingClientRect().bottom - triggerY + 24,
+        behavior: "instant",
+      });
+    });
   await expect.poll(() => railProgress(page)).toBe(1);
 });
 
