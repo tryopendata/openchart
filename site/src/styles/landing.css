@@ -42,14 +42,16 @@
   }
 
   @supports (animation-timeline: view()) {
-    @media (prefers-reduced-motion: no-preference) and (scripting: enabled) {
+    /* Screen only: a printed page has no scroll position, so its rules would stay clipped. */
+    @media screen and (prefers-reduced-motion: no-preference) and (scripting: enabled) {
       .landing-rule {
         /* Longhands keep Lightning CSS from folding the timeline into the shorthand. */
         animation-name: landing-rule-draw;
         animation-timing-function: linear;
         animation-fill-mode: both;
         animation-timeline: view();
-        animation-range: entry 0% cover 30%;
+        /* Done within the bottom seventh of the screen, so a rule in view at load is whole. */
+        animation-range: entry 0% cover 15%;
       }
     }
   }
