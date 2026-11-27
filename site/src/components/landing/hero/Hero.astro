@@ -88,7 +88,7 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
           Read the docs
         </a>
         <a href="#vocabulary" class="hero-link">
-          See every chart type <span aria-hidden="true">→</span>
+          See the chart types <span aria-hidden="true">→</span>
         </a>
       </p>
     </div>
@@ -100,7 +100,7 @@ const staticCharts = staticSvgPair(buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO
       level="h2"
       source={heroSource}
       reveal={false}
-      note="One dataset of US electricity generation (2016–2023) rendered across four editorial forms. Switch views or spotlight any fuel, and open the spec below to inspect the JSON."
+      note="US electricity generation by fuel, 2016–2023. Switch views or highlight a fuel, and open the spec below to see the JSON."
     >
       <HeroDesk client:load>
         <Fragment set:html={staticCharts} />

@@ -60,8 +60,9 @@ const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "mot
 <section id="motion" aria-labelledby="motion-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <SectionHead id="motion">
-      Sixty years of wealth and health, played in {seconds} seconds. Pause it, drag the scrubber to
-      any year, or let it run. Under it, a month of hiring figures arrives and the bars make room.
+      The first chart plays GDP per person against life expectancy from 1960 to 2022 in {seconds}
+      seconds. Pause it or drag to any year. In the second, Next month adds a bar and the other bars
+      animate to their new widths.
     </SectionHead>
     <PublishedFigure class="figure-hairline" source={wealthHealthSource}>
       <div
@@ -78,7 +79,7 @@ const statics = staticSvgPair(opening, { width: 720, height: 420, idPrefix: "mot
     <PublishedFigure
       class="figure-hairline"
       source={motionSource}
-      title="Add a month and the bars make room"
+      title="Add a month to see the update animation"
     >
       <MotionReplay client:visible>
         <Fragment set:html={statics} />

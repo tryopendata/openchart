@@ -57,14 +57,14 @@ const initialSvg = renderStaticSVG(
 <section id="styles" aria-labelledby="styles-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <SectionHead id="styles" layout="beside">
-      A paper sets every chart in its house style: its typeface, its paper, its rules and its
-      colors. The chart below takes four of them in turn, then a dark page, and nothing about its
-      data changes.
+      This chart runs through the four built-in themes and dark mode. For your own house style,
+      write a theme with your fonts and colors, or change a few values in a built-in one, and apply
+      it to one chart or to every chart on the page.
     </SectionHead>
     <PublishedFigure
       class="scrub-figure"
       source={houseStyle.source}
-      note="The kicker, headline and deck belong to the chart, so each style sets them in its own type."
+      note="The text above the plot is part of the chart, so each theme sets it in its own type."
     >
       <PresetScrub client:visible stops={stops} spec={spec}>
         <div class="scrub-static" set:html={initialSvg} />

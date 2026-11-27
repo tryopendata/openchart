@@ -35,20 +35,20 @@ export type LandingCopy = {
 
 /** The landing copy every section and the build test read. */
 export const landingCopy: LandingCopy = {
-  headline: "Charts, maps and tables that arrive ready to publish.",
-  lede: "OpenChart draws the headline, source line, annotations, legend and responsive layout for you, in your house style, with motion built in. You describe the graphic in a short JSON spec, and it runs in React, Vue, Svelte or plain JavaScript.",
+  headline: "Publish-ready charts, maps and tables from a JSON spec.",
+  lede: "OpenChart draws the headline, source line, annotations, legend and a responsive layout for you, in your house style and with animation. It runs in React, Vue, Svelte or plain JavaScript.",
   ledeShort:
-    "OpenChart draws the headline, source line, annotations and responsive layout for you, from a short JSON spec, in React, Vue, Svelte or plain JavaScript.",
+    "OpenChart draws the headline, source line, annotations and responsive layout for you, in React, Vue, Svelte or plain JavaScript.",
   headings: {
-    desk: "One dataset, four ways to tell the story",
-    edit: "Drag the callout to where the story needs it",
-    story: "Annotate the story as the reader scrolls",
-    motion: "When the numbers change, the chart moves with them",
-    styles: "One chart, set in four house styles",
-    responsive: "The same graphic, from a phone to a full-width spread",
-    publish: "Export it for the page, the social post and the screen reader",
-    vocabulary: "Twenty-four charts, and the maps and flows beside them",
-    agents: "A coding agent can draw the chart, and the validator catches its mistakes",
+    desk: "Show the same data in four forms",
+    edit: "Drag a callout to reposition it",
+    story: "Update the chart as the reader scrolls",
+    motion: "Animate the chart when the data changes",
+    styles: "Use a built-in theme or define your own",
+    responsive: "Resize the chart from phone to full width",
+    publish: "Export the chart and its screen-reader text",
+    vocabulary: "Browse the chart types by purpose",
+    agents: "Use a coding agent to write specs",
     start: "Install it for React, Vue, Svelte or plain JavaScript",
   },
 };

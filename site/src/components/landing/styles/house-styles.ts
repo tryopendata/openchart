@@ -38,7 +38,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     id: "essay",
     label: "Essay",
     preset: "essay",
-    description: "Serif type on warm paper with room around the chart, as in a long-form essay.",
+    description: "Serif type on a warm background, with generous spacing around the chart.",
     theme: essay,
     dark: false,
   },
@@ -46,8 +46,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     id: "wire",
     label: "Wire",
     preset: "wire",
-    description:
-      "Monospaced type, tight spacing and plain white, for the dense charts a wire service files.",
+    description: "Monospaced type and tight spacing on a white background, for dense charts.",
     theme: wire,
     dark: false,
   },
@@ -55,8 +54,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     id: "broadsheet",
     label: "Broadsheet",
     preset: "broadsheet",
-    description:
-      "A bold headline under a short red rule on newsprint white, as on a broadsheet's graphics page.",
+    description: "A bold headline under a short red rule, on a warm newsprint background.",
     theme: broadsheet,
     dark: false,
   },
@@ -64,8 +62,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     id: "terminal",
     label: "Terminal",
     preset: "terminal",
-    description:
-      "One cyan series against grey ones on a dark screen, as on a monitoring dashboard.",
+    description: "One cyan series against grey ones on a dark background, in light and dark mode.",
     theme: terminal,
     dark: false,
   },
@@ -75,7 +72,7 @@ export const HOUSE_STYLE_STOPS: readonly HouseStyleStop[] = [
     preset: "broadsheet",
     variant: "Broadsheet, in dark mode",
     description:
-      "The broadsheet look after dark: the same type and red rule on an ink-blue page, its palette lifted to hold the contrast.",
+      "The broadsheet theme in dark mode: the same type and red rule on a dark blue background, with lighter colors for contrast.",
     theme: broadsheet,
     dark: true,
   },

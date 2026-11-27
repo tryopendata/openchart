@@ -66,10 +66,9 @@ const tiles = vocabularyTiles.map((tile, index) => ({
 >
   <div class="landing-container">
     <SectionHead id={SECTION_ID} layout="beside">
-      Each chart is filed under the job it does on the page: comparing values, showing change over
-      time, splitting a whole, showing how values spread, relating two measures, tracing a flow,
-      placing values on a map, setting out exact figures, or combining views in one frame. Choose a
-      purpose to narrow the sheet, or open a chart to see it at full size.
+      The charts are grouped by what they show, such as a comparison or change over time. Pick a
+      purpose to filter them, or click a chart to open its docs page. Below the list are full-size
+      maps and a sankey diagram.
     </SectionHead>
     <VocabularyWall client:idle intents={intents} total={tiles.length} sectionId={SECTION_ID}>
       <ul class="wall-grid" role="list">

@@ -27,7 +27,9 @@ for (const viewport of NARROW) {
     const top = await chart.evaluate((element) => element.getBoundingClientRect().top);
     expect(viewport.height - top).toBeGreaterThanOrEqual(CHART_IN_VIEW_PX);
     await expect(page.locator("#desk .hero-lede:visible")).toHaveCount(1);
-    await expect(page.locator("#desk .hero-lede:visible")).toContainText("from a short JSON spec");
+    await expect(page.locator("#desk .hero-lede:visible")).toContainText(
+      "annotations and responsive layout",
+    );
     await expect(page.locator("#desk #hero-install")).toBeVisible();
   });
 }
@@ -36,7 +38,7 @@ test("at 1440x900 the hero keeps the full lede and its heading order", async ({ 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(page.locator("#desk .hero-lede:visible")).toHaveCount(1);
-  await expect(page.locator("#desk .hero-lede:visible")).toContainText("with motion built in");
+  await expect(page.locator("#desk .hero-lede:visible")).toContainText("with animation");
   const firstHeading = page.getByRole("heading").first();
   await expect(firstHeading).toHaveJSProperty("tagName", "H1");
 });

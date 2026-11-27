@@ -48,9 +48,9 @@ const schemaUrl = `${site.repo}/blob/main/packages/core/schema/vizspec.schema.js
 <section id="agents" aria-labelledby="agents-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <SectionHead id="agents" layout="feature">
-      A reporter asks for a chart. The agent writes the spec, the validator rejects one field and
-      names the columns the data has, and the agent fixes it. The session is scripted, but every
-      line the validator says is its real output.
+      In this scripted session a reporter asks an agent for a chart. The validator rejects one field
+      in the agent's spec and lists the data's columns, and the agent fixes the field. Every
+      validator message shown is the library's real output.
     </SectionHead>
     <div class="agents-stage">
       <AgentSession client:visible script={script}>
