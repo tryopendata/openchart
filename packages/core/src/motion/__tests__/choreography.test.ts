@@ -161,13 +161,13 @@ describe('choreography table', () => {
     });
   });
 
-  it('labels fade in place once their bar reaches 0.97', () => {
+  it('labels fade in place once their bar has landed (0.995)', () => {
     const label = entranceRole('label');
     expect(label.fade).toBeUndefined();
     expect(label.keyframe).toBe('oc-enter-fade-only');
     expect(label.duration).toEqual({ kind: 'fixed', ms: 260 });
     expect(label.delay).toEqual({
-      after: { kind: 'progress', progress: 0.97, of: 'bar' },
+      after: { kind: 'progress', progress: 0.995, of: 'bar' },
       stagger: 'mark',
     });
     expect(Object.keys(KEYFRAMES)).not.toContain('oc-enter-label');
@@ -216,7 +216,7 @@ function goldens(D: number, reach: (p: number) => number): Record<EntranceRole, 
     text: [S * I, D, D, 140],
     rule: [S * I, 0.5 * D, 0, 0.5 * D],
     tick: [S * I, 0.5 * D, 0, 0.5 * D],
-    label: [S * I + D * reach(0.97), 260, 0, 260],
+    label: [S * I + D * reach(0.995), 260, 0, 260],
     'arc-label': [S * I + 450 * reach(0.97), 260, 0, 260],
     // Once its own series' line (same index) is 95% of the way across.
     'endpoint-label': [S * I + D * reach(0.95), 300, 0, 300],

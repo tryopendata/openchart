@@ -679,14 +679,14 @@ const ROLE_DEFS: readonly EntranceRoleDef[] = /* @__PURE__ */ (() => [
     name: 'label',
     scope: 'chart',
     comment:
-      "Data labels (bar values, line end labels) fade in place once their mark has\nlanded: when the bar at the label's --oc-mark-index reaches 0.97. Lines\nshare the bar's duration and curve, so the bar anchor stands in for them.\nLabels never move during the entrance.",
+      "Data labels (bar values, line end labels) fade in place once their mark has\nlanded: when the bar at the label's --oc-mark-index reaches 0.995, within a\npixel of its end, so a label never shows while its bar is still growing.\nLines share the bar's duration and curve, so the bar anchor stands in for\nthem. Labels never move during the entrance.",
     selectors: ['.oc-mark-label'],
     emit: 'shorthand',
     keyframe: 'oc-enter-fade-only',
     timing: AUTHOR,
     durationBasis: 'phase',
     duration: fixed(LABEL_FADE_MS),
-    delay: { after: when('bar', 0.97), stagger: 'mark' },
+    delay: { after: when('bar', 0.995), stagger: 'mark' },
   },
   {
     name: 'arc-label',

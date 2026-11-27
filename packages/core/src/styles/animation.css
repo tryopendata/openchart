@@ -158,16 +158,17 @@
     }
 
     /* Data labels (bar values, line end labels) fade in place once their mark has
-       landed: when the bar at the label's --oc-mark-index reaches 0.97. Lines
-       share the bar's duration and curve, so the bar anchor stands in for them.
-       Labels never move during the entrance. */
+       landed: when the bar at the label's --oc-mark-index reaches 0.995, within a
+       pixel of its end, so a label never shows while its bar is still growing.
+       Lines share the bar's duration and curve, so the bar anchor stands in for
+       them. Labels never move during the entrance. */
     & .oc-mark-label {
       animation: oc-enter-fade-only var(--oc-label-dur, 260ms)
         var(--oc-animation-ease, var(--oc-ease-smooth)) both;
       animation-delay: var(
         --oc-label-delay,
         calc(
-          var(--oc-label-after, calc(var(--oc-animation-duration) * 0.727459)) +
+          var(--oc-label-after, calc(var(--oc-animation-duration) * 0.884043)) +
           var(--oc-animation-stagger) *
           var(--oc-mark-index, 0)
         )
