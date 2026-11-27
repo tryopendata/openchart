@@ -19,8 +19,8 @@ const MIME_TYPES: Record<ExportFormat, string> = {
   gif: "image/gif",
 };
 
-/** Options for the GIF: plays once and holds the last frame, on the page's background. */
-export type GifOptions = { backgroundColor: string };
+/** Options for a GIF export: the opaque colour behind its frames (GIF has no partial alpha). */
+export type GifOptions = { backgroundColor?: string };
 
 /** The download name for an export, such as `openchart-wind-solar-coal.svg`. */
 export function exportFileName(format: ExportFormat): string {
@@ -29,7 +29,8 @@ export function exportFileName(format: ExportFormat): string {
 
 /**
  * The chart exported as a Blob of the format's type. SVG and CSV come back from
- * the library as text and are wrapped; PNG and GIF are already Blobs.
+ * the library as text and are wrapped; PNG and GIF are already Blobs. A GIF
+ * plays once and holds its last frame; `gif` applies to GIF exports only.
  *
  * @throws whatever the library's export throws or rejects with, for example when
  *   the chart has not rendered or `gifenc` cannot load.
@@ -37,7 +38,7 @@ export function exportFileName(format: ExportFormat): string {
 export async function exportChartFile(
   chart: ChartInstance,
   format: ExportFormat,
-  gif: GifOptions,
+  gif: GifOptions = {},
 ): Promise<Blob> {
   const type = MIME_TYPES[format];
   switch (format) {
@@ -48,6 +49,6 @@ export async function exportChartFile(
     case "png":
       return chart.export("png");
     case "gif":
-      return chart.export("gif", { loop: false, backgroundColor: gif.backgroundColor });
+      return chart.export("gif", { loop: false, ...gif });
   }
 }

@@ -58,20 +58,32 @@
     @apply cursor-default opacity-40 hover:bg-transparent;
   }
 
+  /* Busy: still focusable, so the pressed button keeps focus, but visibly paused. */
+  .publish-export-button[aria-disabled="true"] {
+    @apply cursor-progress opacity-60 hover:bg-transparent;
+  }
+
+  /* One line whatever it says: a fixed basis decides wrapping by width alone,
+     and a long message is cut off (its full text is in the title). */
   .publish-export-status {
-    @apply text-muted m-0 min-h-5 text-sm;
+    @apply text-muted m-0 h-5 min-w-0 flex-[1_1_14rem] truncate text-sm leading-5;
   }
 
   .publish-export-status[data-state="failed"] {
     @apply text-ink;
   }
 
+  /* Reserved whether or not a GIF is showing, so the figure keeps its height. */
   .publish-gif-actions {
-    @apply flex basis-full flex-wrap gap-2;
+    @apply flex h-8 basis-full gap-2;
   }
 
   .publish-gif-actions > .btn {
     @apply h-8 cursor-pointer px-3;
+  }
+
+  .publish-gif-actions > .btn:disabled {
+    @apply cursor-default opacity-40 hover:bg-transparent;
   }
 
   /* The panel: a hairline-ruled column of what assistive tech gets. */
@@ -118,9 +130,5 @@
 
   .publish-more {
     @apply text-muted mt-2 mb-0 text-[13px];
-  }
-
-  .publish-static-note {
-    @apply text-muted border-line mt-6 mb-0 border-t pt-4 text-[13px] leading-snug;
   }
 }

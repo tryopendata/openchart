@@ -17,8 +17,10 @@
  * - An exported GIF shows as `<img data-publish-gif>` with a "Download GIF" link
  *   and a "Back to the live chart" button.
  *
- * The alt text and table are built here at build time from the library's own
- * generators, so the panel shows exactly what the chart gives assistive tech.
+ * The panel prints the library's `generateAltText` and `generateDataTable`
+ * output for the published spec unchanged, built here at build time; only the
+ * table's caption and the "and N more rows" line are this page's own. The
+ * figure's note says the chart in the page source is static SVG.
  */
 import { staticSvgPair } from "../../../lib/demo/static-svg";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
@@ -34,6 +36,9 @@ const SHOWN_ROWS = 8;
 const STAGE_HEIGHT = 440;
 const WIDE_WIDTH = 680;
 const PHONE_WIDTH = 360;
+/** The figure's note: what a reader without JavaScript, or a printer, gets. */
+const STATIC_NOTE =
+  "In the page source this chart is static SVG, so it shows and prints without JavaScript.";
 
 const reader = screenReaderContent(publishSpec);
 const numeric = numericColumns(publishSpec);
@@ -60,12 +65,12 @@ const phoneStatics = staticSvgPair(publishSpec, {
     <div class="publish-layout">
       <div class="publish-article" data-publish-article>
         <p>
-          Wind and solar farms generated 15.9% of US electricity in 2023, almost level with coal at
-          16.2%, according to Our World in Data's count of the six main sources of generation. In
-          2016 coal's share was more than four times theirs.
+          Wind and solar farms produced 15.9% of US generation from the six main sources in 2023,
+          almost level with coal at 16.2%, according to Our World in Data. In 2016 coal's share was
+          more than four times theirs.
         </p>
-        <PublishedFigure class="publish-figure" source={publishSource}>
-          <PublishDesk client:visible>
+        <PublishedFigure class="publish-figure" source={publishSource} note={STATIC_NOTE}>
+          <PublishDesk client:visible altText={reader.altText}>
             <div class="demo-static-set" data-static-size="wide">
               <Fragment set:html={wideStatics} />
             </div>
@@ -94,7 +99,7 @@ const phoneStatics = staticSvgPair(publishSpec, {
         </p>
         <h4 class="publish-reader-label">Data table</h4>
         <table class="publish-table">
-          <caption>Share of US electricity generation by source, 2016-2023</caption>
+          <caption>Coal and wind plus solar, share of generation (%), 2016-2023</caption>
           <thead>
             <tr>
               {reader.header.map((cell, index) => (
@@ -115,10 +120,6 @@ const phoneStatics = staticSvgPair(publishSpec, {
           </tbody>
         </table>
         {moreRows > 0 && <p class="publish-more">and {moreRows} more rows</p>}
-        <p class="publish-static-note">
-          In the page source the chart is static SVG, so it shows and prints with JavaScript turned
-          off.
-        </p>
       </aside>
     </div>
   </div>
