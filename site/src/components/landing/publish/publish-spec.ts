@@ -63,7 +63,7 @@ export const publishSpec: ChartSpec = {
       y: 22.2,
       text: "Coal rose in 2021\nas gas prices climbed",
       anchor: "top",
-      offset: { dx: 0, dy: -18 },
+      offset: { dx: 44, dy: -30 },
       connector: true,
       // Keeps the callout on the line on a phone: a note band would grow the chart past its fixed box.
       responsive: false,
