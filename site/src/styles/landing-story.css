@@ -1,8 +1,8 @@
 /*
  * Styles for the scroll story (#story): a sticky chart with paragraphs scrolling
- * past it. Structure comes from hairline rules and the axis motif (ticks on a
- * rule); color stays in the charts. Transitions use `--landing-ease` (landing.css)
- * and never move a chart: the library animates charts itself.
+ * past it. Ticks hang from a vertical rule that fills with accent color as
+ * the steps scroll by. Step transitions use `--landing-ease` (landing.css),
+ * and the library animates the chart.
  */
 @reference "./global.css";
 
@@ -35,7 +35,20 @@
   }
 
   .story-steps {
-    @apply m-0 list-none p-0;
+    @apply relative isolate m-0 list-none p-0;
+  }
+
+  .story-steps::before {
+    @apply bg-accent pointer-events-none absolute inset-y-0 left-0 z-1 w-[2px] content-[''];
+    transform: scaleY(var(--story-progress, 0));
+    transform-origin: top;
+  }
+
+  /* Without scripting nothing measures the rail, so it shows full. */
+  @media (scripting: none) {
+    .story-steps::before {
+      transform: none;
+    }
   }
 
   /* Each step hangs from a vertical axis rule by a tick; the current one's
@@ -45,7 +58,7 @@
   }
 
   .story-step::before {
-    @apply bg-line-strong absolute top-1/2 left-0 h-px w-3 content-[''];
+    @apply bg-line-strong absolute top-1/2 left-0 z-2 h-px w-3 content-[''];
     transition:
       width 600ms var(--landing-ease),
       background-color 600ms var(--landing-ease);
@@ -78,12 +91,14 @@
 
   @media (min-width: 1024px) {
     .story-panel {
-      @apply col-span-7 col-start-6 row-start-1 self-start border-0 py-0;
-      top: max(1.5rem, calc(50vh - 290px));
+      @apply col-span-8 col-start-5 row-start-1 self-start border-0 py-0;
+      /* svh: sticky offsets resolve against the visible viewport on tablets. */
+      --story-stage-height: min(620px, 100svh - 8rem);
+      top: calc((100svh - var(--story-stage-height)) / 2);
     }
 
     .story-stage {
-      @apply h-[520px];
+      height: var(--story-stage-height);
     }
 
     .story-steps {
@@ -94,9 +109,24 @@
       @apply min-h-[88vh];
     }
   }
+
+  /* Four columns at this width hold about 24 characters of the larger size. */
+  @media (min-width: 1024px) and (width < 1280px) {
+    .story-step {
+      @apply pl-6;
+    }
+
+    .story-prose {
+      @apply text-[1.125rem];
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .story-steps::before {
+    transform: none;
+  }
+
   .story-step::before,
   .story-prose,
   .story-change {

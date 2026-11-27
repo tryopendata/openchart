@@ -27,7 +27,9 @@ const finished = storySteps.reduce(
 );
 const changes = storySteps.map((step) => step.change);
 const notes = storySteps.map((_, index) => describeChange(storyBaseSpec, changes, index));
-const statics = staticSvgPair(finished, { width: 720, height: 480, idPrefix: "story" });
+const statics = staticSvgPair(finished, { width: 840, height: 600, idPrefix: "story" });
+// A phone reader gets a still laid out for the phone stage, not the wide one scaled down.
+const phoneStatics = staticSvgPair(finished, { width: 360, height: 440, idPrefix: "story-phone" });
 ---
 
 <section id="story" aria-labelledby="story-title" data-landing-section class="landing-section">
@@ -43,7 +45,12 @@ const statics = staticSvgPair(finished, { width: 720, height: 480, idPrefix: "st
       note="Returns are rebased to 1 January 2022 and include reinvested dividends."
     >
       <ChartStoryScroll client:visible spec={storyBaseSpec} steps={storySteps} notes={notes}>
-        <Fragment set:html={statics} />
+        <div class="demo-static-set" data-static-size="wide">
+          <Fragment set:html={statics} />
+        </div>
+        <div class="demo-static-set" data-static-size="phone">
+          <Fragment set:html={phoneStatics} />
+        </div>
       </ChartStoryScroll>
     </PublishedFigure>
   </div>

@@ -2,8 +2,9 @@
  * The scroll story island: paragraphs scroll past a sticky chart, and each one
  * that crosses the trigger line moves the chart to its step through the
  * library's own scrollytelling (`createChartStory`, driven by the library's
- * `createScrollDriver`). The island only owns layout and which paragraph is
- * current; the story API applies the patches and animates the chart.
+ * `createScrollDriver`). The island marks the current paragraph and fills the
+ * steps' rail as they pass the trigger line. The story API applies the patches
+ * and animates the chart.
  *
  * The chart mounts at the first step, whose change is empty, so every change
  * the reader is told about happens on scroll. A theme change or a crossing of
@@ -11,7 +12,8 @@
  * the entrance.
  *
  * Server and pre-hydration render: every paragraph in full ink and the static
- * SVG of the finished chart (children), so the story reads without JavaScript.
+ * SVG of the finished chart (children). The rail is full for readers without
+ * scripting and empty until the island measures it for everyone else.
  * Story.astro sets the whole story in a PublishedFigure, which carries the source.
  */
 import type { ChartSpec } from "@opendata-ai/openchart-core";
@@ -20,11 +22,13 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import type { LandingStoryStep } from "../../../landing/story";
 import { usePageChartTheme } from "../../shared/page-theme";
 import { useMediaQuery } from "../../shared/use-media-query";
+import { railProgress } from "./story-rail";
 
 /** Where the step trigger line sits, as a fraction of the viewport: below the sticky chart on narrow screens. */
 const TRIGGER = { wide: 0.5, narrow: 0.78 };
 const WIDE_QUERY = "(min-width: 1024px)";
 
+/** The chart, step content and static fallback for the scroll story. */
 export type ChartStoryScrollProps = {
   spec: ChartSpec;
   steps: LandingStoryStep[];
@@ -86,9 +90,49 @@ async function mountStory(request: MountRequest): Promise<StoryParts | null> {
   return { story, driver };
 }
 
+/**
+ * Tracks how far the rail has filled. A step becomes current when its top
+ * crosses the trigger line, and its tick sits at its middle, so the fill runs
+ * half a step ahead of the line: its tip reaches each tick as that step turns
+ * current, and the rail is full while the last step is being read.
+ */
+function trackRailProgress(steps: HTMLOListElement, trigger: number): () => void {
+  let frame: number | undefined;
+  let written = "";
+
+  function measureRail() {
+    frame = undefined;
+    const box = steps.getBoundingClientRect();
+    const lead = (steps.lastElementChild?.getBoundingClientRect().height ?? 0) / 2;
+    const progress = railProgress(
+      { top: box.top - lead, height: box.height },
+      window.innerHeight * trigger,
+    );
+    // The property inherits, so an unchanged value must not restyle the list.
+    const value = progress.toFixed(4);
+    if (value === written) return;
+    written = value;
+    steps.style.setProperty("--story-progress", value);
+  }
+
+  function scheduleMeasure() {
+    if (frame === undefined) frame = requestAnimationFrame(measureRail);
+  }
+
+  measureRail();
+  window.addEventListener("scroll", scheduleMeasure, { passive: true });
+  window.addEventListener("resize", scheduleMeasure);
+  return () => {
+    window.removeEventListener("scroll", scheduleMeasure);
+    window.removeEventListener("resize", scheduleMeasure);
+    if (frame !== undefined) cancelAnimationFrame(frame);
+  };
+}
+
 /** The scroll story: sticky chart, scrolling paragraphs, each with a plain line on what it changed. */
 export function ChartStoryScroll({ spec, steps, notes, children }: ChartStoryScrollProps) {
   const host = useRef<HTMLDivElement>(null);
+  const stepsList = useRef<HTMLOListElement>(null);
   const stepElements = useRef<HTMLElement[]>([]);
   const [current, setCurrent] = useState(-1);
   const [live, setLive] = useState(false);
@@ -97,6 +141,12 @@ export function ChartStoryScroll({ spec, steps, notes, children }: ChartStoryScr
   const currentRef = useRef(current);
   currentRef.current = current;
   const mountedOnce = useRef(false);
+
+  useEffect(() => {
+    const list = stepsList.current;
+    if (!list) return;
+    return trackRailProgress(list, wide ? TRIGGER.wide : TRIGGER.narrow);
+  }, [wide]);
 
   useEffect(() => {
     const target = host.current;
@@ -145,7 +195,7 @@ export function ChartStoryScroll({ spec, steps, notes, children }: ChartStoryScr
           {live ? null : <div className="story-static">{children}</div>}
         </div>
       </div>
-      <ol className="story-steps">
+      <ol ref={stepsList} className="story-steps">
         {steps.map((step, index) => {
           const change = notes[index] ?? null;
           return (
