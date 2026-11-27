@@ -41,6 +41,11 @@
     outline-offset: 2px;
   }
 
+  /* "This is a still" (StillNote.tsx) sits under the chart's columns, after the readout. */
+  .edit-still-note {
+    @apply lg:col-span-8;
+  }
+
   .edit-live {
     @apply h-full w-full;
   }

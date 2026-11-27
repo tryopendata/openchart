@@ -14,7 +14,8 @@
  * one only once both the library and the edit tools (the rule, the guard and
  * the touch relay, one lazy chunk) have loaded: an edit chart without its rules
  * would offer edits it cannot apply. If either fails, the static chart stays
- * and the hook that failed logs why.
+ * and the hook that failed logs why, and a line under the desk says the chart is
+ * a still (StillNote; the same line shows without JavaScript).
  */
 import type { EditTransaction } from "@opendata-ai/openchart-core";
 import type { ChartHandle } from "@opendata-ai/openchart-react";
@@ -28,14 +29,19 @@ import {
   useState,
 } from "react";
 import { flushSync } from "react-dom";
-import { Mounted, useChartModule } from "../../shared/LiveChart";
+import { loadChartLibrary, Mounted, useChartModule } from "../../shared/LiveChart";
 import { usePageChartTheme } from "../../shared/page-theme";
+import { StillNote } from "../../shared/StillNote";
+import { useLoadFailed } from "../../shared/use-load-failed";
 import { CALLOUT_INDEX, type Offset, sameOffset, specWithOffset } from "./callout-offset";
 import { EditReadout, type EditReadoutProps } from "./EditReadout";
 import { editSpec, startOffset } from "./edit-spec";
 import { useCalloutDemo } from "./use-callout-demo";
 import { useEditTools } from "./use-edit-tools";
 import { usePlotTop } from "./use-plot-top";
+
+/** Everything the live chart waits for; if any of it fails, the chart stays a still. */
+const loadLiveCode = () => Promise.all([loadChartLibrary(), import("./edit-tools")]);
 
 /** Where the self-demonstration takes the callout: further down and right, still clear of the line. */
 const DEMO_OFFSET: Offset = { dx: 150, dy: 84 };
@@ -56,6 +62,7 @@ export type EditDeskProps = Pick<EditReadoutProps, "excerpt" | "howTo"> & {
 export function EditDesk({ excerpt, howTo, staticPlotTops, children }: EditDeskProps) {
   const module = useChartModule();
   const tools = useEditTools();
+  const liveFailed = useLoadFailed(loadLiveCode);
   const { theme, darkMode } = usePageChartTheme();
   const root = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
@@ -144,6 +151,7 @@ export function EditDesk({ excerpt, howTo, staticPlotTops, children }: EditDeskP
         busy={demoRunning}
         onReset={reset}
       />
+      <StillNote failed={liveFailed} className="edit-still-note" />
     </div>
   );
 }

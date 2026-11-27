@@ -29,7 +29,9 @@ import {
   useRef,
   useState,
 } from "react";
-import { LiveChart } from "../../shared/LiveChart";
+import { LiveChart, loadChartLibrary } from "../../shared/LiveChart";
+import { StillNote } from "../../shared/StillNote";
+import { useLoadFailed } from "../../shared/use-load-failed";
 import {
   breakpointFor,
   COMPACT_BELOW,
@@ -101,6 +103,8 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
   const [chosen, setChosen] = useState<number | null>(null);
   const [dragging, setDragging] = useState(false);
   const drag = useRef<Drag | null>(null);
+  // The static chart stays if the library fails to load; StillNote says so under the frame.
+  const chartFailed = useLoadFailed(loadChartLibrary);
 
   const range: WidthRange | null =
     available === null ? null : { min: Math.min(MIN_WIDTH, available), max: available };
@@ -201,6 +205,7 @@ export function ResizeFrame({ children }: ResizeFrameProps) {
           )}
         </div>
       </div>
+      <StillNote failed={chartFailed} />
     </div>
   );
 }

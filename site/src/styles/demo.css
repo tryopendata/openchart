@@ -120,6 +120,23 @@
     overflow: auto;
   }
 
+  /* A landing figure's "this is a still" line (StillNote.tsx): in the server HTML but shown
+     only without scripting or once the island marks it failed, so a chart that loads keeps
+     its layout. */
+  .still-note {
+    @apply text-muted m-0 hidden pt-3 text-sm leading-snug;
+  }
+
+  .still-note[data-still-note="failed"] {
+    @apply block;
+  }
+
+  @media (scripting: none) {
+    .still-note {
+      @apply block;
+    }
+  }
+
   .demo-error {
     @apply flex h-full items-center justify-center px-4 text-center text-muted;
   }
