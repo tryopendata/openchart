@@ -47,7 +47,7 @@ test("playback starts when seen, pauses, and scrubs", async ({ page }) => {
 
   const scrubber = figure(page).getByRole("slider", { name: "Time" });
   await scrubber.focus();
-  await page.keyboard.press("ArrowLeft");
+  await page.keyboard.press("ArrowRight");
   await expect(readout(page)).not.toHaveText(held ?? "");
   const { scroll, past } = await sidewaysOverflow(page);
   expect(scroll).toBeLessThanOrEqual(1);
@@ -66,4 +66,40 @@ test("with reduced motion the playback does not start by itself and the controls
   await scrubber.focus();
   await page.keyboard.press("ArrowLeft");
   await expect(readout(page)).not.toHaveText(before ?? "");
+});
+
+// The widths each still is laid out for: there its axes are the live chart's.
+const STILL_WIDTHS = [390, 640, 1024];
+
+test("the still and the live chart use the same axis ticks", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "sets its own viewports");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of STILL_WIDTHS) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const ticks = (kind: string) => figure(page).locator(`svg${kind}:visible .oc-axis-tick`);
+    const stillTicks = await ticks(".demo-static").allTextContents();
+    expect(stillTicks.length, `ticks at ${width}px`).toBeGreaterThan(0);
+    await figure(page).scrollIntoViewIfNeeded();
+    await expect(toggle(page)).toHaveAccessibleName("Play");
+    await expect(ticks(":not(.demo-static)"), `ticks at ${width}px`).toHaveText(stillTicks);
+  }
+});
+
+test("the still names its year and countries and never renders smaller than the live chart", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "sets its own viewports");
+  await page.route("**/*.js", (route) => route.abort());
+  for (const width of [390, 640, 768, 1024, 1280, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    const still = figure(page).locator("svg.demo-static:visible");
+    await expect(still).toHaveCount(1);
+    await expect(still).toContainText("2022");
+    await expect(still).toContainText("China");
+    const tick = still.locator("text.oc-axis-tick").first();
+    const scale = await tick.evaluate((element: SVGTextElement) => element.getScreenCTM()?.a ?? 0);
+    expect(scale, `still text scale at ${width}px`).toBeGreaterThanOrEqual(0.95);
+  }
 });
