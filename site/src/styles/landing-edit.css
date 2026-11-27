@@ -1,43 +1,74 @@
 /*
- * Styles for the edit section (#edit): the editable chart in a fixed box, and
- * under it the spec line the callout writes and Reset. From 1024px the figure
- * takes eight of the twelve columns; under that it takes the full width.
+ * Styles for the edit section (#edit): the editable chart in a fixed box and
+ * what the spec says about its callout.
+ *
+ * From 1024px the chart takes eight of the twelve columns and the spec excerpt
+ * the last four, starting level with the chart's plot (`--edit-plot-top`, set
+ * by the island from the live chart's layout), so the line that changes is on
+ * screen while the reader drags. Under 1024px only the excerpt's offset line
+ * shows, under the chart with Reset beside it.
  */
 @reference "./global.css";
 
 @layer components {
-  .edit-layout {
-    @apply grid lg:grid-cols-12 lg:gap-x-8;
+  /* The figure's rule spans the section; its caption stays under the chart. */
+  .edit-figure {
+    @apply min-w-0 lg:grid lg:grid-cols-12 lg:gap-x-8;
   }
 
-  .edit-figure {
-    @apply min-w-0 lg:col-span-8;
+  .edit-figure > * {
+    @apply lg:col-span-12;
+  }
+
+  .edit-figure > figcaption {
+    @apply lg:col-span-8;
+  }
+
+  .edit-desk {
+    @apply lg:grid lg:grid-cols-12 lg:items-start lg:gap-x-8;
   }
 
   /* The chart's box: one height for the static SVG and the live chart, so the swap never moves the page. */
   .edit-stage {
-    @apply relative h-[480px] w-full max-sm:h-[440px];
+    @apply relative h-[480px] w-full max-sm:h-[440px] lg:col-span-8;
   }
 
   .edit-live {
     @apply h-full w-full;
   }
 
-  .edit-controls {
-    @apply border-line mt-4 flex items-center justify-between gap-4 border-t pt-4;
-  }
-
-  /* The spec line: JSON muted, the two numbers in ink. One line at every width. */
+  /* Under 1024px: the offset line and Reset on one ruled line under the chart. */
   .edit-readout {
-    @apply text-muted m-0 min-w-0 truncate font-mono text-[13px] leading-5 sm:text-sm;
+    @apply border-line mt-4 flex items-center justify-between gap-4 border-t pt-4;
+    @apply lg:col-span-4 lg:mt-0 lg:block lg:border-t-0 lg:pt-[var(--edit-plot-top,115px)];
   }
 
+  .edit-spec-label {
+    @apply text-muted border-line m-0 mb-3 hidden border-t pt-3 text-sm lg:block;
+  }
+
+  .edit-spec {
+    @apply text-muted m-0 min-w-0 truncate bg-transparent p-0 font-mono text-[13px] leading-5 sm:text-sm;
+    @apply lg:overflow-x-auto lg:text-xs lg:leading-6 xl:text-[13px];
+  }
+
+  /* One character per level until the column is wide enough for two: at 1024 the text line needs every column. */
+  .edit-spec-line {
+    @apply block lg:pl-[calc(var(--depth)*1ch)] xl:pl-[calc(var(--depth)*2ch)];
+  }
+
+  .edit-spec-context {
+    @apply hidden lg:block;
+  }
+
+  /* The numbers carry the change: in ink, and beside the chart in fixed cells so a minus sign
+     or a third digit moves nothing. A phone has no room for the cells beside Reset. */
   .edit-readout-number {
-    @apply text-ink font-medium;
+    @apply text-ink font-medium tabular-nums lg:inline-block lg:min-w-[4ch] lg:text-right;
   }
 
   .edit-reset {
-    @apply h-8 shrink-0 cursor-pointer px-3;
+    @apply h-8 shrink-0 cursor-pointer px-3 lg:mt-5;
   }
 
   .edit-reset:disabled {

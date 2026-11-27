@@ -14,7 +14,16 @@
  * `useChartModule` logs why.
  */
 import type { EditTransaction } from "@opendata-ai/openchart-core";
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ChartHandle } from "@opendata-ai/openchart-react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Mounted, useChartModule } from "../../shared/LiveChart";
 import { usePageChartTheme } from "../../shared/page-theme";
 import { type Offset, sameOffset, specWithOffset } from "./callout-offset";
@@ -38,6 +47,8 @@ export function EditDesk({ children }: EditDeskProps) {
   const acceptedOffset = useEditRules();
   const { theme, darkMode } = usePageChartTheme();
   const root = useRef<HTMLDivElement>(null);
+  const handle = useRef<ChartHandle>(null);
+  const [plotTop, setPlotTop] = useState<number | null>(null);
   const [offset, setOffset] = useState<Offset>(startOffset);
   const [live, setLive] = useState(false);
   const markLive = useCallback(() => setLive(true), []);
@@ -69,12 +80,23 @@ export function EditDesk({ children }: EditDeskProps) {
     if (root.current) return relayDetachedTouches(root.current);
   }, []);
 
+  // The spec beside the chart starts level with the plot, under the chart's own headline.
+  // Read once per mount at the starting offset: a moved callout nudges the plot by a few
+  // pixels, and the column must not follow it.
+  useEffect(() => {
+    if (!live) return;
+    setPlotTop(handle.current?.instance?.layout.area.y ?? null);
+  }, [live]);
+  const deskStyle =
+    plotTop === null ? undefined : ({ "--edit-plot-top": `${plotTop}px` } as CSSProperties);
+
   return (
-    <div className="edit-desk" ref={root}>
+    <div className="edit-desk" ref={root} style={deskStyle}>
       <div className="edit-stage" data-edit-chart>
         {module ? (
           <>
             <module.Chart
+              ref={handle}
               spec={liveSpec}
               theme={theme}
               darkMode={darkMode}

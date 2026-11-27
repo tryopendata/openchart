@@ -7,7 +7,9 @@
  * - `<section id="edit" aria-labelledby="edit-title" data-landing-section>` with
  *   one h2, id `edit-title` (`landingCopy.headings.edit`).
  * - `[data-edit-chart]` holds the chart, static SVG in the server HTML.
- * - `[data-edit-readout]` holds the spec line with the callout's live offset.
+ * - `[data-edit-readout]` holds the spec line with the callout's live offset:
+ *   from 1024px one line of a spec excerpt beside the chart, under that the
+ *   only line shown, under the chart.
  * - A "Reset" button, disabled while the callout is where the spec put it.
  * - The figure has a `<figcaption>` with a "Source: …" line.
  *
@@ -26,7 +28,7 @@ import "../../../styles/landing-edit.css";
 const STAGE_HEIGHT = 480;
 /** The chart box's height in px under 640px wide. */
 const PHONE_STAGE_HEIGHT = 440;
-/** The figure's widest column from 1024px. */
+/** The chart's widest column from 1024px (eight of twelve; the spec excerpt takes the rest). */
 const WIDE_WIDTH = 880;
 const PHONE_WIDTH = 360;
 const HOW_TO =
@@ -47,20 +49,18 @@ const phoneStatics = staticSvgPair(editSpec, {
 <section id="edit" aria-labelledby="edit-title" data-landing-section class="landing-section">
   <div class="landing-container">
     <SectionHead id="edit">
-      The callout on this chart is live: put it where it reads best, and the line under the chart
-      shows the offset your move writes into the spec.
+      The callout on this chart is live: put it where it reads best, and watch the offset your move
+      writes into the spec.
     </SectionHead>
-    <div class="edit-layout">
-      <PublishedFigure class="edit-figure figure-hairline" source={editSource} note={HOW_TO}>
-        <EditDesk client:visible>
-          <div class="demo-static-set" data-static-size="wide">
-            <Fragment set:html={wideStatics} />
-          </div>
-          <div class="demo-static-set" data-static-size="phone">
-            <Fragment set:html={phoneStatics} />
-          </div>
-        </EditDesk>
-      </PublishedFigure>
-    </div>
+    <PublishedFigure class="edit-figure figure-hairline" source={editSource} note={HOW_TO}>
+      <EditDesk client:visible>
+        <div class="demo-static-set" data-static-size="wide">
+          <Fragment set:html={wideStatics} />
+        </div>
+        <div class="demo-static-set" data-static-size="phone">
+          <Fragment set:html={phoneStatics} />
+        </div>
+      </EditDesk>
+    </PublishedFigure>
   </div>
 </section>

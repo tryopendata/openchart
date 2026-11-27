@@ -212,6 +212,42 @@ test.describe("handling the chart", () => {
   });
 });
 
+test.describe("the spec beside the chart at 1440x900", () => {
+  test.use({ reducedMotion: "reduce", viewport: { width: 1440, height: 900 } });
+  test.skip(({ isMobile }) => isMobile, "a desktop layout");
+
+  const specBlock = (page: Page) => section(page).locator(".edit-spec");
+
+  test("the readout is on screen whenever the chart is", async ({ page }) => {
+    await goLive(page);
+    await liveChart(page).evaluate((element) => element.scrollIntoView({ block: "center" }));
+    const viewport = page.viewportSize() ?? { width: 0, height: 0 };
+    for (const box of [await liveChart(page).boundingBox(), await readout(page).boundingBox()]) {
+      expect(box).not.toBeNull();
+      expect(box?.y).toBeGreaterThanOrEqual(0);
+      expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(viewport.height);
+      expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport.width);
+    }
+    const chart = await liveChart(page).boundingBox();
+    const line = await readout(page).boundingBox();
+    expect(line?.x, "the readout sits right of the chart").toBeGreaterThan(
+      (chart?.x ?? 0) + (chart?.width ?? 0),
+    );
+  });
+
+  test("the spec block keeps its size while the numbers change", async ({ page }) => {
+    await goLive(page);
+    await expect(specBlock(page)).toContainText('"type": "text"');
+    const before = await specBlock(page).boundingBox();
+    // Far left and down: dx goes negative and dy reaches three digits.
+    await mouseDrag(page, await centreOf(calloutLabel(page)), { x: -260, y: 110 });
+    await expect(readout(page)).toHaveText(/"dx": -\d+, "dy": \d{3} \}/);
+    const after = await specBlock(page).boundingBox();
+    expect(after?.width).toBe(before?.width);
+    expect(after?.height).toBe(before?.height);
+  });
+});
+
 test.describe("the self-demonstration", () => {
   test.use({ reducedMotion: "no-preference" });
 
