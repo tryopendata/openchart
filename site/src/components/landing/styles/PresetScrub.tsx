@@ -4,9 +4,11 @@
  * beside it are the style's name, one sentence on the look, and, behind a
  * disclosure, the theme values that changed. Where the pinned block fits and
  * motion is allowed, the section pins and the scroll picks the stop; otherwise
- * the stops are buttons. The chart is the shared LiveChart whose spec changes,
- * so each change is the library's own transition. Before the island runs, the
- * page shows the first stop with its static chart (the children) and no buttons.
+ * the stops are buttons. A screen reader hears the style a reader picks with a
+ * button, never the stops the scroll passes through. The chart is the shared
+ * LiveChart whose spec changes, so each change is the library's own transition.
+ * Before the island runs, the page shows the first stop with its static chart
+ * (the children) and no buttons.
  */
 import type { ChartSpec, ThemeConfig } from "@opendata-ai/openchart-core";
 import {
@@ -132,6 +134,24 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
     setIndex(next);
   }, []);
 
+  // Only a stop the reader picks is announced. While pinned a press scrolls to
+  // its stop, so the scroll reports it; `requested` tells that stop apart from
+  // the ones the reader merely scrolls through.
+  const requested = useRef<number | null>(null);
+  const [announced, setAnnounced] = useState<number | null>(null);
+  const showScrolledStop = useCallback(
+    (next: number) => {
+      show(next);
+      if (next === requested.current) {
+        setAnnounced(next);
+        return;
+      }
+      requested.current = null;
+      setAnnounced(null);
+    },
+    [show],
+  );
+
   useEffect(() => {
     const block = blockRef.current;
     const progress = progressRef.current;
@@ -139,9 +159,9 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
     return pinScrub(
       tools,
       { block, progress, count: stops.length },
-      { onPin: setPin, onStop: show },
+      { onPin: setPin, onStop: showScrolledStop },
     );
-  }, [tools, ready, stops.length, show]);
+  }, [tools, ready, stops.length, showScrolledStop]);
 
   // Runs before paint, so the new copy never flashes at full strength first.
   useLayoutEffect(() => {
@@ -169,13 +189,16 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
   const choose = (next: number) => {
     // While pinned, the scroll owns the stop: jump to the middle of that stop's stretch.
     if (pin) {
+      requested.current = next;
       const top = pin.start + progressOf(next, stops.length) * (pin.end - pin.start);
       window.scrollTo({ top, behavior: "instant" });
     } else {
       show(next);
+      setAnnounced(next);
     }
   };
   const outgoing = previous === null ? undefined : stops[previous];
+  const announcedStop = announced === null ? undefined : stops[announced];
 
   return (
     <div className="scrub" style={{ "--stops": stops.length } as CSSProperties}>
@@ -226,7 +249,7 @@ export function PresetScrub({ stops, spec, children }: PresetScrubProps) {
           </div>
         </div>
         <p className="sr-only" aria-live="polite">
-          House style: {stop.variant ?? stop.label}
+          {announcedStop ? `House style: ${announcedStop.variant ?? announcedStop.label}` : null}
         </p>
       </div>
     </div>

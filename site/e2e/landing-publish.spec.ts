@@ -17,8 +17,10 @@ const LIBRARY_CHUNK = /\/_astro\/chunk-[^/]+\.js$/;
 /** The GIF exporter's lazily loaded chunk. */
 const GIF_CHUNK = /\/_astro\/export-gif\.[^/]+\.js$/;
 
-const SAVED = (extension: string) =>
-  new RegExp(`^Saved openchart-wind-solar-coal\\.${extension} \\([\\d.]+ (B|KB|MB)\\)$`);
+const DOWNLOAD_STARTED = (extension: string) =>
+  new RegExp(
+    `^Download started: openchart-wind-solar-coal\\.${extension} \\([\\d.]+ (B|KB|MB)\\)$`,
+  );
 const GIF_READY =
   /^GIF ready in place of the chart \([\d.]+ (B|KB|MB)\)\. Download it or go back below\.$/;
 
@@ -68,7 +70,7 @@ for (const format of ["SVG", "PNG", "CSV"] as const) {
     const download = page.waitForEvent("download");
     await exportButton(page, format).click();
     expect((await download).suggestedFilename()).toMatch(new RegExp(`\\.${format.toLowerCase()}$`));
-    await expect(status(page)).toHaveText(SAVED(format.toLowerCase()));
+    await expect(status(page)).toHaveText(DOWNLOAD_STARTED(format.toLowerCase()));
   });
 }
 
@@ -128,7 +130,7 @@ test("a GIF whose encoder chunk does not download reports the failure and leaves
   const download = page.waitForEvent("download");
   await exportButton(page, "SVG").click();
   expect((await download).suggestedFilename()).toMatch(/\.svg$/);
-  await expect(status(page)).toHaveText(SAVED("svg"));
+  await expect(status(page)).toHaveText(DOWNLOAD_STARTED("svg"));
 });
 
 test("Back is disabled while a GIF renders, and no GIF comes back after it", async ({ page }) => {
@@ -160,7 +162,7 @@ test("focus returns to the GIF button after Back, and stays on a button pressed 
   await page.keyboard.press("Enter");
   await expect(exportButton(page, "PNG")).toBeFocused();
   await download;
-  await expect(status(page)).toHaveText(SAVED("png"));
+  await expect(status(page)).toHaveText(DOWNLOAD_STARTED("png"));
   await expect(exportButton(page, "PNG")).toBeFocused();
 });
 

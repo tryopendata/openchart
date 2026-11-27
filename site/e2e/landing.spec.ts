@@ -403,6 +403,34 @@ test("the preset scrub moves through essay, wire, broadsheet and terminal, then 
   );
 });
 
+test("the pinned preset scrub announces a style the reader presses, never one the scroll reaches", async ({
+  page,
+  isMobile,
+}) => {
+  test.skip(isMobile, "The pin, where the scroll picks the stop, runs only on a desktop viewport.");
+  await page.goto("/");
+  const section = await hydrated(page.locator("#styles"));
+  const name = section.locator("[data-preset-name]");
+  const announcement = section.locator('[aria-live="polite"]');
+  const { top, height } = await page.evaluate(() => ({
+    top: (document.getElementById("styles")?.getBoundingClientRect().top ?? 0) + window.scrollY,
+    height: window.innerHeight,
+  }));
+
+  const reached = new Set<string>();
+  for (let y = top - height; y <= top + 3 * height; y += height / 10) {
+    await scrollTo(page, y);
+    reached.add(((await name.textContent()) ?? "").trim());
+    await expect(announcement, `silent at scroll ${Math.round(y)}`).toHaveText("");
+  }
+  expect(reached.size, "the scroll moved through the stops").toBeGreaterThan(1);
+
+  await scrollTo(page, top + height * 0.5);
+  await section.getByRole("button", { name: "Broadsheet", exact: true }).click();
+  await expect(announcement).toHaveText("House style: Broadsheet");
+  await expect(name).toHaveText("Broadsheet");
+});
+
 test.describe("scroll story", () => {
   const section = (page: Page) => page.locator("#story");
   const steps = (page: Page) => section(page).locator("[data-story-step]");
@@ -616,33 +644,37 @@ test("the agent session plays to a chart and shows the validator's error at the 
   ).toHaveCount(1);
 });
 
-test("the hero and start install commands switch package managers independently", async ({
+test("the hero holds the page's one package-manager install command; #start offers a copyable command per framework", async ({
   page,
 }) => {
   await page.goto("/");
-  // Each section's install command is its own widget; #start also holds the framework tabs.
+  await expect(page.getByRole("tablist", { name: "Package manager" })).toHaveCount(1);
   const hero = page.locator("#desk [data-install-command]");
-  const start = page.locator("#start [data-install-command]");
-  const managers = (widget: Locator) => widget.getByRole("tablist", { name: "Package manager" });
-
-  await start.scrollIntoViewIfNeeded();
-  await managers(start).getByRole("tab", { name: "bun" }).click();
-  await expect(start.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
-  await expect(hero.getByRole("tabpanel")).toContainText(
-    "npm install @opendata-ai/openchart-react",
-  );
-
-  await hero.scrollIntoViewIfNeeded();
-  await managers(hero).getByRole("tab", { name: "pnpm" }).click();
+  await expect(hero).toHaveCount(1);
+  await hero
+    .getByRole("tablist", { name: "Package manager" })
+    .getByRole("tab", { name: "pnpm" })
+    .click();
   await expect(hero.getByRole("tabpanel")).toContainText("pnpm add @opendata-ai/openchart-react");
-  await expect(start.getByRole("tabpanel")).toContainText("bun add @opendata-ai/openchart-react");
+
+  const start = await hydrated(page.locator("#start"));
+  await expect(start.locator("[data-install-command]")).toHaveCount(0);
+  const frameworks = start.locator("[data-framework-bench]");
+  for (const label of ["React", "Vue", "Svelte", "Vanilla"]) {
+    await frameworks.getByRole("tab", { name: label, exact: true }).click();
+    const panel = frameworks.getByRole("tabpanel");
+    await expect(panel).toContainText(`npm install @opendata-ai/openchart-${label.toLowerCase()}`);
+    await expect(
+      panel.getByRole("button", { name: `Copy the ${label} install command` }),
+    ).toBeVisible();
+  }
 });
 
 test("framework tabs switch the install and usage code and share the choice with docs demos", async ({
   page,
 }) => {
   await page.goto("/");
-  // The framework bench only: #start also holds the package-manager tabs.
+  // The framework bench only, not the facts table or the links below it.
   const bench = (section: Locator) => section.locator("[data-framework-bench]");
   let frameworks = bench(await hydrated(page.locator("#start")));
   const panelText = async () =>

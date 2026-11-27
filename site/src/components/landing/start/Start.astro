@@ -5,10 +5,10 @@
  * client:visible), each holding the install command and the usage sample the
  * docs generate for one small spec, beside the chart that spec draws. Below it,
  * a ruled facts table (bundle and license, each linked to the file that backs
- * it) and the install command with copy, then links to the docs and GitHub. The
- * framework tabs share the docs demo tabs' stored choice (`openchart:framework`);
- * the install command is the shared InstallCommand, whose own script wires its
- * tabs and Copy.
+ * it), then links to the docs and GitHub. The framework tabs share the docs demo
+ * tabs' stored choice (`openchart:framework`). There is no package-manager
+ * install command here: each framework tab already has its own copyable command,
+ * and a second, React-only one would contradict a Vue or Svelte reader's tab.
  *
  * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
  * - `<section id="start" aria-labelledby="start-title" data-landing-section>`
@@ -19,14 +19,12 @@
  *   "Vue", "Svelte" and "Vanilla", each controlling a `role="tabpanel"`. Each
  *   panel's install command reads `npm install @opendata-ai/openchart-<framework>`,
  *   and every panel is in the server-rendered HTML.
- * - The install command (id `start-install`, "Package manager" tablist) holds
- *   every `site.install` command in the server-rendered HTML.
+ * - No `[data-install-command]`: the hero holds the page's only one.
  */
 import { DOCS_HOME, site } from "../../../config";
 import { FRAMEWORK_STORAGE_KEY } from "../../../lib/demo/framework-choice";
 import { highlightCode } from "../../../lib/demo/highlight";
 import { staticSvgPair } from "../../../lib/demo/static-svg";
-import InstallCommand from "../../shared/InstallCommand.astro";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
 import { benchSource, benchSpec } from "./bench-spec";
@@ -114,8 +112,7 @@ const chartSvgs = staticSvgPair(benchSpec, { idPrefix: "bench-chart", ...CHART_S
           </tbody>
         </table>
       </div>
-      <div class="start-install" data-reveal>
-        <InstallCommand id="start-install" commands={site.install} />
+      <div class="start-next" data-reveal>
         <p class="start-links" data-motion-part>
           <a class="btn btn-primary" href={DOCS_HOME}>
             Read the docs

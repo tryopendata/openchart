@@ -1,7 +1,7 @@
 /*
  * Styles for the start section (#start): a tabbed code bench beside the chart it
- * draws, followed by a ruled facts table and the install command. Rules, type and
- * the one accent do the work; color comes only from the charts.
+ * draws, followed by a ruled facts table and the links to the docs and GitHub.
+ * Rules, type and the one accent do the work; color comes only from the charts.
  */
 @reference "./global.css";
 
@@ -74,14 +74,14 @@
     @apply pt-6;
   }
 
-  /* Start, after the bench: the facts table and the install command in the last
-     eight columns, under the code. */
+  /* Start, after the bench: the facts table and the links in the last eight
+     columns, under the code. */
   .start-close {
     @apply mt-16 grid gap-y-10 lg:mt-20 lg:grid-cols-12 lg:gap-x-8;
   }
 
   .start-table-wrap,
-  .start-install {
+  .start-next {
     @apply min-w-0 lg:col-span-8 lg:col-start-5;
   }
 
@@ -132,7 +132,7 @@
   }
 
   .start-links {
-    @apply mt-8 flex flex-wrap gap-3;
+    @apply flex flex-wrap gap-3;
   }
 
   /* The shared Copy button, sized down where it sits in a one-line row. */

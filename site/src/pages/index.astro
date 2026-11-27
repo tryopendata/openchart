@@ -1,7 +1,8 @@
 ---
 /**
- * The landing page: ten sections in the order of the plan's Spec section, each
- * a component owned by one lane. Sections sit directly in `<main>` with no wrapper
+ * The landing page: ten sections in the order of `LANDING_SECTION_IDS` in
+ * src/landing/copy.ts, which tests/build.test.ts enforces, each its own
+ * component. Sections sit directly in `<main>` with no wrapper
  * or spacer, so the page is exactly as tall as its sections. The shared rhythm is
  * in landing.css; each section imports its own styles.
  */

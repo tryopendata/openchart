@@ -830,7 +830,7 @@ describe("the landing page", () => {
     expect(unsourced).toEqual([]);
   });
 
-  it("without JavaScript already shows the hero chart, the finished spec and every install command", () => {
+  it("without JavaScript already shows the hero chart, the finished spec, the one package-manager install command and every framework's", () => {
     const hero = home().querySelector("#desk");
     expect(hero?.querySelector("[data-hero-chart] svg"), "a chart SVG in the hero").not.toBeNull();
     const defaultSpec = buildHeroSpec(DEFAULT_HERO_FORM, DEFAULT_HERO_SPOTLIGHT);
@@ -841,8 +841,11 @@ describe("the landing page", () => {
       ...defaultDiff.lines.filter((line) => line.added).map((line) => line.text.trim()),
     ].filter((token) => !pane.includes(token));
     expect(missing).toEqual([]);
+    const installs = [...home().querySelectorAll("[data-install-command]")];
+    expect(installs.map((install) => install.closest("section")?.id)).toEqual(["desk"]);
+    const heroInstall = textOf(installs[0]);
+    for (const { command } of site.install) expect(heroInstall).toContain(command);
     const text = home().body.textContent ?? "";
-    for (const { command } of site.install) expect(text).toContain(command);
     for (const framework of ["react", "vue", "svelte", "vanilla"]) {
       expect(text).toContain(`npm install @opendata-ai/openchart-${framework}`);
     }
@@ -929,13 +932,10 @@ describe("the landing page", () => {
     }
   });
 
-  it("#start holds the framework tabs and the bench chart, the bundle and license facts, the install command and the docs and GitHub links", () => {
+  it("#start holds the framework tabs, each with its own install command, the bench chart, the bundle and license facts and the docs and GitHub links", () => {
     const start = home().querySelector("#start");
     const bench = start?.querySelector("[data-framework-bench]");
-    const install = start?.querySelector("[data-install-command]");
-    if (!start || !bench || !install) {
-      throw new Error("#start is missing its framework bench or its install command.");
-    }
+    if (!start || !bench) throw new Error("#start is missing its framework bench.");
     expect([...bench.querySelectorAll('[role="tab"]')].map(textOf)).toEqual([
       "React",
       "Vue",
@@ -956,18 +956,8 @@ describe("the landing page", () => {
       "Bundle",
       "License",
     ]);
-    expect([...install.querySelectorAll('[role="tab"]')].map(textOf)).toEqual([
-      "npm",
-      "bun",
-      "pnpm",
-    ]);
-    expect([...install.querySelectorAll('[role="tabpanel"]')].map((panel) => panel.id)).toEqual([
-      "start-install-npm",
-      "start-install-bun",
-      "start-install-pnpm",
-    ]);
-    const installText = textOf(install);
-    for (const { command } of site.install) expect(installText).toContain(command);
+    // A package-manager install command here would be React's whatever tab is picked.
+    expect(start.querySelector("[data-install-command]")).toBeNull();
     const links = [...start.querySelectorAll("a[href]")].map((link) => link.getAttribute("href"));
     expect(links).toContain(DOCS_HOME);
     expect(links).toContain(site.repo);
@@ -1040,7 +1030,10 @@ function contrastRatio(a: string, b: string): number {
 /**
  * The landing page's HTML cap. The page is static SVG for every figure in both
  * themes plus the demos' embedded specs; data a section can fetch when it is
- * seen stays out of the HTML (see MAX_MOTION_SECTION_BYTES).
+ * seen stays out of the HTML (see MAX_MOTION_SECTION_BYTES). Measured on
+ * 2026-11-26: dist/index.html is 781 KB. Inline SVG is about 518 KB of it, with
+ * inline scripts about 81 KB and island props about 77 KB; by section the
+ * vocabulary wall (236 KB) and the motion stills (178 KB) are the largest.
  */
 const MAX_LANDING_PAGE_BYTES = 1_000_000;
 

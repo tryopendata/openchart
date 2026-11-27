@@ -8,7 +8,7 @@
 /** A format the publish section exports. */
 export type ExportFormat = "svg" | "png" | "csv" | "gif";
 
-/** Where the last export stands. `fileName` is what a finished file is saved as. */
+/** Where the last export stands. `fileName` is the name the download is offered under. */
 export type ExportState =
   | { kind: "idle" }
   | { kind: "working"; format: ExportFormat }
@@ -64,8 +64,9 @@ export function failureReason(format: ExportFormat, error: unknown): string {
 
 /**
  * The status line: empty when idle, "Exporting CSV…" or "Rendering GIF…" while
- * working, "Saved openchart-wind-solar-coal.svg (18 KB)" when a file is saved,
- * a pointer to the GIF shown in place when a GIF is done, and
+ * working, "Download started: openchart-wind-solar-coal.svg (18 KB)" once the
+ * download is handed to the browser (the page cannot see whether the file was
+ * kept, so it never claims the file was saved), a pointer to the GIF shown in place when a GIF is done, and
  * "GIF export failed: <reason>" when an export fails.
  */
 export function exportStatusText(state: ExportState): string {
@@ -77,7 +78,7 @@ export function exportStatusText(state: ExportState): string {
     case "done":
       return state.format === "gif"
         ? `GIF ready in place of the chart (${formatBytes(state.bytes)}). Download it or go back below.`
-        : `Saved ${state.fileName} (${formatBytes(state.bytes)})`;
+        : `Download started: ${state.fileName} (${formatBytes(state.bytes)})`;
     case "failed":
       return `${formatName(state.format)} export failed: ${state.reason}`;
   }

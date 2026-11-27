@@ -46,6 +46,10 @@ const scrub = () => (
 const presetName = (container: HTMLElement) =>
   [...container.querySelectorAll("[data-preset-name]")].map((element) => element.textContent);
 
+/** What the polite live region would read out; empty when nothing is announced. */
+const announcement = (container: HTMLElement) =>
+  container.querySelector('[aria-live="polite"]')?.textContent ?? "";
+
 function setViewport(width: number, height: number) {
   (window as unknown as { happyDOM: { setViewport(size: object): void } }).happyDOM.setViewport({
     width,
@@ -102,6 +106,20 @@ describe("the house-style scrub", () => {
     await user.click(screen.getByRole("button", { name: "Broadsheet" }));
     // The middle of the third of five stretches of a 2-viewport pin.
     expect(window.scrollY).toBeGreaterThan(0);
+  });
+
+  // The pinned path, where the scroll reports the stop, needs real layout: e2e/landing.spec.ts
+  // checks that scrolling through the pin stays silent and a press is announced.
+  it("announces a stop picked from the keyboard", async () => {
+    const user = userEvent.setup();
+    const { container } = render(scrub());
+    expect(announcement(container)).toBe("");
+    screen.getByRole("button", { name: "Wire" }).focus();
+    await user.keyboard("{Enter}");
+    expect(announcement(container)).toBe("House style: Wire");
+    screen.getByRole("button", { name: "Terminal" }).focus();
+    await user.keyboard(" ");
+    expect(announcement(container)).toBe("House style: Terminal");
   });
 
   it("with motion and no room to pin, changes stop on the button and crossfades the old copy out", async () => {
