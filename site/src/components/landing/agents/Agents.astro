@@ -25,7 +25,7 @@ import { llmsIndex } from "../../../lib/docs";
 import SectionHead from "../../shared/SectionHead.astro";
 import { AgentSession } from "./AgentSession";
 import { buildSessionScript } from "./session-script";
-import "../../../styles/landing-close.css";
+import "../../../styles/landing-agents.css";
 
 const llmsUrl = new URL("/llms.txt", site.url).href;
 const llms = llmsIndex((await allPages()).map((entry) => entry.page));
@@ -33,7 +33,7 @@ const script = buildSessionScript(agentSession, { llms, llmsUrl, file: AGENT_SPE
 
 /**
  * Two drawing sizes, so a phone gets the chart's own compact layout instead of the
- * wide one scaled down; landing-close.css shows one per viewport and sizes the stage
+ * wide one scaled down; landing-agents.css shows one per viewport and sizes the stage
  * to match. Each comes in both themes.
  */
 const CHART_SIZES = {

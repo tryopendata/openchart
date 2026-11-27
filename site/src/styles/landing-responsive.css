@@ -1,6 +1,6 @@
 /*
  * Styles for the responsive section (#responsive): a frame with a draggable
- * edge over dashed breakpoint guides. Transitions use `--story-ease` from
+ * edge over dashed breakpoint guides. Transitions use `--landing-ease` from
  * landing.css.
  */
 @reference "./global.css";
@@ -40,7 +40,7 @@
   /* content-box: the width the island sets is the chart's own box, inside the border. */
   .resize-frame {
     @apply border-line-strong bg-canvas relative box-content max-w-[calc(100%-2px)] border;
-    transition: width 520ms var(--story-ease);
+    transition: width 520ms var(--landing-ease);
   }
 
   .resize-frame[data-dragging] {
@@ -60,7 +60,7 @@
     transition:
       background-color 150ms ease-out,
       border-color 150ms ease-out,
-      height 300ms var(--story-ease);
+      height 300ms var(--landing-ease);
   }
 
   .resize-handle:hover::before,

@@ -13,6 +13,8 @@
  * Contract (e2e/landing.spec.ts and tests/build.test.ts rely on it):
  * - `<section id="start" aria-labelledby="start-title" data-landing-section>`
  *   with one h2, id `start-title` (`landingCopy.headings.start`).
+ * - The bench (`[data-framework-bench]`) holds the framework tabs and the
+ *   figure with the bench chart (two SVGs, one per theme).
  * - Framework tabs (`role="tab"` in the "Framework" tablist) named "React",
  *   "Vue", "Svelte" and "Vanilla", each controlling a `role="tabpanel"`. Each
  *   panel's install command reads `npm install @opendata-ai/openchart-<framework>`,
@@ -27,12 +29,12 @@ import { staticSvgPair } from "../../../lib/demo/static-svg";
 import InstallCommand from "../../shared/InstallCommand.astro";
 import PublishedFigure from "../../shared/PublishedFigure.astro";
 import SectionHead from "../../shared/SectionHead.astro";
-import { benchSource, benchSpec } from "../frameworks/bench-spec";
-import { frameworkPanels } from "../frameworks/framework-panels";
-import { LANDING_FRAMEWORKS } from "../frameworks/framework-tabs";
-import { INSTALL_TABS_ID, type InstallPanel, InstallTabs } from "../frameworks/InstallTabs";
+import { benchSource, benchSpec } from "./bench-spec";
 import { startFacts } from "./facts";
-import "../../../styles/landing-close.css";
+import { frameworkPanels } from "./framework-panels";
+import { LANDING_FRAMEWORKS } from "./framework-tabs";
+import { INSTALL_TABS_ID, type InstallPanel, InstallTabs } from "./InstallTabs";
+import "../../../styles/landing-start.css";
 
 const panels = frameworkPanels(benchSpec);
 const highlighted = await highlightCode(panels.map(({ shown, lang }) => ({ code: shown, lang })));
@@ -54,8 +56,8 @@ const chartSvgs = staticSvgPair(benchSpec, { idPrefix: "bench-chart", ...CHART_S
       Install the package for your framework and hand it the spec. The code below draws the chart
       beside it, and the docs show the same four versions under every example.
     </SectionHead>
-    <div class="frameworks-bench">
-      <div class="frameworks-code">
+    <div class="start-bench" data-framework-bench>
+      <div class="start-code">
         <InstallTabs client:visible panels={installPanels} />
         {/* Shows the stored tab before paint; InstallTabs reads the same choice when it hydrates. */}
         <script
@@ -80,8 +82,8 @@ const chartSvgs = staticSvgPair(benchSpec, { idPrefix: "bench-chart", ...CHART_S
           }
         </script>
       </div>
-      <PublishedFigure class="frameworks-figure" source={benchSource} note="What each tab renders.">
-        <div class="frameworks-chart" set:html={chartSvgs} />
+      <PublishedFigure class="start-figure" source={benchSource} note="What each tab renders.">
+        <div class="start-chart" set:html={chartSvgs} />
       </PublishedFigure>
     </div>
     <div class="start-close">

@@ -21,9 +21,9 @@
  *   Visualizations section label from `docsAreas` ("Distribution" and so on).
  * - Each tile carries `data-vocabulary-tile` and holds one link to its docs page
  *   under `/docs/<intent>/`. A filtered-out tile is hidden, not just dimmed.
- * - The featured figures sit in `[data-featured]` after the wall; each has a
- *   `<figcaption>` with a "Source: …" line (`<Demo>` writes one) and a link to
- *   its docs page.
+ * - The featured figures sit in `[data-featured]` after the wall; each
+ *   (`[data-featured-figure]`) has a `<figcaption>` with a "Source: …" line
+ *   (`<Demo>` writes one) and a link to its docs page (`[data-featured-link]`).
  */
 import { getDemo } from "../../../demos/registry";
 import { pageSharedHashes } from "../../../lib/demo/shared-values";
@@ -92,26 +92,27 @@ const tiles = vocabularyTiles.map((tile, index) => ({
         ))}
       </ul>
     </VocabularyWall>
-    <div class="kinds-grid" data-featured data-reveal>
+    <div class="featured-grid" data-featured data-reveal>
       {featuredFigures.map((figure) => (
         <div
-          class="kinds-tile"
+          class="featured-tile"
+          data-featured-figure
           data-place={figure.place}
-          style={`--kinds-height: ${figure.height}px; --kinds-height-narrow: ${figure.narrowHeight ?? figure.height}px`}
+          style={`--featured-height: ${figure.height}px; --featured-height-narrow: ${figure.narrowHeight ?? figure.height}px`}
         >
           {figure.scrollBelow ? (
             <div
-              class="kinds-scroll"
-              data-kinds-scroll
+              class="featured-scroll"
+              data-featured-scroll
               data-scroll-label={`${getDemo(figure.demo).title}. Chart, scrolls sideways.`}
-              style={`--kinds-scroll-min: ${figure.scrollBelow}px`}
+              style={`--featured-scroll-min: ${figure.scrollBelow}px`}
             >
               <Demo id={figure.demo} tabs={false} />
             </div>
           ) : (
             <Demo id={figure.demo} tabs={false} />
           )}
-          <a class="kinds-link" href={figure.href} data-motion-part>
+          <a class="featured-link" href={figure.href} data-featured-link data-motion-part>
             {figure.link}
             <span aria-hidden="true"> →</span>
           </a>
@@ -125,7 +126,7 @@ const tiles = vocabularyTiles.map((tile, index) => ({
   // Under 640px a wide figure scrolls sideways, so its scroller becomes a labelled,
   // keyboard-reachable group; from 640px up nothing scrolls and it is plain markup.
   const narrow = window.matchMedia("(max-width: 639.98px)");
-  const scrollers = document.querySelectorAll<HTMLElement>("[data-kinds-scroll]");
+  const scrollers = document.querySelectorAll<HTMLElement>("[data-featured-scroll]");
 
   function syncScrollers() {
     for (const scroller of scrollers) {
