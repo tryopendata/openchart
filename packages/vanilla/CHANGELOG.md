@@ -1,5 +1,24 @@
 # Changelog
 
+## [9.2.3](https://github.com/tryopendata/openchart/compare/core-v9.2.2...core-v9.2.3) (2026-11-28)
+
+
+### Features
+
+* rebrand default watermark to OpenChart ([c0190b1](https://github.com/tryopendata/openchart/commit/c0190b1))
+
+
+### Bug Fixes
+
+* hold an entering bar's label until the bar lands ([7288f13](https://github.com/tryopendata/openchart/commit/7288f13))
+* fade bar value labels in after the bar lands ([e4f4360](https://github.com/tryopendata/openchart/commit/e4f4360))
+
+
+### Performance
+
+* compile each typed spec through its own validator ([81d686c](https://github.com/tryopendata/openchart/commit/81d686c))
+* make every package entry free of import-time side effects ([ffaeff5](https://github.com/tryopendata/openchart/commit/ffaeff5))
+
 ## [9.2.2](https://github.com/tryopendata/openchart/compare/core-v9.2.1...core-v9.2.2) (2026-11-27)
 
 Importing one visualization type now ships only that type. A React app that imports `Sankey` gets 178 kB minified (60 kB gzip) of OpenChart, down from 1,237 kB (413 kB gzip); the same holds for tables, bar lists, races, graphs and maps, in every package. See the [bundle size guide](https://openchart.steamfield.io/docs/get-started/bundle-size/) for what each import costs.
