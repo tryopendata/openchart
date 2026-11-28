@@ -3,7 +3,13 @@ import type { GeometryValue } from './parity-signature';
 /** C7 measured attribution, relative to the verified B3/P3 output.
  * Exact released-v8/final-v9 pairs only; the v8 capture is never regenerated.
  * A narrower measured brand reserve can enlarge the plot and change automatic
- * label fitting. Every affected path remains guarded independently. */
+ * label fitting. Every affected path remains guarded independently.
+ *
+ * The default watermark was renamed from "OpenData" to "OpenChart" after v9.2.2.
+ * The mark is one letter wider, so every `chrome.source.maxWidth` and
+ * `chrome.byline.maxWidth` that shares the footer row with it is 6.68px
+ * narrower than the C7 value originally pinned here. Only those final v9
+ * values were updated; the released v8 values are untouched. */
 export const APPROVED_C7_ATTRIBUTION: Record<
   string,
   {
@@ -22,7 +28,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [260.45, 272.85],
@@ -62,7 +68,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -72,7 +78,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -82,7 +88,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -92,7 +98,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -102,7 +108,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -112,7 +118,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -122,7 +128,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -132,7 +138,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -142,7 +148,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -152,7 +158,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -162,7 +168,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -172,7 +178,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -182,7 +188,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -192,7 +198,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -202,7 +208,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -212,7 +218,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -227,7 +233,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomHeight: [52, 39.6],
         grownHeight: [200.6, 188.2],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -237,7 +243,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -252,7 +258,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [306, 318.4],
@@ -292,7 +298,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -302,8 +308,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -313,8 +319,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -324,8 +330,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -335,8 +341,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -346,8 +352,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -357,8 +363,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -368,8 +374,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -379,8 +385,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -390,8 +396,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -401,8 +407,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -412,8 +418,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -423,8 +429,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -434,8 +440,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -445,8 +451,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -456,7 +462,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -466,7 +472,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -476,7 +482,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -486,7 +492,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -496,7 +502,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -506,7 +512,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -521,9 +527,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [264, 278],
@@ -561,8 +567,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -577,9 +583,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [286, 300],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'y.end.y': [286, 300],
@@ -611,8 +617,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -622,8 +628,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -633,8 +639,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -644,8 +650,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -655,8 +661,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -666,7 +672,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -676,7 +682,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -686,7 +692,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -696,7 +702,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -711,9 +717,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [297.38, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [271.38, 300],
@@ -760,8 +766,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -776,7 +782,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [284, 296.4],
@@ -819,7 +825,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -829,8 +835,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -840,8 +846,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -856,9 +862,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -890,8 +896,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -906,9 +912,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -939,8 +945,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -950,8 +956,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -961,8 +967,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -972,8 +978,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -983,8 +989,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -994,8 +1000,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1005,8 +1011,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1016,8 +1022,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1027,8 +1033,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1043,7 +1049,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [306, 318.4],
@@ -1074,7 +1080,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1084,8 +1090,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1095,8 +1101,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1106,8 +1112,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1117,8 +1123,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1128,8 +1134,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1139,8 +1145,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1150,8 +1156,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1161,8 +1167,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1172,8 +1178,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1183,8 +1189,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1199,9 +1205,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       marks: {
         '0.cy': [211.15, 218.15],
@@ -1250,8 +1256,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1261,7 +1267,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1271,7 +1277,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1281,8 +1287,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1292,8 +1298,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1303,8 +1309,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1314,8 +1320,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1325,8 +1331,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1336,8 +1342,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1352,9 +1358,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [265.1, 279.1],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [217.1, 231.1],
@@ -1419,8 +1425,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1430,8 +1436,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1441,8 +1447,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1452,8 +1458,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1463,8 +1469,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1474,8 +1480,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1490,9 +1496,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [264, 278],
@@ -1564,8 +1570,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1580,9 +1586,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [264, 278],
@@ -1651,113 +1657,19 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
   },
   '../gallery/charts-scatter-distribution.stories.tsx.dumbbellSpec @390': {
     reason:
-      'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
+      'The wider OpenChart mark narrows the footer row, so the byline wraps as it did in v8; only the row widths differ from v8 now.',
     changes: {
-      area: {
-        'rect.height': [89.85, 103.85],
-      },
       chrome: {
-        bottomAnchorY: [312, 326],
-        bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
-        'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
-      },
-      axes: {
-        'x.end.y': [264, 278],
-        'x.start.y': [264, 278],
-        'x.titlePosition.y': [299, 313],
-        'y.end.y': [264, 278],
-        'y.tick.0.position': [259.42, 272.7],
-        'y.tick.1.position': [252.08, 264.22],
-        'y.tick.10.position': [186.07, 187.93],
-        'y.tick.11.position': [178.73, 179.45],
-        'y.tick.2.position': [244.75, 255.75],
-        'y.tick.3.position': [237.41, 247.27],
-        'y.tick.4.position': [230.08, 238.79],
-        'y.tick.5.position': [222.74, 230.31],
-        'y.tick.6.position': [215.41, 221.84],
-        'y.tick.7.position': [208.07, 213.36],
-        'y.tick.8.position': [200.74, 204.88],
-        'y.tick.9.position': [193.4, 196.4],
-      },
-      marks: {
-        '0.y': [258.42, 271.7],
-        '1.cy': [259.42, 272.7],
-        '10.cy': [237.41, 247.27],
-        '11.cy': [237.41, 247.27],
-        '12.y': [229.08, 237.79],
-        '13.cy': [230.08, 238.79],
-        '14.cy': [230.08, 238.79],
-        '15.y': [221.74, 229.31],
-        '16.cy': [222.74, 230.31],
-        '17.cy': [222.74, 230.31],
-        '18.y': [214.41, 220.84],
-        '19.cy': [215.41, 221.84],
-        '2.cy': [259.42, 272.7],
-        '20.cy': [215.41, 221.84],
-        '21.y': [207.07, 212.36],
-        '22.cy': [208.07, 213.36],
-        '23.cy': [208.07, 213.36],
-        '24.y': [199.74, 203.88],
-        '25.cy': [200.74, 204.88],
-        '26.cy': [200.74, 204.88],
-        '27.y': [192.4, 195.4],
-        '28.cy': [193.4, 196.4],
-        '29.cy': [193.4, 196.4],
-        '3.y': [251.08, 263.22],
-        '30.y': [185.07, 186.93],
-        '31.cy': [186.07, 187.93],
-        '32.cy': [186.07, 187.93],
-        '33.y': [177.73, 178.45],
-        '34.cy': [178.73, 179.45],
-        '35.cy': [178.73, 179.45],
-        '4.cy': [252.08, 264.22],
-        '5.cy': [252.08, 264.22],
-        '6.y': [243.75, 254.75],
-        '7.cy': [244.75, 255.75],
-        '8.cy': [244.75, 255.75],
-        '9.y': [236.41, 246.27],
-      },
-      labels: {
-        '1.label.y': [252.82, 266.1],
-        '10.label.y': [214.97, 224.83],
-        '11.label.y': [214.97, 224.83],
-        '13.label.y': [223.48, 232.19],
-        '14.label.y': [207.64, 216.35],
-        '16.label.y': [200.3, 207.87],
-        '17.label.y': [200.3, 207.87],
-        '19.label.y': [208.81, 215.24],
-        '2.label.y': [252.82, 266.1],
-        '20.label.y': [192.97, 199.4],
-        '22.label.y': [201.47, 206.76],
-        '23.label.y': [185.63, 190.92],
-        '25.label.y': [178.3, 182.44],
-        '26.label.y': [178.3, 182.44],
-        '28.label.y': [186.8, 189.8],
-        '29.label.y': [186.8, 189.8],
-        '31.label.y': [179.47, 181.33],
-        '32.label.y': [163.63, 165.49],
-        '34.label.y': [156.29, 157.01],
-        '35.label.y': [172.13, 172.85],
-        '4.label.y': [229.64, 241.78],
-        '5.label.y': [245.48, 257.62],
-        '7.label.y': [238.15, 249.15],
-        '8.label.y': [222.31, 233.31],
-      },
-      annotations: {
-        'a0.connector.from.y': [180.32, 181.04],
-        'a0.connector.to.y': [178.94, 179.65],
-        'a0.dot.y': [178.73, 179.45],
-        'a0.label.y': [178.73, 179.45],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1767,8 +1679,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1778,8 +1690,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1789,8 +1701,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1800,8 +1712,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1811,8 +1723,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1822,8 +1734,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1833,8 +1745,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1849,9 +1761,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [271.38, 285.38],
@@ -1897,8 +1809,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1908,8 +1820,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1919,8 +1831,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1930,8 +1842,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1941,8 +1853,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1952,8 +1864,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -1963,8 +1875,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -1979,9 +1891,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -2100,8 +2012,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2111,8 +2023,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2122,8 +2034,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2153,8 +2065,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2164,8 +2076,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2175,8 +2087,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2186,8 +2098,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2197,8 +2109,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -2208,8 +2120,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -2219,8 +2131,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2230,8 +2142,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2261,8 +2173,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2272,8 +2184,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2283,7 +2195,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -2293,7 +2205,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -2303,8 +2215,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2314,8 +2226,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2325,8 +2237,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2336,8 +2248,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2352,7 +2264,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       marks: {
         '0.cy': [216.63, 222.83],
@@ -2394,7 +2306,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2409,7 +2321,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       marks: {
         '0.cy': [216.63, 222.83],
@@ -2458,7 +2370,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2468,7 +2380,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2478,7 +2390,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2488,8 +2400,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2499,8 +2411,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2510,7 +2422,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2520,7 +2432,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2530,7 +2442,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2540,7 +2452,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2550,8 +2462,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2561,8 +2473,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2572,8 +2484,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2583,8 +2495,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2594,8 +2506,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2605,8 +2517,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2616,8 +2528,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2627,8 +2539,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2638,8 +2550,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2649,8 +2561,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2660,8 +2572,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2671,8 +2583,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2682,8 +2594,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2693,8 +2605,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2704,7 +2616,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2714,7 +2626,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2724,7 +2636,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2734,7 +2646,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2744,7 +2656,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2754,7 +2666,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2764,8 +2676,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2775,8 +2687,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2786,8 +2698,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2797,8 +2709,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2808,8 +2720,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2819,8 +2731,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2830,8 +2742,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2841,8 +2753,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2852,8 +2764,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2863,8 +2775,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2874,8 +2786,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2885,8 +2797,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2896,8 +2808,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2907,8 +2819,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2918,8 +2830,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2929,8 +2841,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2944,9 +2856,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       },
       chrome: {
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2956,8 +2868,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2971,9 +2883,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       },
       chrome: {
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -2983,8 +2895,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -2994,7 +2906,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3004,7 +2916,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -3014,8 +2926,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3025,8 +2937,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3036,8 +2948,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3047,8 +2959,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3063,9 +2975,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -3098,8 +3010,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3114,9 +3026,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -3143,8 +3055,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3154,8 +3066,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3165,8 +3077,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3176,8 +3088,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3187,8 +3099,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3203,7 +3115,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [306, 318.4],
@@ -3243,7 +3155,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3253,8 +3165,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3264,8 +3176,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -3275,8 +3187,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3286,8 +3198,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3297,7 +3209,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3307,7 +3219,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3317,8 +3229,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3328,8 +3240,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3339,7 +3251,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -3349,7 +3261,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -3359,8 +3271,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [235, 304.58],
-        'source.maxWidth': [235, 304.58],
+        'byline.maxWidth': [235, 297.9],
+        'source.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -3370,8 +3282,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -3381,7 +3293,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [235, 304.58],
+        'byline.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -3391,7 +3303,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -3409,9 +3321,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [324, 338],
         bottomHeight: [66, 52],
-        'byline.maxWidth': [235, 304.58],
+        'byline.maxWidth': [235, 297.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
       marks: {
         '0.height': [2.85, 2.44],
@@ -4129,8 +4041,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4148,9 +4060,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [324, 338],
         bottomHeight: [66, 52],
-        'byline.maxWidth': [235, 304.58],
+        'byline.maxWidth': [235, 297.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
       marks: {
         '0.height': [1.7, 1.45],
@@ -4868,8 +4780,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4879,7 +4791,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -4889,7 +4801,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4899,7 +4811,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -4909,7 +4821,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4919,7 +4831,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [235, 304.58],
+        'byline.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -4929,7 +4841,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4939,8 +4851,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -4950,8 +4862,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4961,8 +4873,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -4972,8 +4884,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -4983,8 +4895,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -4994,8 +4906,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5005,8 +4917,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5016,8 +4928,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5028,8 +4940,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 313.3],
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5040,8 +4952,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 309.2],
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5052,8 +4964,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 325.75],
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5064,8 +4976,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 311.2],
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5076,8 +4988,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 306.7],
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5088,8 +5000,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 309.2],
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5100,7 +5012,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 319.45],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5111,7 +5023,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 330.9],
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5122,7 +5034,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 319.45],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5133,7 +5045,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 330.9],
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5144,7 +5056,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 319.45],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5155,7 +5067,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 330.9],
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5166,7 +5078,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 319.45],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5177,7 +5089,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 330.9],
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5188,7 +5100,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 319.45],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5199,7 +5111,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 330.9],
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5210,7 +5122,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 329.3],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5221,7 +5133,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 333.2],
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5236,9 +5148,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -5273,8 +5185,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -5284,9 +5196,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'footer.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'footer.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -5296,9 +5208,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'footer.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'footer.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -5308,8 +5220,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -5319,8 +5231,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -5333,8 +5245,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -5347,8 +5259,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -5366,9 +5278,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [324, 338],
         bottomHeight: [66, 52],
-        'byline.maxWidth': [235, 304.58],
+        'byline.maxWidth': [235, 297.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
       marks: {
         '0.height': [2.55, 2.14],
@@ -6086,8 +5998,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6097,8 +6009,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6108,8 +6020,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6119,8 +6031,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6130,8 +6042,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6141,7 +6053,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6151,7 +6063,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6164,7 +6076,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6177,7 +6089,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6190,7 +6102,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6203,7 +6115,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6216,7 +6128,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6229,7 +6141,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6242,7 +6154,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6255,7 +6167,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6268,7 +6180,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6281,7 +6193,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6294,7 +6206,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6307,7 +6219,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6320,7 +6232,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6333,7 +6245,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6346,7 +6258,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6359,7 +6271,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6372,7 +6284,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6385,7 +6297,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6398,7 +6310,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6411,7 +6323,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6424,7 +6336,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6437,7 +6349,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6450,7 +6362,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -6463,7 +6375,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -6478,9 +6390,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [286, 300],
@@ -6517,8 +6429,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6528,7 +6440,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6538,7 +6450,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6548,7 +6460,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6558,7 +6470,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6568,8 +6480,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6579,8 +6491,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6590,7 +6502,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6600,7 +6512,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6610,8 +6522,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6621,8 +6533,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6632,7 +6544,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6642,7 +6554,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6652,7 +6564,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6662,7 +6574,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6672,7 +6584,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6682,7 +6594,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6692,7 +6604,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6702,7 +6614,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6712,7 +6624,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6722,7 +6634,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6732,7 +6644,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6742,7 +6654,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6752,7 +6664,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6762,7 +6674,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6772,7 +6684,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -6782,7 +6694,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -6797,7 +6709,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [331, 329.4],
         bottomHeight: [53, 54.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       marks: {
         '0.y': [213.35, 212.55],
@@ -7581,7 +7493,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [319.6, 319.4],
         bottomHeight: [63.4, 63.6],
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
       marks: {
         '0.y': [184.4, 184.3],
@@ -8360,7 +8272,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8370,7 +8282,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8380,7 +8292,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8390,7 +8302,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8400,7 +8312,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8410,7 +8322,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8420,7 +8332,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8430,7 +8342,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8440,7 +8352,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8450,7 +8362,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8460,7 +8372,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8470,7 +8382,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8485,7 +8397,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       marks: {
         '0.cy': [221.15, 227.35],
@@ -8534,7 +8446,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8544,7 +8456,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8554,7 +8466,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8564,7 +8476,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8574,7 +8486,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8589,7 +8501,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [306, 318.4],
@@ -8621,7 +8533,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8636,7 +8548,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [306, 318.4],
@@ -8668,7 +8580,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8678,8 +8590,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8694,9 +8606,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [276, 290],
         bottomHeight: [108, 94],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [78, 64],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [250, 264],
@@ -8748,8 +8660,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8759,8 +8671,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8770,8 +8682,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8805,8 +8717,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8816,8 +8728,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8827,7 +8739,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -8837,7 +8749,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -8847,7 +8759,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -8857,7 +8769,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -8867,7 +8779,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [235, 304.58],
+        'source.maxWidth': [235, 297.9],
       },
     },
     style: {},
@@ -8877,7 +8789,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -8887,7 +8799,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -8897,7 +8809,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -8907,7 +8819,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8917,7 +8829,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8927,9 +8839,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [223, 292.58],
-        'footer.maxWidth': [223, 292.58],
-        'source.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
+        'footer.maxWidth': [223, 285.9],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8939,9 +8851,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'footer.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'footer.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8951,7 +8863,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8961,7 +8873,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8971,7 +8883,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -8981,7 +8893,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -8991,7 +8903,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9001,7 +8913,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9011,7 +8923,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9021,7 +8933,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9031,7 +8943,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9041,7 +8953,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9051,7 +8963,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9061,7 +8973,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9076,7 +8988,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [284, 296.4],
@@ -9136,7 +9048,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9151,7 +9063,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [291.38, 303.78],
@@ -9197,7 +9109,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9212,7 +9124,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [332, 344.4],
         bottomHeight: [52, 39.6],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [306, 318.4],
@@ -9247,7 +9159,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9257,7 +9169,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9267,7 +9179,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9282,9 +9194,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [312, 326],
         bottomHeight: [72, 58],
-        'byline.maxWidth': [223, 292.58],
+        'byline.maxWidth': [223, 285.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
       axes: {
         'x.end.y': [269.83, 283.83],
@@ -9332,8 +9244,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1111, 1180.58],
-        'source.maxWidth': [1111, 1180.58],
+        'byline.maxWidth': [1111, 1173.9],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9343,7 +9255,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9353,7 +9265,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9363,7 +9275,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9373,7 +9285,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9383,8 +9295,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9394,8 +9306,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9405,8 +9317,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9416,8 +9328,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9427,7 +9339,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -9437,7 +9349,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -9451,7 +9363,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       },
       chrome: {
         bottomHeight: [56, 43.6],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9464,7 +9376,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9478,7 +9390,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       },
       chrome: {
         bottomHeight: [56, 43.6],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9491,7 +9403,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9505,7 +9417,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       },
       chrome: {
         bottomHeight: [56, 43.6],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9518,7 +9430,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9531,7 +9443,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 390],
       },
       chrome: {
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9544,7 +9456,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9558,7 +9470,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       },
       chrome: {
         bottomHeight: [56, 43.6],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9571,7 +9483,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
         'size.width': [undefined, 1280],
       },
       chrome: {
-        'source.maxWidth': [1105, 1174.58],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9602,8 +9514,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 313.3],
-        'byline.maxWidth': [215, 284.58],
-        'source.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
+        'source.maxWidth': [215, 277.9],
       },
     },
     style: {},
@@ -9614,8 +9526,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 309.2],
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -9633,9 +9545,9 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       chrome: {
         bottomAnchorY: [undefined, 325.75],
         bottomHeight: [76, 62],
-        'byline.maxWidth': [215, 284.58],
+        'byline.maxWidth': [215, 277.9],
         'byline.y': [42, 28],
-        'source.maxWidth': [215, 284.58],
+        'source.maxWidth': [215, 277.9],
       },
       marks: {
         '0.size': [17, 19],
@@ -10008,8 +9920,8 @@ export const APPROVED_C7_ATTRIBUTION: Record<
     changes: {
       chrome: {
         bottomAnchorY: [undefined, 311.2],
-        'byline.maxWidth': [1105, 1174.58],
-        'source.maxWidth': [1105, 1174.58],
+        'byline.maxWidth': [1105, 1167.9],
+        'source.maxWidth': [1105, 1167.9],
       },
     },
     style: {},
@@ -10019,7 +9931,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -10029,7 +9941,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -10039,7 +9951,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -10049,7 +9961,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -10059,7 +9971,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -10069,7 +9981,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -10079,7 +9991,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -10089,7 +10001,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
@@ -10099,7 +10011,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [223, 292.58],
+        'source.maxWidth': [223, 285.9],
       },
     },
     style: {},
@@ -10109,7 +10021,7 @@ export const APPROVED_C7_ATTRIBUTION: Record<
       'C7 shared measured footer replaces the fixed brand reserve; attribution is complete and automatic geometry uses the remaining frame.',
     changes: {
       chrome: {
-        'source.maxWidth': [1111, 1180.58],
+        'source.maxWidth': [1111, 1173.9],
       },
     },
     style: {},
