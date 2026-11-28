@@ -26,7 +26,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](./chrome.md#labels).                                           |
 | `responsive`  | `boolean \| ResponsiveConfig` | `true` | Layout adaptations at compact sizes; mount `autoResize` controls ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](./theme.md#themeconfig).         |
-| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
+| `watermark`   | `boolean`      | `true`      | Whether to show the OpenChart watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| on | Animation configuration. On by default; `false` disables it. See [Animation](./animation.md#animation-1). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](../accessibility.md). |
 | `a11y` | `A11yConfig` | `undefined` | Figure name, generated live table and visibility. See [A11yConfig](#a11yconfig). |

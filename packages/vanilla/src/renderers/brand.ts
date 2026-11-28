@@ -5,7 +5,7 @@ import { createRenderContext, type RenderContext } from '../render-context';
 import { renderChromeElement } from './chrome';
 import { createSVGElement, XLINK_NS } from './svg-dom';
 
-const BRAND_URL = 'https://tryopendata.ai';
+const BRAND_URL = 'https://openchart.steamfield.io';
 
 /** Paint the exact portable footer mark resolved by computeChrome. */
 export function renderAttributionBrand(

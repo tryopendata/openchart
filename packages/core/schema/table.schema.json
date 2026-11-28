@@ -58,7 +58,7 @@
         },
         "watermark": {
           "type": "boolean",
-          "description": "Whether to show the OpenData watermark. Defaults to true."
+          "description": "Whether to show the OpenChart watermark. Defaults to true."
         },
         "search": {
           "type": "boolean",
@@ -510,7 +510,7 @@
               "$ref": "#/definitions/ChromeText"
             }
           ],
-          "description": "Right-anchored brand block on the footer row. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenData` watermark for this chart."
+          "description": "Right-anchored brand block on the footer row. Visually balances the source/byline left-anchored text. When set, suppresses the default `OpenChart` watermark for this chart."
         }
       },
       "additionalProperties": false,

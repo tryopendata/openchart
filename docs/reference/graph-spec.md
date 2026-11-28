@@ -29,7 +29,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 | `chrome`         | `Chrome`                         | `undefined` | Editorial text.                                                                       |
 | `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
 | `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
-| `watermark`      | `boolean`                        | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. |
+| `watermark`      | `boolean`                        | `true`      | Whether to show the OpenChart watermark. Mount/compile options take precedence over spec and active breakpoint values. |
 
 ### GraphEncoding
 

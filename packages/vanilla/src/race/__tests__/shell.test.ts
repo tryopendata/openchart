@@ -184,9 +184,9 @@ describe('race shell', () => {
     const brand = svg.querySelector('.oc-chrome-ref');
 
     if (watermark) {
-      expect(brand?.getAttribute('href')).toBe('https://tryopendata.ai');
+      expect(brand?.getAttribute('href')).toBe('https://openchart.steamfield.io');
       expect(brand?.getAttribute('tabindex')).toBeNull();
-      expect(brand?.querySelector('.oc-watermark')?.textContent).toBe('OpenData');
+      expect(brand?.querySelector('.oc-watermark')?.textContent).toBe('OpenChart');
     } else {
       expect(brand).toBeNull();
       expect(svg.querySelector('.oc-watermark')).toBeNull();
@@ -269,7 +269,7 @@ describe('race shell', () => {
     expect(svg.querySelector('.oc-brand tspan')).toBeNull();
   });
 
-  it('keeps custom branding when the OpenData watermark is disabled', () => {
+  it('keeps custom branding when the OpenChart watermark is disabled', () => {
     const layout = barLayout(resolveTheme(), { ...chromeContent, brand: 'Research desk' });
     const brand = layout.chrome.brand;
     if (!brand) throw new Error('Expected resolved custom branding');

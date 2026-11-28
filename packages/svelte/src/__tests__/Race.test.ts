@@ -158,7 +158,7 @@ it('mounts a playable race and forwards the wrapper props', () => {
   expect(screen.getByRole('slider', { name: 'Time' })).toHaveAttribute('aria-valuetext', '2020');
   expect(container.firstElementChild).toHaveClass('reader-race');
   expect(container.firstElementChild).toHaveStyle({ width: '420px' });
-  expect(screen.queryByText('OpenData')).not.toBeInTheDocument();
+  expect(screen.queryByText('OpenChart')).not.toBeInTheDocument();
   expect(component.getInstance()?.getState()).toMatchObject({ t: 0, playing: false });
 });
 
@@ -321,6 +321,6 @@ it('routes race specs through Visualization', () => {
   expect(chart.closest('.routed-race')).toHaveStyle({ width: '420px' });
   expect(chart.closest('.oc-dark')).toBeInTheDocument();
   expect(within(chart).getByText('Annual leaders').style.fontSize).toBe('32px');
-  expect(within(chart).getByText('OpenData')).toBeInTheDocument();
+  expect(within(chart).getByText('OpenChart')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
 });

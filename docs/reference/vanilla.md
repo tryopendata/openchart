@@ -50,7 +50,7 @@ Options for `createChart`. It extends `ChartEventHandlers`, so every handler in 
 | `interaction` | `'read' \| 'select' \| 'edit'` | inferred | What the reader can do with chart elements. Omitted, `onEdit` gives `'edit'`, `onSelect` or `onDeselect` gives `'select'`, and anything else `'read'`. See [Interaction mode](./events.md#interaction-mode). |
 | `renderer` | `'auto' \| 'svg' \| 'canvas'` | `'auto'` | Backend for point marks. `'auto'` moves scatters above 1,000 points to canvas. Ignored, with a console warning, for other marks and for faceted, layered and sparkline charts. See [Canvas mark mode](./marks.md#canvas-mark-mode). |
 | `autoResize` | `boolean` | `true` | Re-render when the container resizes, through `ResizeObserver`. |
-| `watermark` | `boolean` | `true` | Show the OpenData watermark. Overrides the spec's `watermark`. |
+| `watermark` | `boolean` | `true` | Show the OpenChart watermark. Overrides the spec's `watermark`. |
 | `selectedElement` | `ElementRef` | `undefined` | Element selected at mount. |
 | `rowHover` | `boolean` | `undefined` | Quiet row inspection on simple horizontal bar charts. |
 | `revision` | `string \| number` | `undefined` | Source revision stamped on emitted edit transactions. |

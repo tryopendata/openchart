@@ -1093,7 +1093,7 @@ export interface Chrome {
   /**
    * Right-anchored brand block on the footer row. Visually balances the
    * source/byline left-anchored text.
-   * When set, suppresses the default `OpenData` watermark for this chart.
+   * When set, suppresses the default `OpenChart` watermark for this chart.
    */
   brand?: string | ChromeText;
 }
@@ -2260,7 +2260,7 @@ interface BaseChartSpec<TData extends DataRow = DataRow> {
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
   /**
-   * Whether to show the OpenData watermark. Defaults to true; auto-hides
+   * Whether to show the OpenChart watermark. Defaults to true; auto-hides
    * when the container is under 200px tall (the cramped height class) unless
    * explicitly set.
    */
@@ -2486,7 +2486,7 @@ export interface TableSpec {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Enable client-side search/filter. */
   search?: boolean;
@@ -2685,7 +2685,7 @@ export interface GraphSpec {
    * legend, so the built-in filter UI doesn't compete with it.
    */
   legend?: boolean | { interactive?: boolean; counts?: boolean };
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /**
    * Render in two or three dimensions. Defaults to `2` (the Canvas renderer).
@@ -2812,7 +2812,7 @@ export interface LayerSpec<TData extends DataRow = DataRow> {
   responsive?: boolean | ResponsiveConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Resolution strategy for shared scales/axes/legends. */
   resolve?: ResolveConfig;
@@ -2907,7 +2907,7 @@ export interface SankeySpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /**
    * Motion. On by default: the entrance plays once the visualization scrolls
@@ -2997,7 +2997,7 @@ export interface TileMapSpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /**
    * Motion. On by default: the entrance plays once the visualization scrolls
@@ -3173,7 +3173,7 @@ export interface GeoMapSpec {
   legend?: LegendConfig;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Optional point/symbol layer rendered above choropleth features. */
   points?: GeoMapPointsLayer;
@@ -3224,7 +3224,7 @@ export interface BarListSpec {
   chrome?: Chrome;
   /** Theme configuration overrides. */
   theme?: ThemeConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /**
    * Motion. On by default: the entrance plays once the visualization scrolls
@@ -3402,7 +3402,7 @@ export interface RaceSpec {
   theme?: ThemeConfig;
   /** Accessibility overrides. Omit to use generated metadata. */
   a11y?: A11yConfig;
-  /** Whether to show the OpenData watermark. Defaults to true. */
+  /** Whether to show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Fixed render width in pixels. Defaults to container-driven sizing. */
   width?: number;

@@ -64,7 +64,7 @@ export interface MountOptions extends ChartEventHandlers {
   renderer?: 'auto' | 'svg' | 'canvas';
   /** Observe container resizing. Defaults to true. */
   autoResize?: boolean;
-  /** Show the OpenData watermark. Defaults to true. */
+  /** Show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Initial selected element. */
   selectedElement?: ElementRef;

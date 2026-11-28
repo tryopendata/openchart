@@ -12,7 +12,7 @@ const measured = (text: string, size: number) => ({
 describe('measured attribution', () => {
   it('reserves the measured brand width instead of a fixed 130px column', () => {
     const chrome = computeChrome({ source: 'Source: Census' }, theme, 600, measured);
-    expect(chrome.watermark?.text).toBe('OpenData');
+    expect(chrome.watermark?.text).toBe('OpenChart');
     expect(chrome.source!.maxWidth).toBeGreaterThan(600 - theme.spacing.padding * 2 - 130);
     expect(chrome.source!.x + chrome.source!.maxWidth).toBeLessThan(
       chrome.watermark!.x - chrome.watermark!.maxWidth,
@@ -86,7 +86,7 @@ describe('measured attribution', () => {
     const chrome = computeChrome({ source: 'Source', brand: 'Custom' }, theme, 390, measured, mode);
     expect(chrome.source).toBeUndefined();
     expect(chrome.brand).toBeUndefined();
-    expect(chrome.watermark?.text).toBe('OpenData');
+    expect(chrome.watermark?.text).toBe('OpenChart');
   });
   it('watermark off gives attribution the full width without a ghost reserve', () => {
     const chrome = computeChrome(

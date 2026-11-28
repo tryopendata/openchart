@@ -158,7 +158,7 @@ export interface NormalizedChartSpec {
   autoThin: boolean;
   compactAnnotationLimit?: number | null;
   theme: ThemeConfig;
-  /** Whether the OpenData watermark is enabled. */
+  /** Whether the OpenChart watermark is enabled. */
   watermark: boolean;
   /** Series names to hide from rendering. */
   hiddenSeries: string[];

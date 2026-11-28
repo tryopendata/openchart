@@ -1105,7 +1105,7 @@ All builders accept field names as strings (auto-infer type from data) or full `
 | `annotations` | `Annotation[]` | Annotations.                               |
 | `responsive`  | `boolean`      | Responsive behavior.                       |
 | `theme`       | `ThemeConfig`  | Theme overrides.                           |
-| `watermark`   | `boolean`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over the spec; defaults to `true`. |
+| `watermark`   | `boolean`      | Whether to show the OpenChart watermark. Mount/compile options take precedence over the spec; defaults to `true`. |
 
 `FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` uses the shared builder/compiler inference: sample up to 50 rows, ignore nulls, and require more than 80% agreement. Numeric strings are considered before dates, so a column of `'2020'` values is quantitative. Set the channel type explicitly when years should be ordinal or temporal.
 
@@ -1146,7 +1146,7 @@ The primary input for standard chart types. Source: `core/src/types/spec.ts`.
 | `labels`      | `LabelConfig`  | `undefined` | Data label display controls. See [Labels](./chrome.md#labels).                                           |
 | `responsive`  | `boolean \| ResponsiveConfig` | `true` | Layout adaptations at compact sizes; mount `autoResize` controls ResizeObserver.                               |
 | `theme`       | `ThemeConfig`  | `undefined` | Theme overrides. Deep-merged onto the default theme. See [ThemeConfig](./theme.md#themeconfig).         |
-| `watermark`   | `boolean`      | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
+| `watermark`   | `boolean`      | `true`      | Whether to show the OpenChart watermark. Mount/compile options take precedence over spec and active breakpoint values. Defaults to `true`; auto-hides when the container is under 200px tall unless explicitly set. |
 | `animation`   | `AnimationSpec`| on | Animation configuration. On by default; `false` disables it. See [Animation](./animation.md#animation-1). |
 | `description` | `string`       | `undefined` | Alt text for the chart (Vega-Lite aligned). Sugar for `a11y.description`. Auto-generated when absent. See the [accessibility guide](../accessibility.md). |
 | `a11y` | `A11yConfig` | `undefined` | Figure name, generated live table and visibility. See [A11yConfig](#a11yconfig). |
@@ -2596,7 +2596,7 @@ Input for data table visualizations. Source: `core/src/types/spec.ts`.
 | `sort`              | `SortState`                       | first inline-bar column, descending | Initial sort applied before the user touches a header. `{ column: string, direction: 'asc' \| 'desc' }`. |
 | `totalRow`          | `boolean \| { label?: string }`   | `false`        | Sticky footer summing every quantitative column over the filtered rows (the whole result set, not just the current page). `true` uses the label `'Total'`. |
 | `responsive`        | `boolean`                         | `true`         | Whether the table adapts to container width.                                      |
-| `watermark`         | `boolean`                         | `true`         | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. |
+| `watermark`         | `boolean`                         | `true`         | Whether to show the OpenChart watermark. Mount/compile options take precedence over spec and active breakpoint values. |
 
 ### ColumnConfig
 
@@ -2774,7 +2774,7 @@ Graphs render force-directed network visualizations on canvas. They support node
 | `chrome`         | `Chrome`                         | `undefined` | Editorial text.                                                                       |
 | `annotations`    | `Annotation[]`                   | `undefined` | Annotations.                                                                          |
 | `theme`          | `ThemeConfig`                    | `undefined` | Theme overrides.                                                                      |
-| `watermark`      | `boolean`                        | `true`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. |
+| `watermark`      | `boolean`                        | `true`      | Whether to show the OpenChart watermark. Mount/compile options take precedence over spec and active breakpoint values. |
 
 ### GraphEncoding
 
@@ -3042,7 +3042,7 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `chrome`        | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                           |
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
-| `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
+| `watermark`     | `boolean`         | `true`      | Whether to show the OpenChart watermark.                                       |
 | `animation`     | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it. Supports entrance, update and exit (see [Data-update transitions](./animation.md#data-update-transitions)). |
 
 ### SankeyEncoding
@@ -3109,7 +3109,7 @@ Every state renders as an equal-size square in a fixed 12x8 grid, so small state
 | `chrome`      | `Chrome`                                              | `undefined` | Editorial text (title, subtitle, source, byline, footer).                       |
 | `legend`      | `LegendConfig`                                        | `undefined` | Legend display configuration. `show: false` hides it.                           |
 | `theme`       | `ThemeConfig`                                         | `undefined` | Theme overrides.                                                                |
-| `watermark`   | `boolean`                                             | `true`      | Whether to show the tryOpenData.ai watermark.                                   |
+| `watermark`   | `boolean`                                             | `true`      | Whether to show the OpenChart watermark.                                   |
 | `animation`   | `AnimationSpec`                                       | on          | Animation configuration. On by default.                                            |
 | `valueFormat` | `string` | `undefined` | Tilemap fallback d3-format string for values, legend labels, and tooltips; `encoding.value.format` takes precedence. |
 
@@ -3189,7 +3189,7 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `chrome`      | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                            |
 | `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
-| `watermark`   | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                        |
+| `watermark`   | `boolean`         | `true`      | Whether to show the OpenChart watermark.                                        |
 | `animation`   | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it.                         |
 
 ### GeoMapGeo
@@ -3475,7 +3475,7 @@ Options for `createChart`. It extends `ChartEventHandlers`, so every handler in 
 | `interaction` | `'read' \| 'select' \| 'edit'` | inferred | What the reader can do with chart elements. Omitted, `onEdit` gives `'edit'`, `onSelect` or `onDeselect` gives `'select'`, and anything else `'read'`. See [Interaction mode](./events.md#interaction-mode). |
 | `renderer` | `'auto' \| 'svg' \| 'canvas'` | `'auto'` | Backend for point marks. `'auto'` moves scatters above 1,000 points to canvas. Ignored, with a console warning, for other marks and for faceted, layered and sparkline charts. See [Canvas mark mode](./marks.md#canvas-mark-mode). |
 | `autoResize` | `boolean` | `true` | Re-render when the container resizes, through `ResizeObserver`. |
-| `watermark` | `boolean` | `true` | Show the OpenData watermark. Overrides the spec's `watermark`. |
+| `watermark` | `boolean` | `true` | Show the OpenChart watermark. Overrides the spec's `watermark`. |
 | `selectedElement` | `ElementRef` | `undefined` | Element selected at mount. |
 | `rowHover` | `boolean` | `undefined` | Quiet row inspection on simple horizontal bar charts. |
 | `revision` | `string \| number` | `undefined` | Source revision stamped on emitted edit transactions. |

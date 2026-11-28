@@ -27,7 +27,7 @@ Maps render TopoJSON geometries as SVG, join tabular data rows to features by id
 | `chrome`      | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                            |
 | `legend`      | `LegendConfig`    | `undefined` | Legend display configuration. See [Map legends](#map-legends).                       |
 | `theme`       | `ThemeConfig`     | `undefined` | Theme overrides.                                                                     |
-| `watermark`   | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                        |
+| `watermark`   | `boolean`         | `true`      | Whether to show the OpenChart watermark.                                        |
 | `animation`   | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it.                         |
 
 ### GeoMapGeo

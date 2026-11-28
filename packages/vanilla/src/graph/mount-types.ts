@@ -45,7 +45,7 @@ export interface GraphMountOptions {
   onWarn?: (message: string) => void;
   /** Observe container resizing. Defaults to true. */
   autoResize?: boolean;
-  /** Show the OpenData watermark. Defaults to true. */
+  /** Show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Show the built-in tooltip; pass an object for a custom formatter. Defaults to true. */
   tooltip?: boolean | { formatter?: GraphTooltipFormatter };

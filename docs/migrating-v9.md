@@ -515,7 +515,7 @@ Callouts reserve complete note capacity before the map is fitted. Review fixed-h
 
 ### Shared attribution and side map keys
 
-Source, byline, footer and branding now use the same measured footer across all visualization families. The default OpenData mark is 12px. A custom `chrome.brand` replaces it, including in maps, tables and graphs. Long attribution uses the full row and stacks the brand below when that needs less space than a shared row. Explicit text, font size, offsets and `maxLines` still take precedence; an authored offset can intentionally move text beyond its reserved area.
+Source, byline, footer and branding now use the same measured footer across all visualization families. The default OpenChart mark is 12px. A custom `chrome.brand` replaces it, including in maps, tables and graphs. Long attribution uses the full row and stacks the brand below when that needs less space than a shared row. Explicit text, font size, offsets and `maxLines` still take precedence; an authored offset can intentionally move text beyond its reserved area.
 
 There is no legacy footer-layout switch. `migrateSpecV8` reports this limitation: even with preserved v8 typography, the measured brand reserve can change wrapping and available plot height. Automatic tile labels may become larger when more room is available, and automatic chart connectors may disappear when a label can sit beside its mark. Source observations, domains and units do not change. Review fixed-height embeds and exports after migrating. Compact/hidden chrome retains its existing attribution visibility policy; `watermark: false` removes the default mark and its reserve.
 

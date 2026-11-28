@@ -74,6 +74,9 @@ describe('static element tree serialization parity', () => {
  * - R10: `&nbsp;` written as U+00A0.
  * - R11: per-mark `aria-label`.
  * - R13: the root's `xmlns:xlink` declaration.
+ * - R14: the default watermark reads "OpenChart" and links to
+ *   openchart.steamfield.io; rc.2 read "OpenData" and linked to tryopendata.ai.
+ *   Only the text and link are rewritten here; the position is unchanged.
  */
 const RC2_LIGHT_PALETTES = {
   categorical: ['#06b6d4', '#e29e47', '#4170cb', '#b2417f', '#3ca368', '#a584dc'],
@@ -125,6 +128,12 @@ function carriesRole(el: Element, root: Element): boolean {
 function normalizeLegacy(root: Element, chart: boolean): void {
   if (chart) root.querySelector('defs > style')?.remove(); // R1
   if (root.getAttribute('role') === 'group') root.setAttribute('role', 'img'); // R3
+  for (const link of Array.from(root.querySelectorAll('a[href="https://tryopendata.ai"]'))) {
+    link.setAttribute('href', 'https://openchart.steamfield.io'); // R14
+    link.setAttribute('xlink:href', 'https://openchart.steamfield.io'); // R14
+  }
+  for (const mark of Array.from(root.querySelectorAll('.oc-watermark')))
+    mark.textContent = 'OpenChart'; // R14
   for (const el of [root, ...root.querySelectorAll('*')]) {
     for (const attr of Array.from(el.attributes))
       if (GEOMETRY_ATTRIBUTES.has(attr.name))

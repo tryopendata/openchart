@@ -211,12 +211,12 @@ function measuredWatermark(
     lineHeight: 1.3,
   };
   return {
-    text: 'OpenData',
+    text: 'OpenChart',
     x: width - pad,
     y,
     maxWidth:
-      measureText?.('OpenData', BRAND_FONT_SIZE, 600).width ??
-      'OpenData'.length * estimateCharWidth(BRAND_FONT_SIZE, 600),
+      measureText?.('OpenChart', BRAND_FONT_SIZE, 600).width ??
+      'OpenChart'.length * estimateCharWidth(BRAND_FONT_SIZE, 600),
     style,
   };
 }

@@ -33,7 +33,7 @@ Sankey diagrams show flows between stages. Each data row represents a link from 
 | `chrome`        | `Chrome`          | `undefined` | Editorial text (title, subtitle, source, byline, footer).                           |
 | `legend`        | `LegendConfig`    | `undefined` | Legend display configuration.                                                       |
 | `theme`         | `ThemeConfig`     | `undefined` | Theme overrides.                                                                    |
-| `watermark`     | `boolean`         | `true`      | Whether to show the tryOpenData.ai watermark.                                       |
+| `watermark`     | `boolean`         | `true`      | Whether to show the OpenChart watermark.                                       |
 | `animation`     | `AnimationSpec`   | on          | Animation configuration. On by default; `false` disables it. Supports entrance, update and exit (see [Data-update transitions](./animation.md#data-update-transitions)). |
 
 ### SankeyEncoding

@@ -110,7 +110,7 @@ All builders accept field names as strings (auto-infer type from data) or full `
 | `annotations` | `Annotation[]` | Annotations.                               |
 | `responsive`  | `boolean`      | Responsive behavior.                       |
 | `theme`       | `ThemeConfig`  | Theme overrides.                           |
-| `watermark`   | `boolean`      | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over the spec; defaults to `true`. |
+| `watermark`   | `boolean`      | Whether to show the OpenChart watermark. Mount/compile options take precedence over the spec; defaults to `true`. |
 
 `FieldRef` is `string | EncodingChannel`. When a string is provided, `inferFieldType()` uses the shared builder/compiler inference: sample up to 50 rows, ignore nulls, and require more than 80% agreement. Numeric strings are considered before dates, so a column of `'2020'` values is quantitative. Set the channel type explicitly when years should be ordinal or temporal.
 

@@ -27,7 +27,7 @@ Every state renders as an equal-size square in a fixed 12x8 grid, so small state
 | `chrome`      | `Chrome`                                              | `undefined` | Editorial text (title, subtitle, source, byline, footer).                       |
 | `legend`      | `LegendConfig`                                        | `undefined` | Legend display configuration. `show: false` hides it.                           |
 | `theme`       | `ThemeConfig`                                         | `undefined` | Theme overrides.                                                                |
-| `watermark`   | `boolean`                                             | `true`      | Whether to show the tryOpenData.ai watermark.                                   |
+| `watermark`   | `boolean`                                             | `true`      | Whether to show the OpenChart watermark.                                   |
 | `animation`   | `AnimationSpec`                                       | on          | Animation configuration. On by default.                                            |
 | `valueFormat` | `string` | `undefined` | Tilemap fallback d3-format string for values, legend labels, and tooltips; `encoding.value.format` takes precedence. |
 

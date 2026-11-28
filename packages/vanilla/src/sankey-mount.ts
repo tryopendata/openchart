@@ -59,7 +59,7 @@ export interface SankeyMountOptions {
   darkMode?: DarkMode;
   /** Observe container resizing. Defaults to true. */
   autoResize?: boolean;
-  /** Show the OpenData watermark. Defaults to true. */
+  /** Show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   /** Show tooltips on hover. Defaults to true. */
   tooltip?: boolean;

@@ -813,17 +813,17 @@ describe('targeted mark snapshots', () => {
 // ---------------------------------------------------------------------------
 
 describe('brand watermark', () => {
-  it('renders "OpenData" as a single text element', () => {
+  it('renders "OpenChart" as a single text element', () => {
     const { svg } = renderSpec(lineSpec);
     const brandLink = svg.querySelector('.oc-chrome-ref');
     expect(brandLink).not.toBeNull();
     const text = brandLink!.querySelector('text')!;
-    expect(text.textContent).toBe('OpenData');
+    expect(text.textContent).toBe('OpenChart');
   });
 
-  it('links to tryopendata.ai', () => {
+  it('links to openchart.steamfield.io', () => {
     const { svg } = renderSpec(lineSpec);
-    const links = svg.querySelectorAll('a[href="https://tryopendata.ai"]');
+    const links = svg.querySelectorAll('a[href="https://openchart.steamfield.io"]');
     expect(links.length).toBe(1);
   });
 

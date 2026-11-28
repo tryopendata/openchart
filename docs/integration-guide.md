@@ -447,7 +447,7 @@ const theme = getVizTheme();
 
 ## Watermark
 
-By default, all charts display a "tryOpenData.ai" watermark in the bottom-right corner. To hide it, set `watermark: false` on the spec:
+By default, all charts display a "OpenChart" watermark in the bottom-right corner. To hide it, set `watermark: false` on the spec:
 
 ```ts
 const spec = {

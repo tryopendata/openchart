@@ -12,7 +12,7 @@ const chrome = {
   brand: { text: 'Our research\nOpen methods', style: { fontSize: 20 } },
 };
 describe('shared attribution painting', () => {
-  it('paints a custom brand without adding an OpenData watermark', () => {
+  it('paints a custom brand without adding an OpenChart watermark', () => {
     const resolved = computeChrome(chrome, resolveTheme(), 390);
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     renderAttributionBrand(svg, resolved, 200);
@@ -27,7 +27,9 @@ describe('shared attribution painting', () => {
       const resolved = computeChrome({ source: 'Source' }, resolveTheme(), width);
       const footer = createAttributionFooter(resolved, width)!;
       expect((footer.querySelector('.oc-watermark') as SVGElement)?.style.fontSize).toBe('12px');
-      expect(footer.querySelector('a')?.getAttribute('href')).toBe('https://tryopendata.ai');
+      expect(footer.querySelector('a')?.getAttribute('href')).toBe(
+        'https://openchart.steamfield.io',
+      );
     }
   });
   it('table compilation preserves byline, custom brand and exact portable styles', () => {

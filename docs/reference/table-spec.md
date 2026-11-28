@@ -31,7 +31,7 @@ Input for data table visualizations. Source: `core/src/types/spec.ts`.
 | `sort`              | `SortState`                       | first inline-bar column, descending | Initial sort applied before the user touches a header. `{ column: string, direction: 'asc' \| 'desc' }`. |
 | `totalRow`          | `boolean \| { label?: string }`   | `false`        | Sticky footer summing every quantitative column over the filtered rows (the whole result set, not just the current page). `true` uses the label `'Total'`. |
 | `responsive`        | `boolean`                         | `true`         | Whether the table adapts to container width.                                      |
-| `watermark`         | `boolean`                         | `true`         | Whether to show the tryOpenData.ai watermark. Mount/compile options take precedence over spec and active breakpoint values. |
+| `watermark`         | `boolean`                         | `true`         | Whether to show the OpenChart watermark. Mount/compile options take precedence over spec and active breakpoint values. |
 
 ### ColumnConfig
 

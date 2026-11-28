@@ -53,7 +53,7 @@ export interface TableMountOptions {
   darkMode?: DarkMode;
   /** Observe container resizing (and re-apply width breakpoints). Defaults to true. */
   autoResize?: boolean;
-  /** Show the OpenData watermark. Defaults to true. */
+  /** Show the OpenChart watermark. Defaults to true. */
   watermark?: boolean;
   onRowClick?: (row: Record<string, unknown>) => void;
   onStateChange?: (state: TableState) => void;
