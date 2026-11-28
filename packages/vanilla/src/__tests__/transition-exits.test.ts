@@ -23,6 +23,7 @@ import { type RectGeometry, rectMarkGeometry } from '../__test-fixtures__/rect-g
 import { renderChartSVG } from '../svg-renderer';
 import { lerpArcGeom } from '../transition/apply';
 import { runTransition } from '../transition/driver';
+import { LABEL_FADE_MS } from '../transition/labels';
 import type { CanvasLayerLike, TransitionHandle } from '../transition/types';
 
 const STEP_MS = 8;
@@ -173,7 +174,8 @@ describe('bar exits', () => {
     const prev = compile(barSpec(['A', 'B']));
     const next = compile(barSpec(['A', 'B', 'C']));
     const { handle } = begin(prev, next);
-    expect(handle.totalMs).toBe(next.animation!.update!.duration);
+    // No exit hold: the run is the update plus the fade of C's entering label.
+    expect(handle.totalMs).toBe(next.animation!.update!.duration + LABEL_FADE_MS);
     handle.cancel();
   });
 });

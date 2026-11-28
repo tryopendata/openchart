@@ -274,10 +274,14 @@ export function runTransition(args: {
     exit,
     ...updateTimeline(update, exit, tweens.some(isRemovalExit)),
   };
-  const { totalMs } = clock;
+  // Labels of entering marks fade in after the marks land, so they extend the run.
+  const totalMs = clock.totalMs + labelMotion.tailMs;
   /** Survivors' eased progress at `elapsed` (labels and snapshots ride it). */
   const updateProgress = (elapsed: number): number =>
     sampleMotion(update, elapsed - clock.updateDelayMs).position;
+  /** How far the waiting labels are through their fade, which follows the marks' landing. */
+  const labelFade = (elapsed: number): number =>
+    labelMotion.tailMs > 0 ? (elapsed - clock.totalMs) / labelMotion.tailMs : 1;
 
   // Apply all from-states SYNCHRONOUSLY before scheduling the first rAF
   for (const tw of tweens) {
@@ -318,7 +322,7 @@ export function runTransition(args: {
     }
 
     // Attached labels share the marks' update clock.
-    labelMotion.apply(updateProgress(elapsed));
+    labelMotion.apply(updateProgress(elapsed), labelFade(elapsed));
 
     // One paint per frame, after every tween has written its state.
     canvas?.repaint();
@@ -528,7 +532,7 @@ export function runTransition(args: {
       for (const tw of tweens) {
         applyTweenState(tw, elapsedMs, clock);
       }
-      labelMotion.apply(updateProgress(elapsedMs));
+      labelMotion.apply(updateProgress(elapsedMs), labelFade(elapsedMs));
       if (elapsedMs >= totalMs) {
         // Snap to exact final geometry (paths, ghosts removed) so the last frame
         // is pixel-correct, but do NOT flip `running` — the caller decides when

@@ -1,7 +1,15 @@
 import type { ChartLayout } from '@opendata-ai/openchart-core';
 import type { GeometrySnapshot } from './types';
 
-/** Attached text and endpoint markers follow the same sampled progress as marks. */
+/** A waiting label's fade once its mark has landed; the entrance's label fade. */
+export const LABEL_FADE_MS = 260;
+
+/**
+ * Attached text and endpoint markers follow the same sampled progress as marks.
+ * The label of a mark that enters stays hidden until the marks have landed, then
+ * fades in place over `tailMs`, so it never floats above a bar that is still
+ * growing.
+ */
 export function buildLabelMotion(
   svg: SVGSVGElement,
   previous: ChartLayout,
@@ -75,10 +83,20 @@ export function buildLabelMotion(
     previous.marks.filter((mark) => mark.key).map((mark) => [mark.key, mark]),
   );
   const afterMarks = new Map(next.marks.filter((mark) => mark.key).map((mark) => [mark.key, mark]));
-  for (const label of svg.querySelectorAll('[data-label-key]')) {
+  // Labels held back until the transition's marks have landed.
+  const waiting: Array<{ element: SVGElement; key: string }> = [];
+  for (const label of svg.querySelectorAll<SVGElement>('[data-label-key]')) {
     const key = label.getAttribute('data-label-key')!;
     const before = beforeMarks.get(key);
     const after = afterMarks.get(key);
+    const opacityKey = `label:${key}:opacity`;
+    if (!before && after) {
+      waiting.push({ element: label, key: opacityKey });
+      continue;
+    }
+    // Interrupted while still waiting: the mark is a survivor now, retargeting
+    // from where it was, so its label keeps waiting.
+    if (snapshot?.has(opacityKey)) waiting.push({ element: label, key: opacityKey });
     if (
       !before ||
       !after ||
@@ -96,9 +114,21 @@ export function buildLabelMotion(
     add(label, 'y', before.label.y - after.label.y - dy, `label:${key}:y`);
   }
   let progress = 0;
+  let waitingOpacity = 0;
   return {
-    apply(value: number) {
+    /** How long past the marks' landing the waiting labels need to fade in. */
+    tailMs: waiting.length > 0 ? LABEL_FADE_MS : 0,
+    /**
+     * `value` is the survivors' eased progress; `fade` is how far the waiting
+     * labels are through their fade (0 until the marks have landed).
+     */
+    apply(value: number, fade: number = value >= 1 ? 1 : 0) {
       progress = value;
+      waitingOpacity = Math.min(1, Math.max(0, fade));
+      for (const item of waiting) {
+        if (waitingOpacity >= 1) item.element.style.removeProperty('opacity');
+        else item.element.style.opacity = String(waitingOpacity);
+      }
       for (const item of attributes)
         item.element.setAttribute(item.name, String(item.from + (item.to - item.from) * value));
       for (const group of enteringGroups) {
@@ -113,6 +143,9 @@ export function buildLabelMotion(
       }
     },
     snapshot(target: GeometrySnapshot) {
+      if (waitingOpacity < 1)
+        for (const item of waiting)
+          target.set(item.key, { type: 'attribute', value: waitingOpacity });
       for (const item of attributes)
         target.set(item.key, {
           type: 'attribute',
